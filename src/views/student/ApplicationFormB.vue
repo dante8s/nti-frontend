@@ -114,7 +114,14 @@ async function handleSubmit() {
     error.value = ''
     loading.value = true
     try {
-        await applicationsApi.create({ callId })
+        await applicationsApi.create({ 
+            callId,
+            teamDescription: form.teamDescription,
+            skills: form.skills,
+            solution: form.solution,
+            expectedResults: form.expectedResults,
+            motivation: form.motivation
+        })
         success.value = true
     } catch (e) {
         error.value =

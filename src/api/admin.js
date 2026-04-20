@@ -2,10 +2,10 @@ import api from './axios'
 
 export const adminApi = {
   // Всі юзери що чекають схвалення
-  getPendingUsers: () => api.get('/api/admin/users/pending'),
+  getPendingUsers: () => api.get('/api/auth/admin/users/pending'),
 
   // Всі юзери
-  getAllUsers: () => api.get('/api/admin/users'),
+  getAllUsers: () => api.get('/api/auth/admin/users'),
 
   // Схвалити юзера
   approveUser: (id) => api.post(`/api/auth/admin/users/${id}/approve`),

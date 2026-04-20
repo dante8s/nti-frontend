@@ -1,8 +1,23 @@
-<script setup></script>
+<script setup>
+import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+
+const auth = useAuthStore()
+const route = useRoute()
+const router = useRouter()
+
+const hidePublicChrome = computed(() => route.path.startsWith('/app'))
+
+function logout() {
+  auth.logout()
+  router.push('/')
+}
+</script>
 
 <template>
   <div id="app">
-    <header class="app-header">
+    <header v-if="!hidePublicChrome" class="app-header">
       <div class="brand-row">
         <router-link to="/" class="brand">NTI Nitra</router-link>
         <span class="brand-subtitle">Cловаччина · програми A/B</span>
@@ -10,8 +25,17 @@
       <nav class="app-nav">
         <router-link to="/programs/a" class="nav-link">Програма A</router-link>
         <router-link to="/programs/b" class="nav-link">Програма B</router-link>
-        <router-link to="/login" class="nav-link nav-login">Увійти</router-link>
-        <router-link to="/register" class="nav-link nav-register">Зареєструватись</router-link>
+
+        <template v-if="!auth.isLoggedIn">
+          <router-link to="/login" class="nav-link nav-login">Увійти</router-link>
+          <router-link to="/register" class="nav-link nav-register">Зареєструватись</router-link>
+        </template>
+        <template v-else>
+          <router-link to="/app/dashboard" class="nav-link nav-login">Кабінет</router-link>
+          <button type="button" class="nav-link nav-register nav-btn" @click="logout">
+            Вийти
+          </button>
+        </template>
       </nav>
     </header>
 
@@ -81,6 +105,8 @@
   border: 1px solid transparent;
   transition: all 0.2s ease;
   background: rgba(255, 255, 255, 0.74);
+  font: inherit;
+  cursor: pointer;
 }
 
 .nav-link:hover {
@@ -97,6 +123,11 @@
   background: #4338ca;
   color: white;
   border-color: rgba(79, 70, 229, 0.22);
+}
+
+.nav-btn {
+  display: inline-flex;
+  align-items: center;
 }
 
 main {

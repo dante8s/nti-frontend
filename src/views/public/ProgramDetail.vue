@@ -49,7 +49,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { programsApi } from '@/api/programs'
 import { useAuthStore } from '@/stores/auth'
@@ -61,11 +61,18 @@ const auth = useAuthStore()
 const program = ref(null)
 const calls = ref([])
 const loading = ref(true)
-const isLoggedIn = auth.isLoggedIn
+const isLoggedIn = computed(() => auth.isLoggedIn)
 
 function handleApply(call) {
     if (!isLoggedIn.value) {
-        router.push({ name: 'register' })
+        router.push({ name: 'login' })
+        return
+    }
+
+    // Перевірити чи користувач має роль студента
+    if (!auth.user?.roles?.includes('STUDENT')) {
+        // Можна показати повідомлення або перенаправити на dashboard
+        alert('Тільки студенти можуть подавати заявки')
         return
     }
 
@@ -73,7 +80,8 @@ function handleApply(call) {
     router.push({ name: `apply-${programKey}`, params: { callId: call.id } })
 }
 
-onMounted(async () => {
+async function fetchData() {
+    loading.value = true
     try {
         const type = route.params.type.toUpperCase()
         const [progRes, callsRes] = await Promise.all([
@@ -87,6 +95,13 @@ onMounted(async () => {
     } finally {
         loading.value = false
     }
+}
+
+onMounted(fetchData)
+
+// Спостерігати за змінами параметрів маршруту
+watch([() => route.params.id, () => route.params.type], () => {
+    fetchData()
 })
 
 function formatDate(date) {

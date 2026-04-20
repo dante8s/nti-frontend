@@ -24,7 +24,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { programsApi } from '@/api/programs'
 
@@ -32,18 +32,26 @@ const route = useRoute()
 const programs = ref([])
 const loading = ref(true)
 
-const type = route.params.type.toUpperCase() // 'A' or 'B'
-const programLabel = type === 'A' ? 'Програма A' : 'Програма B'
+const type = computed(() => route.params.type?.toUpperCase() || 'A')
+const programLabel = computed(() => type.value === 'A' ? 'Програма A' : 'Програма B')
 
-onMounted(async () => {
+async function fetchPrograms() {
+    loading.value = true
     try {
-        const res = await programsApi.getAllByType(type)
+        const res = await programsApi.getAllByType(type.value)
         programs.value = res.data
     } catch (e) {
         console.error('Помилка завантаження програм', e)
     } finally {
         loading.value = false
     }
+}
+
+onMounted(fetchPrograms)
+
+// Спостерігати за змінами параметрів маршруту
+watch(() => route.params.type, () => {
+    fetchPrograms()
 })
 </script>
 

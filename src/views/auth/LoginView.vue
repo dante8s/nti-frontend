@@ -110,11 +110,7 @@ async function handleLogin() {
             captchaToken.value
         )
 
-        if (data.role === 'ADMIN') {
-            router.push('/admin')
-        } else {
-            router.push('/dashboard')
-        }
+        router.push('/app/dashboard')
     } catch (e) {
         error.value = e.response?.data?.message || e.response?.data || 'Невірний email або пароль'
     } finally {

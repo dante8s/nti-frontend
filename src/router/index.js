@@ -20,12 +20,6 @@ const router = createRouter({
       component: () => import('@/views/auth/RegisterView.vue'),
     },
     {
-      path: '/dashboard',
-      name: 'dashboard',
-      component: () => import('@/views/DashboardView.vue'),
-      meta: { requiresAuth: true },
-    },
-    {
       path: '/forgot-password',
       name: 'forgot-password',
       component: () => import('@/views/auth/ForgotPasswordView.vue'),
@@ -46,40 +40,100 @@ const router = createRouter({
       name: 'program-detail',
       component: () => import('@/views/public/ProgramDetail.vue'),
     },
+
+    {
+      path: '/app',
+      component: () => import('@/layouts/AppShell.vue'),
+      meta: { requiresAuth: true },
+      children: [
+        {
+          path: '',
+          redirect: { name: 'dashboard' },
+        },
+        {
+          path: 'dashboard',
+          name: 'dashboard',
+          meta: { title: 'Дашборд' },
+          component: () => import('@/views/DashboardView.vue'),
+        },
+        {
+          path: 'my-applications',
+          name: 'my-applications',
+          meta: { title: 'Мої заявки', requiresRole: 'STUDENT' },
+          component: () => import('@/views/student/MyApplications.vue'),
+        },
+        {
+          path: 'apply/a/:callId',
+          name: 'apply-a',
+          meta: { title: 'Заявка — програма A', requiresRole: 'STUDENT' },
+          component: () => import('@/views/student/ApplicationFormA.vue'),
+        },
+        {
+          path: 'apply/b/:callId',
+          name: 'apply-b',
+          meta: { title: 'Заявка — програма B', requiresRole: 'STUDENT' },
+          component: () => import('@/views/student/ApplicationFormB.vue'),
+        },
+        {
+          path: 'admin/users',
+          name: 'admin-users',
+          meta: { title: 'Користувачі', requiresSuperAdmin: true },
+          component: () => import('@/views/admin/AdminUsers.vue'),
+        },
+        {
+          path: 'admin/applications',
+          name: 'admin-applications',
+          meta: { title: 'Заявки', requiresAdmin: true },
+          component: () => import('@/views/admin/AdminApplications.vue'),
+        },
+        {
+          path: 'admin/programs',
+          name: 'admin-programs',
+          meta: { title: 'Програми та виклики', requiresAdmin: true },
+          component: () => import('@/views/admin/AdminPrograms.vue'),
+        },
+      ],
+    },
+
+    { path: '/dashboard', redirect: '/app/dashboard' },
+    { path: '/admin/users', redirect: '/app/admin/users' },
     {
       path: '/apply/a/:callId',
-      name: 'apply-a',
-      component: () => import('@/views/student/ApplicationFormA.vue'),
-      meta: { requiresAuth: true },
+      redirect: (to) => ({ path: `/app/apply/a/${to.params.callId}` }),
     },
     {
       path: '/apply/b/:callId',
-      name: 'apply-b',
-      component: () => import('@/views/student/ApplicationFormB.vue'),
-      meta: { requiresAuth: true },
-    },
-    {
-      path: '/admin/users',
-      name: 'admin-users',
-      component: () => import('@/views/admin/AdminUsers.vue'),
-      meta: {
-        requiresAuth: true,
-      },
+      redirect: (to) => ({ path: `/app/apply/b/${to.params.callId}` }),
     },
   ],
 })
 
-// Захист маршрутів
+function hasAdminRole(roles) {
+  return roles?.some((r) => r === 'ADMIN' || r === 'SUPER_ADMIN')
+}
+
 router.beforeEach((to) => {
   const auth = useAuthStore()
 
-  if (to.meta.requiresAuth && !auth.isLoggedIn) {
+  if (to.matched.some((r) => r.meta.requiresAuth) && !auth.isLoggedIn) {
     return { name: 'login' }
   }
 
   if (to.meta.requiresRole) {
-    const hasRole = auth.user?.roles?.includes(to.meta.requiresRole)
-    if (!hasRole) {
+    const ok = auth.user?.roles?.includes(to.meta.requiresRole)
+    if (!ok) {
+      return { name: 'dashboard' }
+    }
+  }
+
+  if (to.meta.requiresSuperAdmin) {
+    if (!auth.user?.roles?.includes('SUPER_ADMIN')) {
+      return { name: 'dashboard' }
+    }
+  }
+
+  if (to.meta.requiresAdmin) {
+    if (!hasAdminRole(auth.user?.roles)) {
       return { name: 'dashboard' }
     }
   }

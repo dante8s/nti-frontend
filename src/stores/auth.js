@@ -7,7 +7,8 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref(JSON.parse(localStorage.getItem('user') || 'null'))
 
   const isLoggedIn = computed(() => !!token.value)
-  const role = computed(() => user.value?.role || null)
+  const role = computed(() => user.value?.roles?.[0] || null)
+  const roles = computed(() => user.value?.roles || [])
 
   async function register(data) {
     const response = await api.post('/api/auth/register', data)
@@ -26,7 +27,7 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = {
       name: data.name,
       email: data.email,
-      role: data.role,
+      roles: data.roles ?? [],
       emailVerified: data.emailVerified,
       onboardingCompleted: data.onboardingCompleted,
     }
@@ -57,6 +58,7 @@ export const useAuthStore = defineStore('auth', () => {
     user,
     isLoggedIn,
     role,
+    roles,
     register,
     login,
     logout,

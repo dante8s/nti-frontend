@@ -23,5 +23,5 @@ export const programsApi = {
 
   createCall: (programId, data) => api.post(`/api/admin/programs/${programId}/calls`, data),
 
-  closeCall: (id) => api.patch(`/api/admin/calls/${id}/close`),
+  closeCall: (id) => api.patch(`/api/admin/calls/${id}`, { status: 'CLOSED' }),
 }
