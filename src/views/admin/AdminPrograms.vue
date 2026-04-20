@@ -234,16 +234,14 @@ function openProgramModal(p) {
 }
 
 async function saveProgram() {
-  const type = tab.value
+  const type = `PROGRAM_${tab.value}`
   const body = {
     name: programModal.name,
     description: programModal.description,
     type,
     isActive: programModal.isActive,
   }
-  if (programModal.edit) {
-    body.id = programModal.id
-  }
+
   try {
     if (programModal.edit) {
       await programsApi.update(programModal.id, body)
