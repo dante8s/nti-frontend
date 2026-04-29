@@ -31,7 +31,10 @@ const adminNav = computed(() => {
 
 const studentNav = computed(() => {
   if (!isStudent.value) return []
-  return [{ to: '/app/my-applications', label: 'Мої заявки', icon: '▸' }]
+  return [
+    { to: '/app/my-applications', label: 'Мої заявки', icon: '▸' },
+    { to: '/app/my-profile', label: 'Мій профіль', icon: '◉' },
+  ]
 })
 
 function logout() {

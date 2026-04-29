@@ -39,12 +39,15 @@
                 </div>
 
                 <!-- ✅ CAPTCHA -->
-                <div class="field">
+                <div v-if="!AUTH_MOCK_ENABLED" class="field">
                     <div id="recaptcha-register" class="g-recaptcha"
                         data-sitekey="6Lfl56gsAAAAAOBIsD-BT1Krdd9aGvTz7iWIZnDL"></div>
                     <span v-if="captchaError" class="error-text">
                         Підтвердіть що ви не робот
                     </span>
+                </div>
+                <div v-else class="mock-note">
+                    Mock-режим активний: реєстрація працює без backend і CAPTCHA.
                 </div>
 
                 <button type="submit" :disabled="loading || !form.gdprConsent">
@@ -66,6 +69,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const SITE_KEY = '6Lfl56gsAAAAAOBIsD-BT1Krdd9aGvTz7iWIZnDL'
+const AUTH_MOCK_ENABLED = import.meta.env.VITE_ENABLE_AUTH_MOCK === 'true'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -85,6 +89,8 @@ const success = ref('')
 const captchaError = ref(false)
 
 onMounted(() => {
+    if (AUTH_MOCK_ENABLED) return
+
     const tryRender = setInterval(() => {
         if (window.grecaptcha?.render) {
             clearInterval(tryRender)
@@ -103,7 +109,7 @@ onMounted(() => {
 })
 
 async function handleRegister() {
-    if (!form.captchaToken) {
+    if (!AUTH_MOCK_ENABLED && !form.captchaToken) {
         captchaError.value = true
         return
     }
@@ -123,7 +129,7 @@ async function handleRegister() {
         const message = await auth.register(payload)
         success.value = message || 'Реєстрація пройшла успішно. Перевірте пошту.'
     } catch (e) {
-        error.value = e.response?.data?.message || e.response?.data || 'Помилка реєстрації'
+        error.value = e.response?.data?.message || e.response?.data || e.message || 'Помилка реєстрації'
     } finally {
         loading.value = false
     }
@@ -229,5 +235,14 @@ button:disabled {
     border-radius: 8px;
     margin-bottom: 1rem;
     font-size: 0.875rem;
+}
+
+.mock-note {
+    margin-top: 0.25rem;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 0.85rem;
+    background: #eef2ff;
+    color: #3730a3;
 }
 </style>

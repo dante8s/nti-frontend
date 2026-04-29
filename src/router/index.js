@@ -63,6 +63,12 @@ const router = createRouter({
           component: () => import('@/views/student/MyApplications.vue'),
         },
         {
+          path: 'my-profile',
+          name: 'my-profile',
+          meta: { title: 'Мій профіль', requiresRole: 'STUDENT' },
+          component: () => import('@/views/student/StudentProfilePage.vue'),
+        },
+        {
           path: 'apply/a/:callId',
           name: 'apply-a',
           meta: { title: 'Заявка — програма A', requiresRole: 'STUDENT' },

@@ -97,12 +97,20 @@ const cards = computed(() => {
   }
 
   if (isStudent.value) {
-    out.push({
-      to: '/app/my-applications',
-      title: 'Мої заявки',
-      desc: 'Статуси подань та коментарі комісії',
-      icon: '▸',
-    })
+    out.push(
+      {
+        to: '/app/my-applications',
+        title: 'Мої заявки',
+        desc: 'Статуси подань та коментарі комісії',
+        icon: '▸',
+      },
+      {
+        to: '/app/my-profile',
+        title: 'Мій профіль',
+        desc: 'Редагування даних профілю та CV',
+        icon: '◉',
+      },
+    )
   }
 
   out.push(
