@@ -25,7 +25,7 @@
                     Завантажте резюме команди і перейдіть до
                     кабінету щоб відправити заявку.
                 </p>
-                <router-link to="/student/applications">
+                <router-link to="/app/my-applications">
                     Перейти до моїх заявок
                 </router-link>
             </div>

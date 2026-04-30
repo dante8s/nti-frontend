@@ -14,6 +14,7 @@ const isAdmin = computed(() =>
   auth.roles?.some((r) => r === 'ADMIN' || r === 'SUPER_ADMIN'),
 )
 const isStudent = computed(() => auth.roles?.includes('STUDENT'))
+const isEvaluator = computed(() => auth.roles?.includes('EVALUATOR'))
 
 const adminNav = computed(() => {
   const items = []
@@ -21,7 +22,14 @@ const adminNav = computed(() => {
     items.push(
       { to: '/app/admin/applications', label: 'Заявки', icon: '◆' },
       { to: '/app/admin/programs', label: 'Програми та виклики', icon: '◇' },
+      { to: '/app/reporting', label: 'Звітність', icon: '⬒' },
     )
+  }
+  if (isEvaluator.value) {
+    items.push({ to: '/app/evaluation', label: 'Оцінювання', icon: '◌' })
+    if (!isAdmin.value) {
+      items.push({ to: '/app/reporting', label: 'Звітність', icon: '⬒' })
+    }
   }
   if (isSuperAdmin.value) {
     items.push({ to: '/app/admin/users', label: 'Користувачі', icon: '◎' })
@@ -34,6 +42,7 @@ const studentNav = computed(() => {
   return [
     { to: '/app/my-applications', label: 'Мої заявки', icon: '▸' },
     { to: '/app/my-profile', label: 'Мій профіль', icon: '◉' },
+    { to: '/app/teams', label: 'Моя команда', icon: '◍' },
   ]
 })
 

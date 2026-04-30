@@ -25,7 +25,7 @@
                     Ви можете завантажити документи і відправити
                     заявку у вашому кабінеті.
                 </p>
-                <router-link to="/student/applications">
+                <router-link to="/app/my-applications">
                     Перейти до моїх заявок
                 </router-link>
             </div>

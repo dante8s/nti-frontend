@@ -50,6 +50,7 @@ const isAdmin = computed(() =>
   auth.roles?.some((r) => r === 'ADMIN' || r === 'SUPER_ADMIN'),
 )
 const isStudent = computed(() => auth.roles?.includes('STUDENT'))
+const isEvaluator = computed(() => auth.roles?.includes('EVALUATOR'))
 
 const roleLabels = {
   STUDENT: 'Студент',
@@ -93,6 +94,12 @@ const cards = computed(() => {
         desc: 'Редагування програм і дедлайнів',
         icon: '◇',
       },
+      {
+        to: '/app/reporting',
+        title: 'Звітність',
+        desc: 'Панель статистики та експорти CSV/XLSX/PDF/DOCX',
+        icon: '⬒',
+      },
     )
   }
 
@@ -109,6 +116,29 @@ const cards = computed(() => {
         title: 'Мій профіль',
         desc: 'Редагування даних профілю та CV',
         icon: '◉',
+      },
+      {
+        to: '/app/teams',
+        title: 'Моя команда',
+        desc: 'Створення команди та керування інвайтами',
+        icon: '◍',
+      },
+    )
+  }
+
+  if (isEvaluator.value) {
+    out.push(
+      {
+        to: '/app/evaluation',
+        title: 'Оцінювання',
+        desc: 'Черга заявок, критерії та скоринг',
+        icon: '◌',
+      },
+      {
+        to: '/app/reporting',
+        title: 'Звітність',
+        desc: 'Перевірки готовності та експорт звітів',
+        icon: '⬒',
       },
     )
   }

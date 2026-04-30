@@ -69,6 +69,12 @@ const router = createRouter({
           component: () => import('@/views/student/StudentProfilePage.vue'),
         },
         {
+          path: 'teams',
+          name: 'teams',
+          meta: { title: 'Моя команда', requiresRole: 'STUDENT' },
+          component: () => import('@/views/student/TeamsPage.vue'),
+        },
+        {
           path: 'apply/a/:callId',
           name: 'apply-a',
           meta: { title: 'Заявка — програма A', requiresRole: 'STUDENT' },
@@ -97,6 +103,18 @@ const router = createRouter({
           name: 'admin-programs',
           meta: { title: 'Програми та виклики', requiresAdmin: true },
           component: () => import('@/views/admin/AdminPrograms.vue'),
+        },
+        {
+          path: 'evaluation',
+          name: 'evaluation',
+          meta: { title: 'Оцінювання', requiresAnyRole: ['EVALUATOR', 'ADMIN', 'SUPER_ADMIN'] },
+          component: () => import('@/views/evaluator/EvaluationPage.vue'),
+        },
+        {
+          path: 'reporting',
+          name: 'reporting',
+          meta: { title: 'Звітність', requiresAnyRole: ['ADMIN', 'SUPER_ADMIN', 'EVALUATOR'] },
+          component: () => import('@/views/admin/ReportingPage.vue'),
         },
       ],
     },
@@ -127,6 +145,15 @@ router.beforeEach((to) => {
 
   if (to.meta.requiresRole) {
     const ok = auth.user?.roles?.includes(to.meta.requiresRole)
+    if (!ok) {
+      return { name: 'dashboard' }
+    }
+  }
+
+  if (to.meta.requiresAnyRole) {
+    const allowed = to.meta.requiresAnyRole
+    const userRoles = auth.user?.roles || []
+    const ok = allowed.some((role) => userRoles.includes(role))
     if (!ok) {
       return { name: 'dashboard' }
     }

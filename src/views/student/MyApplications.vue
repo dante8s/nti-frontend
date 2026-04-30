@@ -48,13 +48,21 @@
 
         <footer class="card__foot">
           <span class="muted">Оновлено: {{ formatDt(app.updatedAt) }}</span>
-          <router-link
-            v-if="app.status === 'DRAFT'"
-            :to="draftRoute(app)"
-            class="link-continue"
-          >
-            Продовжити чернетку →
-          </router-link>
+          <div v-if="app.status === 'DRAFT'" class="draft-actions">
+            <router-link
+              :to="draftRoute(app)"
+              class="link-continue"
+            >
+              Продовжити чернетку →
+            </router-link>
+            <button
+              class="submit-btn"
+              :disabled="submittingId === app.id"
+              @click="submitDraft(app.id)"
+            >
+              {{ submittingId === app.id ? 'Відправлення...' : 'Відправити' }}
+            </button>
+          </div>
         </footer>
 
         <p v-if="app.adminComment" class="comment">
@@ -72,6 +80,7 @@ import { statusLabel } from '@/utils/applicationStatus'
 
 const items = ref([])
 const loading = ref(true)
+const submittingId = ref(null)
 const error = ref('')
 
 onMounted(async () => {
@@ -147,6 +156,20 @@ function timelineSteps(status) {
 function draftRoute(app) {
   const t = (app.programType || '').includes('A') ? 'a' : 'b'
   return { name: `apply-${t}`, params: { callId: app.callId } }
+}
+
+async function submitDraft(appId) {
+  submittingId.value = appId
+  error.value = ''
+  try {
+    await applicationsApi.submit(appId)
+    const res = await applicationsApi.getMy()
+    items.value = res.data || []
+  } catch {
+    error.value = 'Не вдалося відправити заявку'
+  } finally {
+    submittingId.value = null
+  }
 }
 </script>
 
@@ -331,6 +354,28 @@ function draftRoute(app) {
   font-weight: 600;
   color: #4f46e5;
   text-decoration: none;
+}
+
+.draft-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.submit-btn {
+  border: none;
+  border-radius: 999px;
+  background: #4338ca;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.78rem;
+  padding: 0.38rem 0.75rem;
+  cursor: pointer;
+}
+
+.submit-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
 }
 
 .comment {
