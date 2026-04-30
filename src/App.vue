@@ -25,8 +25,6 @@ function logout() {
       <nav class="app-nav">
         <router-link to="/programs/a" class="nav-link">Програма A</router-link>
         <router-link to="/programs/b" class="nav-link">Програма B</router-link>
-        <router-link to="/organizations" class="nav-link">Organizations</router-link>
-        <router-link to="/mentors" class="nav-link">Mentors</router-link>
 
         <template v-if="!auth.isLoggedIn">
           <router-link to="/login" class="nav-link nav-login">Увійти</router-link>
