@@ -18,7 +18,11 @@
     </div>
 
     <div v-else class="grid">
-      <article v-for="app in items" :key="app.id" class="card">
+      <article
+        v-for="app in items"
+        :key="app.id"
+        class="card"
+      >
         <header class="card__head">
           <div>
             <h2 class="card__title">
@@ -52,6 +56,7 @@
             v-if="app.status === 'DRAFT'"
             :to="draftRoute(app)"
             class="link-continue"
+            @click.stop
           >
             Продовжити чернетку →
           </router-link>
@@ -60,24 +65,149 @@
         <p v-if="app.adminComment" class="comment">
           <strong>Коментар:</strong> {{ app.adminComment }}
         </p>
+
+        <section class="mentorship">
+          <h3 class="mentorship__title">Mentorship</h3>
+          <div v-if="mentorshipsFor(app.id).length === 0" class="mentorship__empty">
+            No mentorship assigned yet.
+          </div>
+          <div v-else class="mentorship__table-wrap">
+            <table class="mentorship__table">
+              <thead>
+                <tr>
+                  <th>Mentor</th>
+                  <th>Status</th>
+                  <th>Assigned</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="m in mentorshipsFor(app.id)" :key="m.id">
+                  <td class="cell-title">
+                    {{ m.mentorName || '—' }}
+                  </td>
+                  <td>
+                    <span class="pill pill--muted">
+                      {{ m.status || '—' }}
+                    </span>
+                  </td>
+                  <td class="muted">
+                    {{ mentorshipAssignedDt(m) }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="notes">
+          <div class="notes__head">
+            <h3 class="notes__title">Consultation Notes</h3>
+          </div>
+          <div v-if="notesFor(app.id).length === 0" class="notes__empty">
+            No notes yet.
+          </div>
+          <div v-else class="notes__list">
+            <article v-for="n in notesFor(app.id)" :key="n.id" class="note">
+              <header class="note__head">
+                <div class="note__meta">
+                  <strong>{{ n.createdByName || '—' }}</strong>
+                  <span>{{ formatDt(n.createdAt) }}</span>
+                </div>
+              </header>
+              <p class="note__content">
+                {{ n.content }}
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section class="milestones">
+          <div class="milestones__head">
+            <h3 class="milestones__title">Milestones</h3>
+            <button type="button" class="milestones__add-btn" @click="openMilestoneModal(app.id)">
+              Add Milestone
+            </button>
+          </div>
+          <div v-if="milestonesFor(app.id).length === 0" class="milestones__empty">
+            No milestones yet.
+          </div>
+          <div v-else class="milestones__list">
+            <article v-for="m in milestonesFor(app.id)" :key="m.id" class="milestone-item">
+              <div class="milestone-item__top">
+                <h4 class="milestone-item__title">
+                  {{ m.title || '—' }}
+                </h4>
+                <span class="milestone-status" :class="milestoneStatusClass(m.status)">
+                  {{ m.status || '—' }}
+                </span>
+              </div>
+              <p class="milestone-item__meta">
+                Due: {{ formatMilestoneDate(m.dueDate) }}
+              </p>
+              <p class="milestone-item__desc">
+                {{ m.description || '—' }}
+              </p>
+              <div v-if="m.status === 'PENDING_APPROVAL'" class="milestone-item__actions">
+                <button type="button" class="milestone-action-btn" @click="openEditMilestoneModal(app.id, m)">
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  class="milestone-action-btn milestone-action-btn--danger"
+                  @click="deleteMilestone(app.id, m.id)"
+                >
+                  Delete
+                </button>
+              </div>
+            </article>
+          </div>
+        </section>
       </article>
     </div>
+
+    <MilestoneFormModal
+      v-model="milestoneModalOpen"
+      :application-id="selectedMilestoneAppId"
+      :milestone="editingMilestone"
+      @created="onMilestoneCreated"
+    />
   </div>
 </template>
 
 <script setup>
 import { onMounted, ref } from 'vue'
+import { storeToRefs } from 'pinia'
 import { applicationsApi } from '@/api/applications'
 import { statusLabel } from '@/utils/applicationStatus'
+import { useMentorshipStore } from '@/stores/mentorship'
+import { useNoteStore } from '@/stores/note'
+import { useMilestoneStore } from '@/stores/milestone'
+import MilestoneFormModal from '@/components/MilestoneFormModal.vue'
 
 const items = ref([])
 const loading = ref(true)
 const error = ref('')
 
+const mentorshipStore = useMentorshipStore()
+const { mentorshipsByApplication } = storeToRefs(mentorshipStore)
+const noteStore = useNoteStore()
+const { notesByApplication } = storeToRefs(noteStore)
+const milestoneStore = useMilestoneStore()
+const { milestones } = storeToRefs(milestoneStore)
+
+const milestoneModalOpen = ref(false)
+const selectedMilestoneAppId = ref(null)
+const editingMilestone = ref(null)
+
 onMounted(async () => {
   try {
     const res = await applicationsApi.getMy()
     items.value = res.data || []
+    await Promise.all([
+      ...(items.value || []).map((app) => mentorshipStore.getByApplication(app.id)),
+      ...(items.value || []).map((app) => noteStore.fetchNotesByApplication(app.id)),
+      ...(items.value || []).map((app) => milestoneStore.fetchByApplication(app.id)),
+    ])
   } catch (e) {
     error.value = 'Не вдалося завантажити заявки'
   } finally {
@@ -106,6 +236,72 @@ function formatDt(iso) {
     hour: '2-digit',
     minute: '2-digit',
   })
+}
+
+function mentorshipsFor(applicationId) {
+  return mentorshipsByApplication.value?.[applicationId] || []
+}
+
+function mentorshipAssignedDt(m) {
+  return formatDt(m?.startDate || m?.createdAt)
+}
+
+function notesFor(applicationId) {
+  const raw = notesByApplication.value?.[String(applicationId)] || []
+  return [...raw].sort((a, b) => new Date(b?.createdAt || 0) - new Date(a?.createdAt || 0))
+}
+
+function milestonesFor(applicationId) {
+  const raw = milestones.value?.[String(applicationId)] || []
+  return [...raw].sort((a, b) => new Date(a?.dueDate || 0) - new Date(b?.dueDate || 0))
+}
+
+function milestoneStatusClass(status) {
+  const map = {
+    PENDING_APPROVAL: 'milestone-status--pending',
+    PLANNED: 'milestone-status--planned',
+    IN_PROGRESS: 'milestone-status--progress',
+    COMPLETED: 'milestone-status--completed',
+    OVERDUE: 'milestone-status--overdue',
+    BLOCKED: 'milestone-status--blocked',
+  }
+  return map[status] || 'milestone-status--default'
+}
+
+function formatMilestoneDate(value) {
+  if (!value) return '—'
+  return new Date(value).toLocaleDateString('uk-UA', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+function openMilestoneModal(applicationId) {
+  editingMilestone.value = null
+  selectedMilestoneAppId.value = applicationId
+  milestoneModalOpen.value = true
+}
+
+function openEditMilestoneModal(applicationId, milestone) {
+  selectedMilestoneAppId.value = applicationId
+  editingMilestone.value = milestone
+  milestoneModalOpen.value = true
+}
+
+async function onMilestoneCreated(created) {
+  editingMilestone.value = null
+  if (created?.applicationId) {
+    await milestoneStore.fetchByApplication(created.applicationId)
+    return
+  }
+  if (selectedMilestoneAppId.value) {
+    await milestoneStore.fetchByApplication(selectedMilestoneAppId.value)
+  }
+}
+
+async function deleteMilestone(applicationId, milestoneId) {
+  await milestoneStore.delete(milestoneId, applicationId)
 }
 
 function timelineSteps(status) {
@@ -148,6 +344,7 @@ function draftRoute(app) {
   const t = (app.programType || '').includes('A') ? 'a' : 'b'
   return { name: `apply-${t}`, params: { callId: app.callId } }
 }
+
 </script>
 
 <style scoped>
@@ -206,6 +403,10 @@ function draftRoute(app) {
   background: rgba(255, 255, 255, 0.95);
   border: 1px solid rgba(79, 70, 229, 0.1);
   box-shadow: 0 16px 40px rgba(15, 23, 42, 0.06);
+}
+
+.card:hover {
+  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.1);
 }
 
 .card__head {
@@ -333,6 +534,11 @@ function draftRoute(app) {
   text-decoration: none;
 }
 
+.link-btn:hover,
+.link-continue:hover {
+  opacity: 0.88;
+}
+
 .comment {
   margin: 1rem 0 0;
   padding: 0.75rem 1rem;
@@ -340,5 +546,281 @@ function draftRoute(app) {
   background: rgba(79, 70, 229, 0.06);
   font-size: 0.88rem;
   color: #334155;
+}
+
+.mentorship {
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.mentorship__title {
+  margin: 0 0 0.6rem;
+  font-size: 0.95rem;
+  color: #0f172a;
+}
+
+.mentorship__empty {
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
+.mentorship__table-wrap {
+  overflow: auto;
+  border-radius: 12px;
+  border: 1px solid rgba(79, 70, 229, 0.12);
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.mentorship__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.mentorship__table th,
+.mentorship__table td {
+  padding: 0.65rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.mentorship__table th {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748b;
+  background: rgba(79, 70, 229, 0.04);
+}
+
+.notes {
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.notes__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+}
+
+.notes__title {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #0f172a;
+}
+
+.notes__empty {
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
+.notes__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.note {
+  border: 1px solid rgba(79, 70, 229, 0.12);
+  border-radius: 12px;
+  padding: 0.65rem 0.75rem;
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.note__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.note__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.note__content {
+  margin: 0.55rem 0 0;
+  color: #334155;
+  font-size: 0.88rem;
+  white-space: pre-wrap;
+}
+
+.milestones {
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.milestones__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+}
+
+.milestones__title {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #0f172a;
+}
+
+.milestones__add-btn {
+  padding: 0.4rem 0.75rem;
+  border: none;
+  border-radius: 9px;
+  background: #4f46e5;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.milestones__add-btn:hover {
+  background: #4338ca;
+}
+
+.milestones__empty {
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
+.milestones__list {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding-left: 1rem;
+}
+
+.milestones__list::before {
+  content: '';
+  position: absolute;
+  left: 0.2rem;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: rgba(79, 70, 229, 0.2);
+}
+
+.milestone-item {
+  position: relative;
+  border: 1px solid rgba(79, 70, 229, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.96);
+  padding: 0.7rem 0.8rem;
+}
+
+.milestone-item::before {
+  content: '';
+  position: absolute;
+  left: -0.96rem;
+  top: 0.95rem;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #6366f1;
+}
+
+.milestone-item__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.milestone-item__title {
+  margin: 0;
+  font-size: 0.92rem;
+  color: #0f172a;
+}
+
+.milestone-item__meta {
+  margin: 0.4rem 0 0;
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+.milestone-item__desc {
+  margin: 0.45rem 0 0;
+  color: #334155;
+  font-size: 0.86rem;
+  white-space: pre-wrap;
+}
+
+.milestone-item__actions {
+  margin-top: 0.6rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.milestone-action-btn {
+  padding: 0.3rem 0.6rem;
+  border: 1px solid rgba(79, 70, 229, 0.25);
+  border-radius: 8px;
+  background: white;
+  color: #4338ca;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.milestone-action-btn--danger {
+  border-color: rgba(220, 38, 38, 0.25);
+  color: #b91c1c;
+}
+
+.milestone-action-btn:hover {
+  background: rgba(79, 70, 229, 0.06);
+}
+
+.milestone-status {
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.milestone-status--pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.milestone-status--planned {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.milestone-status--progress {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.milestone-status--completed {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.milestone-status--overdue {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.milestone-status--blocked {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.milestone-status--default {
+  background: #f8fafc;
+  color: #475569;
 }
 </style>
