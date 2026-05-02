@@ -24,4 +24,16 @@ export const programsApi = {
   createCall: (programId, data) => api.post(`/api/admin/programs/${programId}/calls`, data),
 
   closeCall: (id) => api.patch(`/api/admin/calls/${id}/close`),
+
+  submitProgramB: (data) => api.post('/api/programs/submit-program-b', data),
+
+  updateProgramB: (id, data) => api.put(`/api/programs/program-b/${id}`, data),
+
+  submitForReview: (id) => api.post(`/api/programs/program-b/${id}/submit`),
+
+  getMyPrograms: () => api.get('/api/programs/my'),
+
+  getPendingReview: () => api.get('/api/admin/programs/pending-review'),
+
+  reviewProgram: (id, reviewData) => api.post(`/api/admin/programs/${id}/review`, reviewData),
 }

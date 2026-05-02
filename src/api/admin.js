@@ -25,4 +25,7 @@ export const adminApi = {
   // Забрати роль
   removeRole: (id, role) =>
     api.post(`/api/auth/admin/users/${id}/roles/remove`, null, { params: { role } }),
+
+  // Запросити ментора
+  inviteMentor: (email) => api.post('/api/auth/admin/invite-mentor', { email }),
 }

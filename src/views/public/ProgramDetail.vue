@@ -17,6 +17,18 @@
                 </span>
                 <h1>{{ program.name }}</h1>
                 <p>{{ program.description }}</p>
+                <p
+                    v-if="showPresentedBy(program)"
+                    class="presented-by"
+                >
+                    Presented by:
+                    <router-link
+                        class="presented-by__link"
+                        :to="{ name: 'public-organization', params: { id: String(program.organizationId) } }"
+                    >
+                        {{ program.organizationName }}
+                    </router-link>
+                </p>
             </div>
 
             <div class="calls-section">
@@ -45,6 +57,10 @@
                 </div>
             </div>
         </template>
+
+        <div v-else class="empty">
+            {{ notFoundMessage }}
+        </div>
     </div>
 </template>
 
@@ -61,7 +77,14 @@ const auth = useAuthStore()
 const program = ref(null)
 const calls = ref([])
 const loading = ref(true)
+const notFoundMessage = ref('Програму не знайдено або вона недоступна')
 const isLoggedIn = computed(() => auth.isLoggedIn)
+
+function showPresentedBy(p) {
+    return p?.type === 'PROGRAM_B'
+        && p.organizationId != null
+        && p.organizationId !== ''
+}
 
 function handleApply(call) {
     if (!isLoggedIn.value) {
@@ -88,10 +111,19 @@ async function fetchData() {
             programsApi.getOneByType(route.params.id, type),
             programsApi.getCallsByProgram(route.params.id)
         ])
+        if (progRes.data?.status !== 'APPROVED') {
+            program.value = null
+            calls.value = []
+            notFoundMessage.value = 'Програма недоступна для публічного перегляду'
+            return
+        }
         program.value = progRes.data
         calls.value = callsRes.data
     } catch (e) {
         console.error(e)
+        program.value = null
+        calls.value = []
+        notFoundMessage.value = 'Програму не знайдено або вона недоступна'
     } finally {
         loading.value = false
     }
@@ -143,6 +175,22 @@ function formatDate(date) {
 
 .header p {
     color: #6b7280;
+}
+
+.presented-by {
+    font-size: 0.875rem;
+    color: #475569;
+    margin-top: 0.75rem;
+}
+
+.presented-by__link {
+    color: #4f46e5;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.presented-by__link:hover {
+    text-decoration: underline;
 }
 
 .calls-section {

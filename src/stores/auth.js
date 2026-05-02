@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import api from '@/api/axios'
+import { authApi } from '@/api/auth'
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref(localStorage.getItem('token') || null)
@@ -46,6 +47,22 @@ export const useAuthStore = defineStore('auth', () => {
     })
   }
 
+  async function completeInvite(inviteToken, name, password) {
+    await api.post('/api/auth/complete-invite', {
+      inviteToken,
+      name,
+      password,
+    })
+  }
+
+  async function completeOrgMemberInvite(inviteToken, name, password) {
+    await authApi.completeOrgInvite({
+      inviteToken,
+      name,
+      password,
+    })
+  }
+
   function logout() {
     token.value = null
     user.value = null
@@ -64,5 +81,7 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
     forgotPassword,
     resetPassword,
+    completeInvite,
+    completeOrgMemberInvite,
   }
 })

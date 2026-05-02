@@ -29,6 +29,16 @@ const router = createRouter({
       name: 'reset-password',
       component: () => import('@/views/auth/ResetPasswordView.vue'),
     },
+    {
+      path: '/complete-registration',
+      name: 'complete-registration',
+      component: () => import('@/views/auth/CompleteRegistration.vue'),
+    },
+    {
+      path: '/complete-org-invite',
+      name: 'complete-org-invite',
+      component: () => import('@/views/auth/CompleteOrgInvite.vue'),
+    },
 
     {
       path: '/programs/:type',
@@ -45,6 +55,12 @@ const router = createRouter({
       name: 'public-organizations',
       meta: { title: 'Organizations' },
       component: () => import('@/views/public/Organizations.vue'),
+    },
+    {
+      path: '/organizations/:id',
+      name: 'public-organization',
+      meta: { title: 'Organization' },
+      component: () => import('@/views/public/OrganizationPublicProfile.vue'),
     },
     {
       path:'/mentors',
@@ -119,6 +135,12 @@ const router = createRouter({
           component: () => import('@/views/admin/AdminPrograms.vue'),
         },
         {
+          path: 'admin/program-review-queue',
+          name: 'admin-program-review-queue',
+          meta: { title: 'Черга Program B', requiresAdmin: true },
+          component: () => import('@/views/admin/ProgramReviewQueue.vue'),
+        },
+        {
           path: 'admin/organizations',
           name: 'admin-organizations',
           meta: { title: 'Організації', requiresAdmin: true },
@@ -126,7 +148,7 @@ const router = createRouter({
         },
         {
           path: 'admin/organizations/:id',
-          name: 'admin-organization-details',
+          name: 'OrganizationDetails',
           meta: { title: 'Organization details', requiresAdmin: true },
           component: () => import('@/views/admin/OrganizationDetails.vue'),
         },
@@ -147,6 +169,12 @@ const router = createRouter({
           name: 'org-profile',
           meta: { title: 'Профіль організації', requiresAnyRole: ['FIRM', 'FIRM_USER'] },
           component: () => import('@/views/organization/OrgProfileView.vue'),
+        },
+        {
+          path: 'programs/my',
+          name: 'my-programs',
+          meta: { title: 'Мої програми B', requiresRole: 'FIRM' },
+          component: () => import('@/views/programs/MyPrograms.vue'),
         },
         {
           path: 'mentor/my-mentorships',

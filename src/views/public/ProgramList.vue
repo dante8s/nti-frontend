@@ -10,8 +10,20 @@
         </div>
 
         <div v-else class="programs-grid">
-            <div v-for="program in programs" :key="program.id" class="program-card" :class="program.type.toLowerCase()">
+            <div v-for="program in approvedPrograms" :key="program.id" class="program-card" :class="program.type.toLowerCase()">
                 <h2>{{ program.name }}</h2>
+                <p
+                    v-if="showPresentedBy(program)"
+                    class="presented-by"
+                >
+                    Presented by:
+                    <router-link
+                        class="presented-by__link"
+                        :to="{ name: 'public-organization', params: { id: String(program.organizationId) } }"
+                    >
+                        {{ program.organizationName }}
+                    </router-link>
+                </p>
                 <p>{{ program.description }}</p>
                 <div class="card-footer">
                     <router-link :to="`/programs/${route.params.type}/${program.id}`" class="btn-primary">
@@ -31,15 +43,22 @@ import { programsApi } from '@/api/programs'
 const route = useRoute()
 const programs = ref([])
 const loading = ref(true)
+const approvedPrograms = computed(() => programs.value.filter((program) => program?.status === 'APPROVED'))
 
 const type = computed(() => route.params.type?.toUpperCase() || 'A')
 const programLabel = computed(() => type.value === 'A' ? 'Програма A' : 'Програма B')
+
+function showPresentedBy(program) {
+    return program?.type === 'PROGRAM_B'
+        && program.organizationId != null
+        && program.organizationId !== ''
+}
 
 async function fetchPrograms() {
     loading.value = true
     try {
         const res = await programsApi.getAllByType(type.value)
-        programs.value = res.data
+        programs.value = res.data || []
     } catch (e) {
         console.error('Помилка завантаження програм', e)
     } finally {
@@ -104,6 +123,22 @@ watch(() => route.params.type, () => {
     color: #4f46e5;
     margin-bottom: 0.5rem;
     text-transform: uppercase;
+}
+
+.presented-by {
+    font-size: 0.8125rem;
+    color: #475569;
+    margin: 0 0 0.5rem;
+}
+
+.presented-by__link {
+    color: #4f46e5;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.presented-by__link:hover {
+    text-decoration: underline;
 }
 
 h2 {

@@ -85,6 +85,11 @@ export const useOrganizationStore = defineStore('organization', () => {
     return response.data
   }
 
+  async function inviteMember(orgId, email) {
+    const response = await organizationsApi.inviteMember(orgId, email)
+    return response.data
+  }
+
   async function transferOwnership(id, memberId) {
     const response = await organizationsApi.transferOwnership(id, memberId)
     const updated = response.data
@@ -129,6 +134,7 @@ export const useOrganizationStore = defineStore('organization', () => {
     delete: remove,
     getMembers,
     addMember,
+    inviteMember,
     transferOwnership,
     removeMember,
     changeStatus,
