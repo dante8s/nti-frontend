@@ -6,6 +6,22 @@
             <p>Управління користувачами системи</p>
         </div>
 
+        <div class="invite-mentor-card">
+            <h2>Запросити ментора</h2>
+            <p>Надішліть запрошення на email для завершення реєстрації ментора.</p>
+
+            <form class="invite-mentor-form" @submit.prevent="inviteMentor">
+                <input v-model.trim="mentorEmail" type="email" placeholder="mentor@example.com" required />
+                <button type="submit" :disabled="isInviting || !mentorEmail">
+                    {{ isInviting ? 'Надсилання...' : 'Надіслати запрошення' }}
+                </button>
+            </form>
+
+            <div v-if="inviteError" class="invite-error">
+                {{ inviteError }}
+            </div>
+        </div>
+
         <!-- Вкладки -->
         <div class="tabs">
             <button :class="['tab', { active: activeTab === 'pending' }]" @click="activeTab = 'pending'">
@@ -210,6 +226,9 @@ const loadingAll = ref(false)
 const processing = ref(null)
 const search = ref('')
 const filterStatus = ref('')
+const mentorEmail = ref('')
+const isInviting = ref(false)
+const inviteError = ref('')
 
 const allRoles = [
     'STUDENT', 'FIRM', 'FIRM_USER',
@@ -283,6 +302,25 @@ async function loadAll() {
         showToast('Помилка завантаження', 'error')
     } finally {
         loadingAll.value = false
+    }
+}
+
+async function inviteMentor() {
+    if (!mentorEmail.value) {
+        return
+    }
+
+    inviteError.value = ''
+    isInviting.value = true
+    try {
+        await adminApi.inviteMentor(mentorEmail.value)
+        showToast(`Запрошення успішно надіслано на ${mentorEmail.value}`, 'success')
+        mentorEmail.value = ''
+    } catch (e) {
+        inviteError.value = e.response?.data?.message || e.response?.data || 'Помилка надсилання запрошення'
+        showToast(inviteError.value, 'error')
+    } finally {
+        isInviting.value = false
     }
 }
 
@@ -445,6 +483,53 @@ function formatDate(date) {
     gap: 0;
     border-bottom: 1px solid #e5e7eb;
     margin-bottom: 1.5rem;
+}
+
+.invite-mentor-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.invite-mentor-card h2 {
+    font-size: 1.1rem;
+    margin-bottom: 0.25rem;
+}
+
+.invite-mentor-card p {
+    color: #6b7280;
+    margin-bottom: 0.75rem;
+}
+
+.invite-mentor-form {
+    display: flex;
+    gap: 10px;
+}
+
+.invite-mentor-form input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 0.875rem;
+}
+
+.invite-mentor-form button {
+    padding: 8px 14px;
+    background: #4f46e5;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.875rem;
+}
+
+.invite-error {
+    margin-top: 0.5rem;
+    color: #b91c1c;
+    font-size: 0.875rem;
 }
 
 .tab {

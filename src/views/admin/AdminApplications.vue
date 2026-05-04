@@ -83,6 +83,7 @@
         <p class="modal-meta">
           {{ modal.row?.programName }} · {{ modal.row?.callTitle }}
         </p>
+        
         <p>
           Поточний статус:
           <strong>{{ statusLabel(modal.row?.status) }}</strong>
@@ -421,6 +422,7 @@ function notesFor(applicationId) {
 function openApplication(id) {
   router.push(`/applications/${id}`)
 }
+
 </script>
 
 <style scoped>
@@ -575,6 +577,8 @@ function openApplication(id) {
 .actions {
   text-align: right;
 }
+
+
 
 .btn-sm {
   padding: 0.45rem 0.85rem;

@@ -22,6 +22,8 @@ export const organizationsApi = {
 
   addMember: (id, data) => api.post(`/api/organizations/${id}/members`, data),
 
+  inviteMember: (orgId, email) => api.post(`/api/organizations/${orgId}/invite-member`, { email }),
+
   transferOwnership: (id, memberId) =>
     api.patch(`/api/organizations/${id}/transfer-ownership/${memberId}`),
 

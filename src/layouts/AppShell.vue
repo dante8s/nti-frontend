@@ -29,6 +29,7 @@ const adminNav = computed(() => {
       { to: '/app/admin/applications', label: 'Заявки', icon: '◆' },
       { to: '/app/admin/milestone-approvals', label: 'Milestone approvals', icon: '✓' },
       { to: '/app/admin/programs', label: 'Програми та виклики', icon: '◇' },
+      { to: '/app/admin/program-review-queue', label: 'Program B Review Queue', icon: '◬' },
       { to: '/app/admin/organizations', label: 'Організації', icon: '◈' },
       { to: '/app/admin/mentorships', label: 'Mentorships', icon: '✦'}
     )
@@ -48,7 +49,7 @@ const organizationNav = computed(() => {
   if (!isOrgUser.value || !firmChecked.value || !firmHasOrg.value) return []
   return [
     { to: '/app/org/profile', label: 'My Organization', icon: '◉' },
-    //{ to: '/app/org/programs', label: 'Organization Programs', icon: '◈' },
+    { to: '/app/programs/my', label: 'Program B Proposals', icon: '◈' },
   ]
 })
 

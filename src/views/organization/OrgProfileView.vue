@@ -113,6 +113,9 @@
         <div v-if="membersError" class="inline-error">
           {{ membersError }}
         </div>
+        <div v-if="membersSuccess" class="inline-success">
+          {{ membersSuccess }}
+        </div>
 
         <form v-if="canManageMembers" class="member-form" @submit.prevent="submitAddMember">
           <label class="field">
@@ -120,17 +123,8 @@
             <input v-model="addMember.email" type="email" placeholder="user@company.com" />
           </label>
 
-          <label class="field">
-            <span>Role</span>
-            <select v-model="addMember.role">
-              <option :value="orgStore.OrgMemberRole.MEMBER">
-                MEMBER
-              </option>
-            </select>
-          </label>
-
           <button type="submit" class="btn-primary" :disabled="memberSaving || !addMember.email.trim()">
-            {{ memberSaving ? 'Adding…' : 'Add member' }}
+            {{ memberSaving ? 'Inviting…' : 'Invite member' }}
           </button>
         </form>
 
@@ -207,6 +201,7 @@ const saveError = ref('')
 
 const membersLoading = ref(false)
 const membersError = ref('')
+const membersSuccess = ref('')
 const memberSaving = ref(false)
 
 const editMode = ref(false)
@@ -223,7 +218,6 @@ const profileForm = reactive({
 
 const addMember = reactive({
   email: '',
-  role: orgStore.OrgMemberRole.MEMBER,
 })
 
 const isAdmin = computed(() => auth.roles?.some((r) => r === 'ADMIN' || r === 'SUPER_ADMIN'))
@@ -332,17 +326,16 @@ async function submitAddMember() {
   if (!org.value?.id) return
   memberSaving.value = true
   membersError.value = ''
+  membersSuccess.value = ''
   try {
-    await orgStore.addMember(org.value.id, {
-      email: addMember.email?.trim(),
-      role: addMember.role,
-    })
+    await orgStore.inviteMember(org.value.id, addMember.email.trim())
+    membersSuccess.value = 'Користувача успішно запрошено'
     addMember.email = ''
     await refreshMembers()
   } catch (e) {
     membersError.value = e.response?.data?.message
       || (typeof e.response?.data === 'string' ? e.response.data : null)
-      || 'Failed to add member.'
+      || 'Failed to invite member.'
   } finally {
     memberSaving.value = false
   }
@@ -504,6 +497,15 @@ async function confirmTransferOwnership(m) {
   font-size: 0.9rem;
 }
 
+.inline-success {
+  margin: 0.75rem 0 0.35rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 12px;
+  background: #dcfce7;
+  color: #166534;
+  font-size: 0.9rem;
+}
+
 .form {
   display: flex;
   flex-direction: column;
@@ -583,7 +585,7 @@ async function confirmTransferOwnership(m) {
 
 .member-form {
   display: grid;
-  grid-template-columns: 1.5fr 0.7fr auto;
+  grid-template-columns: 1fr auto;
   gap: 0.85rem;
   align-items: end;
   margin: 0.75rem 0 1rem;

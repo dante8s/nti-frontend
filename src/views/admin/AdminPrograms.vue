@@ -1,7 +1,7 @@
 <template>
   <div class="page">
     <p class="lead">
-      Керуйте програмами A/B та викликами (дедлайни). Деактивація приховує програму з публічного каталогу.
+      Керуйте програмами A/B та викликами (дедлайни), а також відстежуйте поточний статус кожної програми.
     </p>
 
     <div class="tabs">
@@ -36,14 +36,23 @@
             <p class="desc">
               {{ p.description || '—' }}
             </p>
-            <span v-if="!p.isActive" class="badge-inactive">Неактивна</span>
+            <p v-if="programOrganizationLine(p)" class="program-org">
+              Організація:
+              <router-link
+                v-if="programOrganizationAdminLink(p)"
+                class="program-org__link"
+                :to="programOrganizationAdminLink(p)"
+                @click.stop
+              >
+                {{ programOrganizationName(p) }}
+              </router-link>
+              <span v-else>{{ programOrganizationName(p) }}</span>
+            </p>
+            <StatusBadge :status="p.status" :label="statusLabel(p.status)" />
           </div>
           <div class="program-card__actions">
             <button type="button" class="btn-sm" @click="openProgramModal(p)">
               Редагувати
-            </button>
-            <button v-if="p.isActive" type="button" class="btn-sm btn-sm--danger" @click="deactivateProgram(p)">
-              Деактивувати
             </button>
           </div>
         </div>
@@ -93,9 +102,9 @@
           <span>Опис</span>
           <textarea v-model="programModal.description" rows="3" />
         </label>
-        <label v-if="programModal.edit" class="field row">
-          <input id="active" v-model="programModal.isActive" type="checkbox">
-          <span for="active">Активна (видима в каталозі)</span>
+        <label v-if="programModal.edit" class="field">
+          <span>Поточний статус</span>
+          <StatusBadge :status="programModal.status" :label="statusLabel(programModal.status)" />
         </label>
         <div class="modal-actions">
           <button type="button" class="btn-secondary" @click="programModal.show = false">
@@ -148,6 +157,7 @@
 import { reactive, ref, watch } from 'vue'
 import { programsApi } from '@/api/programs'
 import { apiErrorMessage } from '@/utils/apiError'
+import StatusBadge from '@/components/StatusBadge.vue'
 
 const tab = ref('A')
 const programs = ref([])
@@ -162,7 +172,7 @@ const programModal = reactive({
   id: null,
   name: '',
   description: '',
-  isActive: true,
+  status: '',
 })
 
 const callModal = reactive({
@@ -222,13 +232,13 @@ function openProgramModal(p) {
     programModal.id = p.id
     programModal.name = p.name
     programModal.description = p.description || ''
-    programModal.isActive = p.isActive
+    programModal.status = p.status || ''
   } else {
     programModal.edit = false
     programModal.id = null
     programModal.name = ''
     programModal.description = ''
-    programModal.isActive = true
+    programModal.status = ''
   }
   programModal.show = true
 }
@@ -239,7 +249,6 @@ async function saveProgram() {
     name: programModal.name,
     description: programModal.description,
     type,
-    isActive: programModal.isActive,
   }
 
   try {
@@ -257,20 +266,32 @@ async function saveProgram() {
   }
 }
 
-async function deactivateProgram(p) {
-  if (!confirm(`Деактивувати «${p.name}»?`)) return
-  try {
-    await programsApi.update(p.id, {
-      name: p.name,
-      description: p.description,
-      type: p.type,
-      isActive: false,
-    })
-    showToast('Програму деактивовано', 'success')
-    await loadTab()
-  } catch (e) {
-    showToast(apiErrorMessage(e, 'Помилка'), 'error')
-  }
+function statusLabel(status) {
+  if (!status) return 'Невідомо'
+  return status
+    .toString()
+    .toLowerCase()
+    .split('_')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+}
+
+function programOrganizationId(p) {
+  return p?.organizationId ?? p?.organization_id ?? null
+}
+
+function programOrganizationName(p) {
+  return p?.organizationName ?? p?.organization_name ?? '—'
+}
+
+function programOrganizationLine(p) {
+  return programOrganizationName(p) !== '—' || programOrganizationAdminLink(p)
+}
+
+function programOrganizationAdminLink(p) {
+  const id = programOrganizationId(p)
+  if (id == null || id === '') return null
+  return { name: 'OrganizationDetails', params: { id: String(id) } }
 }
 
 /** Рядок для <input type="datetime-local"> у локальному часі браузера. */
@@ -452,17 +473,20 @@ function showToast(message, type = 'success') {
   line-height: 1.5;
 }
 
-.badge-inactive {
-  display: inline-block;
-  margin-top: 0.5rem;
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #b45309;
-  background: #ffedd5;
-  padding: 0.2rem 0.5rem;
-  border-radius: 6px;
+.program-org {
+  margin: 0.45rem 0 0;
+  font-size: 0.88rem;
+  color: #475569;
+}
+
+.program-org__link {
+  color: #4f46e5;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.program-org__link:hover {
+  text-decoration: underline;
 }
 
 .program-card__head {
@@ -487,11 +511,6 @@ function showToast(message, type = 'success') {
   font-weight: 600;
   font-size: 0.8rem;
   cursor: pointer;
-}
-
-.btn-sm--danger {
-  border-color: rgba(220, 38, 38, 0.35);
-  color: #b91c1c;
 }
 
 .btn-sm--warn {
