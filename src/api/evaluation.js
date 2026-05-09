@@ -18,6 +18,22 @@ function setItems(key, data) {
   localStorage.setItem(key, JSON.stringify(data))
 }
 
+function getPortalApplications() {
+  return JSON.parse(localStorage.getItem('mock_applications') || '[]')
+}
+
+function mapPortalAppToQueueRow(a) {
+  return {
+    id: a.id,
+    status: a.status,
+    applicantId: a.userId,
+    callId: Number(a.callId),
+    programType: a.programType,
+    programName: a.programName,
+    callTitle: a.callTitle,
+  }
+}
+
 function ensureSeedData() {
   if (!getItems(CRITERIA_KEY).length) {
     setItems(CRITERIA_KEY, [
@@ -47,7 +63,18 @@ export const evaluationApi = {
   getQueue: (callId) => {
     if (!MOCK_ENABLED) return api.get('/api/evaluation/queue', { params: { callId } })
     ensureSeedData()
-    const apps = getItems(APPS_KEY).filter((item) => item.callId === Number(callId))
+    const cid = Number(callId)
+    const fromPortal = getPortalApplications()
+      .filter(
+        (a) =>
+          Number(a.callId) === cid
+          && ['SUBMITTED', 'IN_REVIEW'].includes(a.status),
+      )
+      .map(mapPortalAppToQueueRow)
+    if (fromPortal.length) {
+      return ok(fromPortal)
+    }
+    const apps = getItems(APPS_KEY).filter((item) => item.callId === cid)
     return ok(apps)
   },
 

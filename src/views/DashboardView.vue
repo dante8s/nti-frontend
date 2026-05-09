@@ -10,6 +10,10 @@
       <p class="welcome__text">
         Це ваш кабінет NTI: швидкі дії та розділи залежно від ролі.
       </p>
+      <p v-if="leaderWelcomeLine" class="welcome__pill-line">
+        <span class="welcome__pill">Лідер команди</span>
+        {{ leaderWelcomeLine }}
+      </p>
     </section>
 
     <div class="grid">
@@ -42,6 +46,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import { hasStudentPortalAccess, hasTeamLeaderRole } from '@/utils/roles'
 
 const auth = useAuthStore()
 
@@ -49,11 +54,12 @@ const isSuperAdmin = computed(() => auth.roles?.includes('SUPER_ADMIN'))
 const isAdmin = computed(() =>
   auth.roles?.some((r) => r === 'ADMIN' || r === 'SUPER_ADMIN'),
 )
-const isStudent = computed(() => auth.roles?.includes('STUDENT'))
+const canStudentPortal = computed(() => hasStudentPortalAccess(auth.roles))
 const isEvaluator = computed(() => auth.roles?.includes('EVALUATOR'))
 
 const roleLabels = {
   STUDENT: 'Студент',
+  TEAM_LEADER: 'Лідер команди',
   FIRM: 'Компанія',
   FIRM_USER: 'Представник фірми',
   MENTOR: 'Ментор',
@@ -67,6 +73,11 @@ const rolesLine = computed(() =>
     .map((r) => roleLabels[r] || r)
     .join(', '),
 )
+
+const leaderWelcomeLine = computed(() => {
+  if (!hasTeamLeaderRole(auth.user?.roles)) return ''
+  return 'У вашому профілі активна роль лідера: запросіть учасників у «Моїй команді» та подайте заявку на програму від команди.'
+})
 
 const cards = computed(() => {
   const out = []
@@ -103,7 +114,7 @@ const cards = computed(() => {
     )
   }
 
-  if (isStudent.value) {
+  if (canStudentPortal.value || isSuperAdmin.value) {
     out.push(
       {
         to: '/app/my-applications',
@@ -126,12 +137,12 @@ const cards = computed(() => {
     )
   }
 
-  if (isEvaluator.value) {
+  if (isEvaluator.value || isSuperAdmin.value) {
     out.push(
       {
         to: '/app/evaluation',
         title: 'Оцінювання',
-        desc: 'Черга заявок, критерії та скоринг',
+        desc: 'Черга заявок, критерії, скоринг і рішення комісії',
         icon: '◌',
       },
       {
@@ -193,6 +204,31 @@ const cards = computed(() => {
   max-width: 36rem;
   color: #475569;
   line-height: 1.6;
+}
+
+.welcome__pill-line {
+  margin: 0.85rem 0 0;
+  max-width: 40rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.5rem 0.65rem;
+  font-size: 0.88rem;
+  color: #0f766e;
+  line-height: 1.5;
+}
+
+.welcome__pill {
+  flex-shrink: 0;
+  display: inline-block;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+  color: #065f46;
 }
 
 .grid {

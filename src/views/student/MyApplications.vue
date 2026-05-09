@@ -1,7 +1,8 @@
 <template>
   <div class="page">
     <p class="lead">
-      Тут відображаються ваші заявки та поточний етап розгляду.
+      Ваші заявки за програмами A та B: статуси узгоджені з процесом розгляду комісією (подання, розгляд, рішення або
+      повернення на доопрацювання з коментарем).
     </p>
 
     <div v-if="loading" class="state">
@@ -48,19 +49,19 @@
 
         <footer class="card__foot">
           <span class="muted">Оновлено: {{ formatDt(app.updatedAt) }}</span>
-          <div v-if="app.status === 'DRAFT'" class="draft-actions">
+          <div v-if="app.status === 'DRAFT' || app.status === 'NEEDS_REVISION'" class="draft-actions">
             <router-link
               :to="draftRoute(app)"
               class="link-continue"
             >
-              Продовжити чернетку →
+              {{ app.status === 'NEEDS_REVISION' ? 'Внести правки →' : 'Продовжити чернетку →' }}
             </router-link>
             <button
               class="submit-btn"
               :disabled="submittingId === app.id"
               @click="submitDraft(app.id)"
             >
-              {{ submittingId === app.id ? 'Відправлення...' : 'Відправити' }}
+              {{ submittingId === app.id ? 'Відправлення...' : app.status === 'NEEDS_REVISION' ? 'Надіслати повторно' : 'Відправити' }}
             </button>
           </div>
         </footer>
@@ -68,6 +69,22 @@
         <p v-if="app.adminComment" class="comment">
           <strong>Коментар:</strong> {{ app.adminComment }}
         </p>
+        <p v-if="app.status === 'APPROVED'" class="comment comment--ok">
+          <strong>Далі:</strong> заявка схвалена. Очікуйте онбординг від NTI та повідомлення про старт проєкту.
+        </p>
+        <div v-if="app.onboarding && app.status === 'APPROVED'" class="onboarding">
+          <p class="onboarding__title">
+            Онбординг: {{ app.onboarding.status }}
+          </p>
+          <p class="onboarding__meta">
+            Підтверджено: {{ app.onboarding.approvedBy }} · {{ formatDt(app.onboarding.approvedAt) }}
+          </p>
+          <ul class="onboarding__list">
+            <li v-for="step in app.onboarding.steps || []" :key="step.key">
+              {{ step.done ? '✓' : '•' }} {{ step.label }}
+            </li>
+          </ul>
+        </div>
       </article>
     </div>
   </div>
@@ -165,8 +182,12 @@ async function submitDraft(appId) {
     await applicationsApi.submit(appId)
     const res = await applicationsApi.getMy()
     items.value = res.data || []
-  } catch {
+  } catch (e) {
     error.value = 'Не вдалося відправити заявку'
+    const apiMessage = e?.response?.data?.message
+    if (apiMessage) {
+      error.value = apiMessage
+    }
   } finally {
     submittingId.value = null
   }
@@ -385,5 +406,36 @@ async function submitDraft(appId) {
   background: rgba(79, 70, 229, 0.06);
   font-size: 0.88rem;
   color: #334155;
+}
+
+.comment--ok {
+  background: rgba(5, 150, 105, 0.1);
+  color: #065f46;
+}
+
+.onboarding {
+  margin-top: 0.65rem;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  background: rgba(14, 116, 144, 0.08);
+  color: #0f172a;
+}
+
+.onboarding__title {
+  margin: 0;
+  font-weight: 700;
+}
+
+.onboarding__meta {
+  margin: 0.2rem 0 0.45rem;
+  color: #475569;
+  font-size: 0.82rem;
+}
+
+.onboarding__list {
+  margin: 0;
+  padding-left: 1rem;
+  color: #334155;
+  font-size: 0.84rem;
 }
 </style>

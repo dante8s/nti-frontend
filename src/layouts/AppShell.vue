@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { hasStudentPortalAccess, hasTeamLeaderRole } from '@/utils/roles'
 
 const auth = useAuthStore()
 const route = useRoute()
@@ -13,8 +14,21 @@ const isSuperAdmin = computed(() => auth.roles?.includes('SUPER_ADMIN'))
 const isAdmin = computed(() =>
   auth.roles?.some((r) => r === 'ADMIN' || r === 'SUPER_ADMIN'),
 )
-const isStudent = computed(() => auth.roles?.includes('STUDENT'))
+const canStudentPortal = computed(
+  () => hasStudentPortalAccess(auth.roles) || isSuperAdmin.value,
+)
 const isEvaluator = computed(() => auth.roles?.includes('EVALUATOR'))
+const showTeamLeaderBadge = computed(() => hasTeamLeaderRole(auth.roles))
+
+const studentNavGroupTitle = computed(() => {
+  if (showTeamLeaderBadge.value && hasStudentPortalAccess(auth.roles)) {
+    return 'Студентський портал'
+  }
+  if (showTeamLeaderBadge.value) {
+    return 'Лідер команди'
+  }
+  return 'Студент'
+})
 
 const adminNav = computed(() => {
   const items = []
@@ -38,7 +52,7 @@ const adminNav = computed(() => {
 })
 
 const studentNav = computed(() => {
-  if (!isStudent.value) return []
+  if (!canStudentPortal.value) return []
   return [
     { to: '/app/my-applications', label: 'Мої заявки', icon: '▸' },
     { to: '/app/my-profile', label: 'Мій профіль', icon: '◉' },
@@ -89,7 +103,12 @@ function isActive(path) {
         </RouterLink>
 
         <p v-if="studentNav.length" class="shell__group-label">
-          Студент
+          {{ studentNavGroupTitle }}
+          <span
+            v-if="showTeamLeaderBadge"
+            class="shell__group-tag"
+            title="Роль у системі: лідер команди"
+          >Лідер</span>
         </p>
         <RouterLink
           v-for="item in studentNav"
@@ -142,6 +161,9 @@ function isActive(path) {
       <div class="shell__user">
         <div class="shell__user-name">{{ auth.user?.name || 'Користувач' }}</div>
         <div class="shell__user-email">{{ auth.user?.email }}</div>
+        <div v-if="showTeamLeaderBadge" class="shell__role-row" aria-label="Додаткові ролі">
+          <span class="shell__pill shell__pill--leader">Лідер команди</span>
+        </div>
         <button type="button" class="shell__logout" @click="logout">
           Вийти
         </button>
@@ -236,6 +258,46 @@ function isActive(path) {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: #94a3b8;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.shell__group-tag {
+  display: inline-block;
+  padding: 0.12rem 0.42rem;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+  color: #065f46;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.shell__role-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.55rem;
+}
+
+.shell__pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.28rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.shell__pill--leader {
+  background: linear-gradient(135deg, #eef2ff, #e0e7ff);
+  color: #3730a3;
+  border: 1px solid rgba(79, 70, 229, 0.28);
 }
 
 .shell__link {

@@ -48,7 +48,7 @@
                 {{ row.programName }}
               </div>
               <div class="cell-meta">
-                {{ row.programType === 'PROGRAM_A' ? 'Програма A' : 'Програма B' }}
+                {{ row.programType === 'PROGRAM_A' || row.programType === 'A' ? 'Програма A' : 'Програма B' }}
               </div>
             </td>
             <td>{{ row.callTitle }}</td>
@@ -129,12 +129,14 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { applicationsApi } from '@/api/applications'
 import { adminAllowedNextStatuses, statusLabel } from '@/utils/applicationStatus'
+import { useAuthStore } from '@/stores/auth'
 
 const list = ref([])
 const loading = ref(true)
 const error = ref('')
 const search = ref('')
 const saving = ref(false)
+const auth = useAuthStore()
 
 const modal = reactive({
   show: false,
@@ -220,7 +222,12 @@ async function submitStatus() {
       modal.nextStatus,
       modal.comment?.trim() || null,
     )
-    showToast('Статус оновлено', 'success')
+    const isSuperAdmin = (auth.user?.roles || []).includes('SUPER_ADMIN')
+    if (modal.nextStatus === 'APPROVED' && isSuperAdmin) {
+      showToast('Схвалено SUPER_ADMIN: запущено онбординг проєкту', 'success')
+    } else {
+      showToast('Статус оновлено', 'success')
+    }
     modal.show = false
     await load()
   } catch (e) {

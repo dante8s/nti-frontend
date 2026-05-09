@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { hasStudentPortalAccess } from '@/utils/roles'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -75,6 +76,12 @@ const router = createRouter({
           component: () => import('@/views/student/TeamsPage.vue'),
         },
         {
+          path: 'member-profile/:userId',
+          name: 'member-profile',
+          meta: { title: 'Профіль учасника', requiresRole: 'STUDENT' },
+          component: () => import('@/views/student/MemberProfileView.vue'),
+        },
+        {
           path: 'apply/a/:callId',
           name: 'apply-a',
           meta: { title: 'Заявка — програма A', requiresRole: 'STUDENT' },
@@ -136,15 +143,34 @@ function hasAdminRole(roles) {
   return roles?.some((r) => r === 'ADMIN' || r === 'SUPER_ADMIN')
 }
 
-router.beforeEach((to) => {
-  const auth = useAuthStore()
+function isSuperAdmin(roles) {
+  return roles?.includes('SUPER_ADMIN')
+}
 
-  if (to.matched.some((r) => r.meta.requiresAuth) && !auth.isLoggedIn) {
+router.beforeEach(async (to) => {
+  const auth = useAuthStore()
+  const requiresAuth = to.matched.some((r) => r.meta.requiresAuth)
+
+  if (requiresAuth && !auth.isLoggedIn) {
     return { name: 'login' }
   }
 
+  if (requiresAuth && auth.isLoggedIn && !auth.sessionHydrated) {
+    await auth.hydrateSession()
+  }
+
+  const roles = auth.user?.roles || []
+  const superAdmin = isSuperAdmin(roles)
+
+  // SUPER_ADMIN gets full access across portal pages for testing/operations.
+  if (superAdmin) return true
+
   if (to.meta.requiresRole) {
-    const ok = auth.user?.roles?.includes(to.meta.requiresRole)
+    const required = to.meta.requiresRole
+    const ok =
+      required === 'STUDENT'
+        ? hasStudentPortalAccess(roles)
+        : roles.includes(required)
     if (!ok) {
       return { name: 'dashboard' }
     }
@@ -152,21 +178,20 @@ router.beforeEach((to) => {
 
   if (to.meta.requiresAnyRole) {
     const allowed = to.meta.requiresAnyRole
-    const userRoles = auth.user?.roles || []
-    const ok = allowed.some((role) => userRoles.includes(role))
+    const ok = allowed.some((role) => roles.includes(role))
     if (!ok) {
       return { name: 'dashboard' }
     }
   }
 
   if (to.meta.requiresSuperAdmin) {
-    if (!auth.user?.roles?.includes('SUPER_ADMIN')) {
+    if (!superAdmin) {
       return { name: 'dashboard' }
     }
   }
 
   if (to.meta.requiresAdmin) {
-    if (!hasAdminRole(auth.user?.roles)) {
+    if (!hasAdminRole(roles)) {
       return { name: 'dashboard' }
     }
   }

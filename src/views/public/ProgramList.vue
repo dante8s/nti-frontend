@@ -1,8 +1,8 @@
 <template>
     <div class="page">
         <div class="hero">
-            <h1>{{ programLabel }}</h1>
-            <p>Оберіть {{ programLabel.toLowerCase() }} яка підходить саме вам</p>
+            <h1>{{ catalogTitle }}</h1>
+            <p>Оберіть програму, щоб переглянути виклики й подати заявку.</p>
         </div>
 
         <div v-if="loading" class="loading">
@@ -33,7 +33,9 @@ const programs = ref([])
 const loading = ref(true)
 
 const type = computed(() => route.params.type?.toUpperCase() || 'A')
-const programLabel = computed(() => type.value === 'A' ? 'Програма A' : 'Програма B')
+const catalogTitle = computed(() =>
+  type.value === 'A' ? 'Каталог програми A' : 'Каталог програми B',
+)
 
 async function fetchPrograms() {
     loading.value = true

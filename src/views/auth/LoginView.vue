@@ -17,7 +17,7 @@
                 </div>
 
                 <!-- CAPTCHA -->
-                <div v-if="!AUTH_MOCK_ENABLED" class="field">
+                <div class="field">
                     <div id="recaptcha-login" class="g-recaptcha"
                         data-sitekey="6Lfl56gsAAAAAOBIsD-BT1Krdd9aGvTz7iWIZnDL"></div>
                     <span v-if="captchaError" class="error-text">
@@ -26,9 +26,6 @@
                     <div v-if="captchaLoadError" class="error">
                         Не вдалося завантажити капчу. Перевірте, що ви відкрили сайт через http://localhost:5173.
                     </div>
-                </div>
-                <div v-else class="mock-note">
-                    Mock-режим активний: вхід працює без backend і CAPTCHA.
                 </div>
 
                 <button type="submit" :disabled="loading">
@@ -58,7 +55,6 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const SITE_KEY = '6Lfl56gsAAAAAOBIsD-BT1Krdd9aGvTz7iWIZnDL'
-const AUTH_MOCK_ENABLED = import.meta.env.VITE_ENABLE_AUTH_MOCK === 'true'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -72,8 +68,6 @@ const captchaLoadError = ref(false)
 const captchaToken = ref('')
 
 onMounted(() => {
-    if (AUTH_MOCK_ENABLED) return
-
     const tryRender = setInterval(() => {
         if (window.grecaptcha?.render) {
             clearInterval(tryRender)
@@ -102,7 +96,7 @@ onMounted(() => {
 })
 
 async function handleLogin() {
-    if (!AUTH_MOCK_ENABLED && !captchaToken.value) {
+    if (!captchaToken.value) {
         captchaError.value = true
         return
     }
@@ -210,12 +204,4 @@ a {
     color: #4f46e5;
 }
 
-.mock-note {
-    margin-top: 0.25rem;
-    border-radius: 8px;
-    padding: 8px 10px;
-    font-size: 0.85rem;
-    background: #eef2ff;
-    color: #3730a3;
-}
 </style>

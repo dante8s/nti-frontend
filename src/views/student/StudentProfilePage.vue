@@ -20,8 +20,6 @@ const message = ref('')
 const messageType = ref('info')
 const selectedFile = ref(null)
 
-const userIdInput = ref(auth.user?.id ? String(auth.user.id) : '')
-
 const form = reactive({
   studyProgram: '',
   yearOfStudy: '',
@@ -31,17 +29,30 @@ const form = reactive({
   profileAverageGrade: '',
 })
 
-const parsedUserId = computed(() => Number(userIdInput.value))
-const canUseUserId = computed(
-  () => Number.isFinite(parsedUserId.value) && parsedUserId.value > 0,
-)
-const cvHref = computed(() =>
-  canUseUserId.value ? getCvUrl(parsedUserId.value) : '#',
-)
+const parsedUserId = computed(() => Number(auth.user?.id))
+const cvHref = computed(() => getCvUrl(parsedUserId.value > 0 ? parsedUserId.value : null))
 
 function setMessage(text, type = 'info') {
   message.value = text
   messageType.value = type
+}
+
+function extractApiError(error, fallback) {
+  const status = error?.response?.status
+  const payload = error?.response?.data
+  const apiMessage =
+    payload?.error || payload?.message || (typeof payload === 'string' ? payload : '')
+
+  if (status === 401) return 'Сесія закінчилась. Увійдіть у систему знову.'
+  if (status === 403) {
+    return (
+      apiMessage
+      || 'Немає доступу до профілю. Для цієї сторінки потрібна роль STUDENT/ADMIN.'
+    )
+  }
+  if (status === 404) return apiMessage || 'Профіль не знайдено.'
+  if (status) return apiMessage || `${fallback} (HTTP ${status})`
+  return apiMessage || fallback
 }
 
 function clearForm() {
@@ -65,7 +76,7 @@ function syncForm(profile) {
 
 function buildPayload() {
   return {
-    userId: parsedUserId.value,
+    userId: parsedUserId.value > 0 ? parsedUserId.value : null,
     studyProgram: form.studyProgram,
     yearOfStudy: form.yearOfStudy === '' ? null : Number(form.yearOfStudy),
     skills: form.skills,
@@ -77,14 +88,10 @@ function buildPayload() {
 }
 
 async function loadProfile() {
-  if (!canUseUserId.value) {
-    setMessage('Не знайдено user id. Увійдіть ще раз або вкажіть id вручну.', 'error')
-    return
-  }
   loading.value = true
   setMessage('')
   try {
-    const profile = await getProfile(parsedUserId.value)
+    const profile = await getProfile(parsedUserId.value > 0 ? parsedUserId.value : null)
     syncForm(profile)
     profileExists.value = true
     setMessage('Профіль завантажено.', 'success')
@@ -95,29 +102,26 @@ async function loadProfile() {
       setMessage('Профіль ще не створено. Заповніть поля та натисніть "Зберегти".')
       return
     }
-    setMessage('Не вдалося завантажити профіль.', 'error')
+    setMessage(extractApiError(error, 'Не вдалося завантажити профіль.'), 'error')
   } finally {
     loading.value = false
   }
 }
 
 async function saveProfile() {
-  if (!canUseUserId.value) {
-    setMessage('Вкажіть коректний user id.', 'error')
-    return
-  }
   saving.value = true
   setMessage('')
   try {
     const payload = buildPayload()
+    const userId = parsedUserId.value > 0 ? parsedUserId.value : null
     const profile = profileExists.value
-      ? await updateProfile(parsedUserId.value, payload)
+      ? await updateProfile(userId, payload)
       : await createProfile(payload)
     syncForm(profile)
     profileExists.value = true
     setMessage('Профіль успішно збережено.', 'success')
-  } catch {
-    setMessage('Не вдалося зберегти профіль.', 'error')
+  } catch (error) {
+    setMessage(extractApiError(error, 'Не вдалося зберегти профіль.'), 'error')
   } finally {
     saving.value = false
   }
@@ -139,10 +143,6 @@ function onFilePicked(event) {
 }
 
 async function submitCv() {
-  if (!canUseUserId.value) {
-    setMessage('Вкажіть коректний user id.', 'error')
-    return
-  }
   if (!selectedFile.value) {
     setMessage('Спочатку виберіть PDF файл.', 'error')
     return
@@ -150,28 +150,24 @@ async function submitCv() {
   uploading.value = true
   setMessage('')
   try {
-    await uploadCv(parsedUserId.value, selectedFile.value)
+    await uploadCv(parsedUserId.value > 0 ? parsedUserId.value : null, selectedFile.value)
     selectedFile.value = null
     setMessage('CV успішно завантажено.', 'success')
-  } catch {
-    setMessage('Не вдалося завантажити CV.', 'error')
+  } catch (error) {
+    setMessage(extractApiError(error, 'Не вдалося завантажити CV.'), 'error')
   } finally {
     uploading.value = false
   }
 }
 
 async function removeCv() {
-  if (!canUseUserId.value) {
-    setMessage('Вкажіть коректний user id.', 'error')
-    return
-  }
   deleting.value = true
   setMessage('')
   try {
-    await deleteCv(parsedUserId.value)
+    await deleteCv(parsedUserId.value > 0 ? parsedUserId.value : null)
     setMessage('CV видалено.', 'success')
-  } catch {
-    setMessage('Не вдалося видалити CV.', 'error')
+  } catch (error) {
+    setMessage(extractApiError(error, 'Не вдалося видалити CV.'), 'error')
   } finally {
     deleting.value = false
   }
@@ -182,22 +178,6 @@ onMounted(loadProfile)
 
 <template>
   <div class="page">
-    <p class="lead">Ваш профіль студента: базові дані, навички та резюме.</p>
-
-    <article class="card">
-      <h2 class="title">Мій профіль</h2>
-      <div class="grid two">
-        <div>
-          <label class="label">User ID</label>
-          <input v-model="userIdInput" type="number" min="1" placeholder="Напр. 12" />
-        </div>
-        <div class="actions-top">
-          <button class="btn ghost" :disabled="loading" @click="loadProfile">
-            {{ loading ? 'Завантаження...' : 'Оновити профіль' }}
-          </button>
-        </div>
-      </div>
-    </article>
 
     <article class="card">
       <h3 class="title-sm">Дані профілю</h3>
@@ -250,7 +230,6 @@ onMounted(loadProfile)
         </button>
       </div>
       <div class="row">
-        <a class="link" :href="cvHref" target="_blank" rel="noreferrer">Відкрити поточне CV</a>
         <button class="btn danger" :disabled="deleting" @click="removeCv">
           {{ deleting ? 'Видалення...' : 'Видалити CV' }}
         </button>
@@ -400,6 +379,35 @@ textarea:focus {
 .notice--info {
   background: #eef2ff;
   color: #3730a3;
+}
+
+.profile-intro {
+  margin-bottom: 0.85rem;
+}
+
+.session-id-line {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #334155;
+}
+
+.session-id-line.muted {
+  color: #64748b;
+}
+
+.id-badge {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.78rem;
+  background: rgba(79, 70, 229, 0.1);
+  color: #4338ca;
+}
+
+.grid.two.grid--solo {
+  grid-template-columns: 1fr;
 }
 
 @media (max-width: 860px) {
