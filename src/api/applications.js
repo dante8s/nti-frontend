@@ -120,6 +120,72 @@ export const applicationsApi = {
     return mockResponse(one)
   },
 
+  /** Alias для екранів команди (getOne). */
+  getById: (id) => {
+    if (!MOCK_ENABLED) return api.get(`/api/applications/${id}`)
+    const one = getMockApps().find((a) => a.id === Number(id)) || null
+    return mockResponse(one)
+  },
+
+  getDocumentStatus: (applicationId) => {
+    if (!MOCK_ENABLED) {
+      return api.get(`/api/applications/${applicationId}/documents/status`)
+    }
+    const app = getMockApps().find((a) => a.id === Number(applicationId))
+    if (!app) return mockResponse([])
+    const types = requiredDocumentTypes(app.programType)
+    const present = getAttachmentTypes(app.payload)
+    const rows = types.map((t) => ({
+      documentType: t,
+      label: t,
+      description: '',
+      uploaded: present.includes(t),
+      fileName: present.includes(t) ? `${String(t).toLowerCase()}.pdf` : undefined,
+    }))
+    return mockResponse(rows)
+  },
+
+  uploadDocument: (applicationId, documentType, file, onProgress) => {
+    if (!MOCK_ENABLED) {
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('documentType', documentType)
+      return api.post(`/api/applications/${applicationId}/documents`, fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (e) => {
+          if (onProgress && e.lengthComputable) {
+            onProgress(Math.round((e.loaded * 100) / e.total))
+          }
+        },
+      })
+    }
+    return new Promise((resolve, reject) => {
+      if (onProgress) onProgress(30)
+      const apps = getMockApps()
+      const idx = apps.findIndex((a) => a.id === Number(applicationId))
+      if (idx < 0) {
+        reject(new Error('Application not found'))
+        return
+      }
+      const payload = apps[idx].payload || {}
+      const prev = Array.isArray(payload.attachments) ? payload.attachments : []
+      const next = [
+        ...prev.filter((x) => x.type !== documentType),
+        {
+          type: documentType,
+          fileName: file.name,
+          size: file.size,
+          mimeType: file.type || 'application/octet-stream',
+        },
+      ]
+      apps[idx].payload = { ...payload, attachments: next }
+      apps[idx].updatedAt = nowIso()
+      setMockApps(apps)
+      if (onProgress) onProgress(100)
+      setTimeout(() => resolve(mockResponse({ ok: true })), 40)
+    })
+  },
+
   // ADMIN
   getAll: () => {
     if (!MOCK_ENABLED) return api.get('/api/admin/applications')

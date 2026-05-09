@@ -1,131 +1,230 @@
 <template>
   <div class="page">
+    <h1>Мої заявки</h1>
     <p class="lead">
       Ваші заявки за програмами A та B: статуси узгоджені з процесом розгляду комісією (подання, розгляд, рішення або
       повернення на доопрацювання з коментарем).
     </p>
 
-    <div v-if="loading" class="state">
-      Завантаження…
+    <div v-if="loading" class="loading">
+      Завантаження...
     </div>
-    <div v-else-if="error" class="state state--error">
-      {{ error }}
-    </div>
-    <div v-else-if="items.length === 0" class="empty-card">
-      <p>Ви ще не подали жодної заявки.</p>
-      <router-link to="/programs/a" class="link-btn">
+
+    <div v-else-if="applications.length === 0" class="empty">
+      <p>У вас поки немає заявок</p>
+      <router-link to="/programs/a" class="btn-go">
         Переглянути програми
       </router-link>
     </div>
 
-    <div v-else class="grid">
-      <article v-for="app in items" :key="app.id" class="card">
-        <header class="card__head">
-          <div>
-            <h2 class="card__title">
-              {{ app.programName }}
-            </h2>
-            <p class="card__sub">
-              {{ app.callTitle }}
-            </p>
-          </div>
-          <span class="pill" :class="pillClass(app.status)">{{ statusLabel(app.status) }}</span>
-        </header>
+    <div v-else class="layout">
 
-        <div class="timeline" aria-hidden="true">
-          <div
-            v-for="step in timelineSteps(app.status)"
-            :key="step.key"
-            class="timeline__step"
-          >
-            <div
-              class="timeline__dot"
-              :data-done="step.done"
-              :data-current="step.current"
-            />
-            <span class="timeline__label">{{ step.label }}</span>
+      <!-- Список заявок -->
+      <div class="list">
+        <div v-for="app in applications" :key="app.id" class="app-card" :class="{
+          active: selected?.id === app.id,
+          [statusClass(app.status)]: true
+        }" @click="select(app)">
+          <div class="card-top">
+            <span class="program-tag">
+              {{ app.programType === 'PROGRAM_A'
+                ? 'Програма A' : 'Програма B' }}
+            </span>
+            <span class="status-tag" :class="statusClass(app.status)">
+              {{ statusLabel(app.status) }}
+            </span>
+          </div>
+          <div class="card-title">{{ app.callTitle }}</div>
+          <div class="card-sub">{{ app.programName }}</div>
+          <div class="card-date">
+            {{ formatDate(app.createdAt) }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Деталі -->
+      <div v-if="selected" class="detail">
+
+        <div class="detail-head">
+          <div>
+            <h2>{{ selected.callTitle }}</h2>
+            <div class="detail-sub">
+              {{ selected.programName }}
+            </div>
+          </div>
+          <span class="status-tag large" :class="statusClass(selected.status)">
+            {{ statusLabel(selected.status) }}
+          </span>
+        </div>
+
+        <!-- Коментар адміна -->
+        <div v-if="selected.adminComment" class="admin-comment">
+          <div class="comment-label">
+            💬 Коментар від адміністратора
+          </div>
+          <div class="comment-text">
+            {{ selected.adminComment }}
           </div>
         </div>
 
-        <footer class="card__foot">
-          <span class="muted">Оновлено: {{ formatDt(app.updatedAt) }}</span>
-          <div v-if="app.status === 'DRAFT' || app.status === 'NEEDS_REVISION'" class="draft-actions">
-            <router-link
-              :to="draftRoute(app)"
-              class="link-continue"
-            >
-              {{ app.status === 'NEEDS_REVISION' ? 'Внести правки →' : 'Продовжити чернетку →' }}
-            </router-link>
-            <button
-              class="submit-btn"
-              :disabled="submittingId === app.id"
-              @click="submitDraft(app.id)"
-            >
-              {{ submittingId === app.id ? 'Відправлення...' : app.status === 'NEEDS_REVISION' ? 'Надіслати повторно' : 'Відправити' }}
-            </button>
-          </div>
-        </footer>
+        <!-- Кнопка редагувати якщо DRAFT -->
+        <div v-if="selected.status === 'DRAFT'
+          || selected.status === 'NEEDS_REVISION'" class="edit-section">
+          <router-link
+            :to="{
+              name: selected.programType === 'PROGRAM_A' ? 'apply-a' : 'apply-b',
+              params: { callId: selected.callId },
+            }"
+            class="btn-edit"
+          >
+            ✏️ Редагувати заявку
+          </router-link>
+        </div>
 
-        <p v-if="app.adminComment" class="comment">
-          <strong>Коментар:</strong> {{ app.adminComment }}
-        </p>
-        <p v-if="app.status === 'APPROVED'" class="comment comment--ok">
+        <!-- Документи -->
+        <DocumentUpload :key="selected.id" :application-id="selected.id" :application-status="selected.status"
+          @change="refreshSelected" />
+
+        <!-- Кнопка відправити -->
+        <div v-if="selected.status === 'DRAFT'
+          || selected.status === 'NEEDS_REVISION'" class="submit-section">
+          <div v-if="submitError" class="submit-error">
+            {{ submitError }}
+          </div>
+          <button class="btn-submit" :disabled="submitting" @click="submitApp">
+            {{ submitting
+              ? 'Відправка...'
+              : selected.status === 'NEEDS_REVISION'
+                ? '↩ Відправити виправлену заявку'
+                : '📤 Відправити заявку' }}
+          </button>
+        </div>
+
+        <!-- Таймлайн -->
+        <StatusTimeline :key="'audit-' + selected.id" :application-id="selected.id" ref="timelineRef" />
+
+        <p v-if="selected.status === 'APPROVED'" class="comment comment--ok">
           <strong>Далі:</strong> заявка схвалена. Очікуйте онбординг від NTI та повідомлення про старт проєкту.
         </p>
-        <div v-if="app.onboarding && app.status === 'APPROVED'" class="onboarding">
+        <div v-if="selected.onboarding && selected.status === 'APPROVED'" class="onboarding">
           <p class="onboarding__title">
-            Онбординг: {{ app.onboarding.status }}
+            Онбординг: {{ selected.onboarding.status }}
           </p>
           <p class="onboarding__meta">
-            Підтверджено: {{ app.onboarding.approvedBy }} · {{ formatDt(app.onboarding.approvedAt) }}
+            Підтверджено: {{ selected.onboarding.approvedBy }} · {{ formatDt(selected.onboarding.approvedAt) }}
           </p>
           <ul class="onboarding__list">
-            <li v-for="step in app.onboarding.steps || []" :key="step.key">
+            <li v-for="step in selected.onboarding.steps || []" :key="step.key">
               {{ step.done ? '✓' : '•' }} {{ step.label }}
             </li>
           </ul>
         </div>
-      </article>
+
+      </div>
+
+      <div v-else class="detail empty-detail">
+        <p>Оберіть заявку зі списку</p>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { applicationsApi } from '@/api/applications'
-import { statusLabel } from '@/utils/applicationStatus'
+import DocumentUpload from '@/components/DocumentUpload.vue'
+import StatusTimeline from '@/components/StatusTimeline.vue'
 
-const items = ref([])
+const applications = ref([])
+const selected = ref(null)
 const loading = ref(true)
-const submittingId = ref(null)
-const error = ref('')
+const submitting = ref(false)
+const submitError = ref('')
+const timelineRef = ref(null)
 
-onMounted(async () => {
+onMounted(load)
+
+async function load() {
+  loading.value = true
   try {
     const res = await applicationsApi.getMy()
-    items.value = res.data || []
+    applications.value = res.data
   } catch (e) {
-    error.value = 'Не вдалося завантажити заявки'
+    console.error(e)
   } finally {
     loading.value = false
   }
-})
-
-function pillClass(status) {
-  const map = {
-    DRAFT: 'pill--muted',
-    SUBMITTED: 'pill--info',
-    IN_REVIEW: 'pill--warn',
-    NEEDS_REVISION: 'pill--orange',
-    APPROVED: 'pill--ok',
-    REJECTED: 'pill--bad',
-  }
-  return map[status] || 'pill--muted'
 }
 
-function formatDt(iso) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleString('uk-UA', {
+function select(app) {
+  selected.value = app
+  submitError.value = ''
+}
+
+async function refreshSelected() {
+  if (!selected.value) return
+  try {
+    const res = await applicationsApi.getById(selected.value.id)
+    selected.value = res.data
+    // Оновлюємо також в списку
+    const idx = applications.value
+      .findIndex(a => a.id === res.data.id)
+    if (idx !== -1) {
+      applications.value[idx] = res.data
+    }
+  } catch (e) {
+    console.error(e)
+  }
+}
+
+async function submitApp() {
+  submitError.value = ''
+  submitting.value = true
+  try {
+    const res = await applicationsApi
+      .submit(selected.value.id)
+    selected.value = res.data
+    const idx = applications.value
+      .findIndex(a => a.id === res.data.id)
+    if (idx !== -1) {
+      applications.value[idx] = res.data
+    }
+    // Оновлюємо таймлайн
+    if (timelineRef.value) {
+      timelineRef.value.reload()
+    }
+  } catch (e) {
+    submitError.value =
+      e.response?.data || 'Помилка при відправці'
+  } finally {
+    submitting.value = false
+  }
+}
+
+function statusClass(s) {
+  return s?.toLowerCase().replace('_', '-') || ''
+}
+
+function statusLabel(status) {
+  return {
+    DRAFT: 'Чернетка',
+    SUBMITTED: 'Відправлена',
+    IN_REVIEW: 'На розгляді',
+    NEEDS_REVISION: 'Потрібна правка',
+    APPROVED: 'Схвалена',
+    REJECTED: 'Відхилена'
+  }[status] || status
+}
+
+function formatDate(date) {
+  return new Date(date).toLocaleDateString('uk-UA', {
+    day: '2-digit', month: 'short', year: 'numeric'
+  })
+}
+
+function formatDt(value) {
+  if (!value) return '—'
+  return new Date(value).toLocaleString('uk-UA', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -133,284 +232,283 @@ function formatDt(iso) {
     minute: '2-digit',
   })
 }
-
-function timelineSteps(status) {
-  const lastLabel =
-    status === 'APPROVED'
-      ? 'Схвалено'
-      : status === 'REJECTED'
-        ? 'Відхилено'
-        : status === 'NEEDS_REVISION'
-          ? 'Потрібні зміни'
-          : 'Рішення'
-
-  const phase = (s) => {
-    if (s === 'DRAFT') return 0
-    if (s === 'SUBMITTED') return 1
-    if (s === 'IN_REVIEW') return 2
-    if (s === 'NEEDS_REVISION' || s === 'APPROVED' || s === 'REJECTED') return 3
-    return 0
-  }
-
-  const p = phase(status)
-
-  return [
-    { key: 't1', label: 'Чернетка', done: p > 0, current: status === 'DRAFT' },
-    { key: 't2', label: 'Подано', done: p > 1, current: status === 'SUBMITTED' },
-    { key: 't3', label: 'На розгляді', done: p > 2, current: status === 'IN_REVIEW' },
-    {
-      key: 't4',
-      label: lastLabel,
-      done: status === 'APPROVED' || status === 'REJECTED',
-      current:
-        status === 'NEEDS_REVISION'
-        || status === 'APPROVED'
-        || status === 'REJECTED',
-    },
-  ]
-}
-
-function draftRoute(app) {
-  const t = (app.programType || '').includes('A') ? 'a' : 'b'
-  return { name: `apply-${t}`, params: { callId: app.callId } }
-}
-
-async function submitDraft(appId) {
-  submittingId.value = appId
-  error.value = ''
-  try {
-    await applicationsApi.submit(appId)
-    const res = await applicationsApi.getMy()
-    items.value = res.data || []
-  } catch (e) {
-    error.value = 'Не вдалося відправити заявку'
-    const apiMessage = e?.response?.data?.message
-    if (apiMessage) {
-      error.value = apiMessage
-    }
-  } finally {
-    submittingId.value = null
-  }
-}
 </script>
 
 <style scoped>
 .page {
-  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+h1 {
+  font-size: 1.75rem;
+  margin-bottom: 0.5rem;
 }
 
 .lead {
-  margin: 0 0 1.25rem;
-  color: #475569;
-  line-height: 1.6;
-}
-
-.state {
-  text-align: center;
-  padding: 2rem;
+  margin: 0 0 1.5rem;
+  max-width: 48rem;
   color: #64748b;
+  line-height: 1.55;
+  font-size: 0.95rem;
 }
 
-.state--error {
-  color: #b91c1c;
+.layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 1.5rem;
+  align-items: start;
 }
 
-.empty-card {
-  text-align: center;
-  padding: 2.5rem 1.5rem;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px dashed rgba(79, 70, 229, 0.25);
-}
-
-.empty-card p {
-  margin: 0 0 1rem;
-  color: #64748b;
-}
-
-.link-btn {
-  display: inline-flex;
-  padding: 0.65rem 1.2rem;
-  border-radius: 999px;
-  background: #4f46e5;
-  color: white;
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.grid {
+.list {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 8px;
 }
 
-.card {
-  padding: 1.35rem 1.5rem;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid rgba(79, 70, 229, 0.1);
-  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.06);
+.app-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+  border-left: 4px solid #e5e7eb;
+  background: white;
+  transition: all 0.15s;
 }
 
-.card__head {
+.app-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.app-card.active {
+  border-color: #4f46e5;
+  background: #f5f3ff;
+}
+
+.app-card.draft {
+  border-left-color: #9ca3af;
+}
+
+.app-card.submitted {
+  border-left-color: #3b82f6;
+}
+
+.app-card.in-review {
+  border-left-color: #f59e0b;
+}
+
+.app-card.needs-revision {
+  border-left-color: #ef4444;
+}
+
+.app-card.approved {
+  border-left-color: #10b981;
+}
+
+.app-card.rejected {
+  border-left-color: #6b7280;
+}
+
+.card-top {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 1rem;
-  margin-bottom: 1.25rem;
+  margin-bottom: 4px;
 }
 
-.card__title {
-  margin: 0;
-  font-size: 1.15rem;
-  color: #0f172a;
+.program-tag {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #4f46e5;
+  text-transform: uppercase;
 }
 
-.card__sub {
-  margin: 0.35rem 0 0;
-  color: #64748b;
-  font-size: 0.92rem;
+.card-title {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #111827;
+  margin-bottom: 2px;
 }
 
-.pill {
-  flex-shrink: 0;
-  padding: 0.3rem 0.75rem;
-  border-radius: 999px;
+.card-sub {
   font-size: 0.78rem;
-  font-weight: 700;
+  color: #6b7280;
+  margin-bottom: 4px;
 }
 
-.pill--muted {
-  background: #f1f5f9;
-  color: #475569;
+.card-date {
+  font-size: 0.75rem;
+  color: #9ca3af;
 }
 
-.pill--info {
-  background: #e0e7ff;
-  color: #3730a3;
+.status-tag {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-weight: 500;
 }
 
-.pill--warn {
+.status-tag.large {
+  font-size: 0.875rem;
+  padding: 4px 12px;
+}
+
+.draft {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.submitted {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.in-review {
   background: #fef3c7;
   color: #92400e;
 }
 
-.pill--orange {
-  background: #ffedd5;
-  color: #9a3412;
-}
-
-.pill--ok {
-  background: #d1fae5;
-  color: #065f46;
-}
-
-.pill--bad {
+.needs-revision {
   background: #fee2e2;
   color: #991b1b;
 }
 
-.timeline {
+.approved {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.rejected {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.detail {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.detail-head {
   display: flex;
+  justify-content: space-between;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.35rem;
-  position: relative;
-  padding: 0.25rem 0 0.5rem;
+  margin-bottom: 1rem;
 }
 
-.timeline__step {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  position: relative;
-  min-width: 0;
+.detail-head h2 {
+  font-size: 1.1rem;
+  margin: 0 0 4px;
 }
 
-.timeline__dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: #e2e8f0;
-  border: 2px solid #cbd5e1;
-  z-index: 1;
+.detail-sub {
+  font-size: 0.8rem;
+  color: #6b7280;
 }
 
-.timeline__dot[data-done='true'] {
-  background: #4f46e5;
-  border-color: #4338ca;
+.admin-comment {
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 1rem;
 }
 
-.timeline__dot[data-current='true'] {
-  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.25);
-}
-
-.timeline__label {
-  margin-top: 0.4rem;
-  font-size: 0.68rem;
+.comment-label {
   font-weight: 600;
-  color: #64748b;
-  line-height: 1.2;
+  font-size: 0.8rem;
+  color: #92400e;
+  margin-bottom: 4px;
 }
 
-.card__foot {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 1rem;
-  padding-top: 0.85rem;
-  border-top: 1px solid rgba(15, 23, 42, 0.06);
+.comment-text {
+  font-size: 0.875rem;
+  color: #374151;
 }
 
-.muted {
-  font-size: 0.82rem;
-  color: #94a3b8;
+.edit-section {
+  margin-bottom: 1rem;
 }
 
-.link-continue {
-  font-weight: 600;
-  color: #4f46e5;
+.btn-edit {
+  display: inline-block;
+  padding: 8px 16px;
+  background: #f3f4f6;
+  color: #374151;
+  border-radius: 8px;
   text-decoration: none;
+  font-size: 0.875rem;
 }
 
-.draft-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
+.submit-section {
+  margin-top: 1rem;
 }
 
-.submit-btn {
+.submit-error {
+  background: #fee2e2;
+  color: #dc2626;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  margin-bottom: 8px;
+}
+
+.btn-submit {
+  width: 100%;
+  padding: 10px;
+  background: #10b981;
+  color: white;
   border: none;
-  border-radius: 999px;
-  background: #4338ca;
-  color: #fff;
-  font-weight: 700;
-  font-size: 0.78rem;
-  padding: 0.38rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
   cursor: pointer;
 }
 
-.submit-btn:disabled {
-  opacity: 0.65;
+.btn-submit:disabled {
+  opacity: 0.5;
   cursor: not-allowed;
+}
+
+.empty-detail {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  color: #9ca3af;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+}
+
+.loading,
+.empty {
+  text-align: center;
+  padding: 3rem;
+  color: #9ca3af;
+}
+
+.btn-go {
+  display: inline-block;
+  padding: 10px 20px;
+  background: #4f46e5;
+  color: white;
+  border-radius: 8px;
+  text-decoration: none;
+  margin-top: 1rem;
 }
 
 .comment {
   margin: 1rem 0 0;
   padding: 0.75rem 1rem;
-  border-radius: 12px;
-  background: rgba(79, 70, 229, 0.06);
-  font-size: 0.88rem;
+  font-size: 0.9rem;
   color: #334155;
 }
 
 .comment--ok {
   background: rgba(5, 150, 105, 0.1);
   color: #065f46;
+  border-radius: 8px;
 }
 
 .onboarding {

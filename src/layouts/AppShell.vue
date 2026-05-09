@@ -1,10 +1,12 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useOrganizationStore } from '@/stores/organization'
 import { hasStudentPortalAccess, hasTeamLeaderRole } from '@/utils/roles'
 
 const auth = useAuthStore()
+const orgStore = useOrganizationStore()
 const route = useRoute()
 const router = useRouter()
 
@@ -30,13 +32,23 @@ const studentNavGroupTitle = computed(() => {
   return 'Студент'
 })
 
+const isOrgUser = computed(() => auth.roles?.some((r) => r === 'FIRM' || r === 'FIRM_USER'))
+const isMentor = computed(() => auth.roles?.includes('MENTOR'))
+
+const firmChecked = ref(false)
+const firmHasOrg = ref(false)
+
 const adminNav = computed(() => {
   const items = []
   if (isAdmin.value) {
     items.push(
       { to: '/app/admin/applications', label: 'Заявки', icon: '◆' },
+      { to: '/app/admin/milestone-approvals', label: 'Milestone approvals', icon: '✓' },
       { to: '/app/admin/programs', label: 'Програми та виклики', icon: '◇' },
+      { to: '/app/admin/program-review-queue', label: 'Program B Review Queue', icon: '◬' },
+      { to: '/app/admin/organizations', label: 'Організації', icon: '◈' },
       { to: '/app/reporting', label: 'Звітність', icon: '⬒' },
+      { to: '/app/admin/mentorships', label: 'Mentorships', icon: '✦' },
     )
   }
   if (isEvaluator.value) {
@@ -60,6 +72,21 @@ const studentNav = computed(() => {
   ]
 })
 
+const organizationNav = computed(() => {
+  if (!isOrgUser.value || !firmChecked.value || !firmHasOrg.value) return []
+  return [
+    { to: '/app/org/profile', label: 'My Organization', icon: '◉' },
+    { to: '/app/programs/my', label: 'Program B Proposals', icon: '◈' },
+  ]
+})
+
+const mentorNav = computed(() => {
+  if (!isMentor.value) return []
+  return [{ to: '/app/mentor/my-mentorships', label: 'My Mentorships', icon: '◷' }]
+})
+
+
+
 function logout() {
   auth.logout()
   router.push('/')
@@ -71,6 +98,20 @@ function closeMobile() {
 
 function isActive(path) {
   return route.path === path || route.path.startsWith(`${path}/`)
+}
+
+onMounted(checkFirmOrg)
+
+async function checkFirmOrg() {
+  if (!isOrgUser.value) return
+  try {
+    const my = await orgStore.getMy()
+    firmHasOrg.value = Array.isArray(my) ? my.length > 0 : (my?.length > 0)
+  } catch {
+    // keep nav usable even if endpoint fails
+  } finally {
+    firmChecked.value = true
+  }
 }
 </script>
 
@@ -122,6 +163,36 @@ function isActive(path) {
           {{ item.label }}
         </RouterLink>
 
+        <p v-if="organizationNav.length" class="shell__group-label">
+          Organization
+        </p>
+        <RouterLink
+          v-for="item in organizationNav"
+          :key="item.to"
+          :to="item.to"
+          class="shell__link"
+          :class="{ active: isActive(item.to) }"
+          @click="closeMobile"
+        >
+          <span class="shell__ico" aria-hidden="true">{{ item.icon }}</span>
+          {{ item.label }}
+        </RouterLink>
+
+        <p v-if="mentorNav.length" class="shell__group-label">
+          Mentor
+        </p>
+        <RouterLink
+          v-for="item in mentorNav"
+          :key="item.to"
+          :to="item.to"
+          class="shell__link"
+          :class="{ active: isActive(item.to) }"
+          @click="closeMobile"
+        >
+          <span class="shell__ico" aria-hidden="true">{{ item.icon }}</span>
+          {{ item.label }}
+        </RouterLink>
+
         <p v-if="adminNav.length" class="shell__group-label">
           Адміністрування
         </p>
@@ -155,6 +226,30 @@ function isActive(path) {
         >
           <span class="shell__ico" aria-hidden="true">B</span>
           Каталог програми B
+        </RouterLink>
+
+        <p class="shell__group-label">
+          Organizations
+        </p>
+        <RouterLink
+          to="/organizations"
+          class="shell__link shell__link--ghost"
+          @click="closeMobile"
+        >
+          <span class="shell__ico" aria-hidden="true">O</span>
+          Organizations
+        </RouterLink>
+
+        <p class="shell__group-label">
+          Mentors
+        </p>
+        <RouterLink
+          to="/mentors"
+          class="shell__link shell__link--ghost"
+          @click="closeMobile"
+        >
+          <span class="shell__ico" aria-hidden="true">M</span>
+          Mentors
         </RouterLink>
       </nav>
 

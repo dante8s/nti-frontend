@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import api from '@/api/axios'
+import { authApi } from '@/api/auth'
 
 const AUTH_MOCK_ENABLED = import.meta.env.VITE_ENABLE_AUTH_MOCK === 'true'
 
@@ -134,6 +135,22 @@ export const useAuthStore = defineStore('auth', () => {
     })
   }
 
+  async function completeInvite(inviteToken, name, password) {
+    await api.post('/api/auth/complete-invite', {
+      inviteToken,
+      name,
+      password,
+    })
+  }
+
+  async function completeOrgMemberInvite(inviteToken, name, password) {
+    await authApi.completeOrgInvite({
+      inviteToken,
+      name,
+      password,
+    })
+  }
+
   function logout() {
     token.value = null
     user.value = null
@@ -161,5 +178,7 @@ export const useAuthStore = defineStore('auth', () => {
     forgotPassword,
     resetPassword,
     refreshUserFromStorage,
+    completeInvite,
+    completeOrgMemberInvite,
   }
 })

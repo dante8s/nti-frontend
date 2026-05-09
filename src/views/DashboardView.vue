@@ -36,6 +36,18 @@
       </router-link>
     </div>
 
+    <section v-if="isFirm && firmChecked && !firmHasOrg" class="firm">
+      <p class="firm__hint">
+        You haven’t registered an organization yet.
+      </p>
+      <router-link
+        to="/app/org/register"
+        class="firm__btn"
+      >
+        Register Organization
+      </router-link>
+    </section>
+
     <section v-if="rolesLine" class="meta">
       <span class="meta__label">Ваші ролі:</span>
       {{ rolesLine }}
@@ -44,11 +56,13 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import { useOrganizationStore } from '@/stores/organization'
 import { hasStudentPortalAccess, hasTeamLeaderRole } from '@/utils/roles'
 
 const auth = useAuthStore()
+const orgStore = useOrganizationStore()
 
 const isSuperAdmin = computed(() => auth.roles?.includes('SUPER_ADMIN'))
 const isAdmin = computed(() =>
@@ -56,6 +70,12 @@ const isAdmin = computed(() =>
 )
 const canStudentPortal = computed(() => hasStudentPortalAccess(auth.roles))
 const isEvaluator = computed(() => auth.roles?.includes('EVALUATOR'))
+const isFirm = computed(() => auth.roles?.includes('FIRM'))
+const isOrgUser = computed(() => auth.roles?.some((r) => r === 'FIRM' || r === 'FIRM_USER'))
+const isMentor = computed(() => auth.roles?.includes('MENTOR'))
+
+const firmChecked = ref(false)
+const firmHasOrg = ref(false)
 
 const roleLabels = {
   STUDENT: 'Студент',
@@ -91,6 +111,15 @@ const cards = computed(() => {
     })
   }
 
+  if (isSuperAdmin.value || isAdmin.value) {
+    out.push({
+      to: '/app/admin/mentorships',
+      title: 'Mentorships',
+      desc: 'Managing mentorships',
+      icon: '✦',
+    })
+  }
+
   if (isAdmin.value) {
     out.push(
       {
@@ -100,10 +129,28 @@ const cards = computed(() => {
         icon: '◆',
       },
       {
+        to: '/app/admin/milestone-approvals',
+        title: 'Milestone approvals',
+        desc: 'Review and approve pending milestones',
+        icon: '✓',
+      },
+      {
         to: '/app/admin/programs',
         title: 'Програми та виклики',
         desc: 'Редагування програм і дедлайнів',
         icon: '◇',
+      },
+      {
+        to: '/app/admin/program-review-queue',
+        title: 'Черга Program B',
+        desc: 'Перегляд нових пропозицій програми B',
+        icon: '◬',
+      },
+      {
+        to: '/app/admin/organizations',
+        title: 'Організації',
+        desc: 'Каталог організацій-партнерів',
+        icon: '◈',
       },
       {
         to: '/app/reporting',
@@ -154,6 +201,24 @@ const cards = computed(() => {
     )
   }
 
+  if (isMentor.value) {
+    out.push({
+      to: '/app/mentor/my-mentorships',
+      title: 'My Mentorships',
+      desc: 'Track your active mentorships',
+      icon: '◷',
+    })
+  }
+
+  if (isOrgUser.value && firmChecked.value && firmHasOrg.value) {
+    out.push({
+      to: '/app/org/profile',
+      title: 'My Organization',
+      desc: 'Manage organization profile and members',
+      icon: '◉',
+    })
+  }
+
   out.push(
     {
       to: '/programs/a',
@@ -171,6 +236,20 @@ const cards = computed(() => {
 
   return out
 })
+
+onMounted(checkFirmOrg)
+
+async function checkFirmOrg() {
+  if (!isOrgUser.value) return
+  try {
+    const my = await orgStore.getMy()
+    firmHasOrg.value = Array.isArray(my) ? my.length > 0 : (my?.length > 0)
+  } catch {
+    // If the endpoint fails, we simply keep the dashboard visible.
+  } finally {
+    firmChecked.value = true
+  }
+}
 </script>
 
 <style scoped>
@@ -302,5 +381,45 @@ const cards = computed(() => {
 .meta__label {
   font-weight: 700;
   color: #334155;
+}
+
+.firm {
+  margin-top: 1.25rem;
+  padding: 1rem 1.1rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(79, 70, 229, 0.1);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.firm__hint {
+  margin: 0;
+  color: #475569;
+  line-height: 1.5;
+}
+
+.firm__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.15rem;
+  border-radius: 999px;
+  background: #4f46e5;
+  color: white;
+  font-weight: 800;
+  text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  box-shadow: 0 18px 40px rgba(79, 70, 229, 0.28);
+}
+
+.firm__btn:hover {
+  transform: translateY(-2px);
+  background: #4338ca;
+  box-shadow: 0 20px 44px rgba(67, 56, 202, 0.24);
 }
 </style>

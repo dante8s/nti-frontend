@@ -30,6 +30,16 @@ const router = createRouter({
       name: 'reset-password',
       component: () => import('@/views/auth/ResetPasswordView.vue'),
     },
+    {
+      path: '/complete-registration',
+      name: 'complete-registration',
+      component: () => import('@/views/auth/CompleteRegistration.vue'),
+    },
+    {
+      path: '/complete-org-invite',
+      name: 'complete-org-invite',
+      component: () => import('@/views/auth/CompleteOrgInvite.vue'),
+    },
 
     {
       path: '/programs/:type',
@@ -41,7 +51,24 @@ const router = createRouter({
       name: 'program-detail',
       component: () => import('@/views/public/ProgramDetail.vue'),
     },
-
+    {
+      path: '/organizations',
+      name: 'public-organizations',
+      meta: { title: 'Organizations' },
+      component: () => import('@/views/public/Organizations.vue'),
+    },
+    {
+      path: '/organizations/:id',
+      name: 'public-organization',
+      meta: { title: 'Organization' },
+      component: () => import('@/views/public/OrganizationPublicProfile.vue'),
+    },
+    {
+      path:'/mentors',
+      name: 'public-mentors',
+      meta: {title: 'Mentors'},
+      component: () => import('@/views/public/Mentors.vue'),
+    },
     {
       path: '/app',
       component: () => import('@/layouts/AppShell.vue'),
@@ -82,6 +109,15 @@ const router = createRouter({
           component: () => import('@/views/student/MemberProfileView.vue'),
         },
         {
+          path: 'applications/:id',
+          name: 'application-details',
+          meta: {
+            title: 'Application details',
+            requiresAnyRole: ['STUDENT', 'MENTOR', 'ADMIN', 'SUPER_ADMIN'],
+          },
+          component: () => import('@/views/ApplicationDetails.vue'),
+        },
+        {
           path: 'apply/a/:callId',
           name: 'apply-a',
           meta: { title: 'Заявка — програма A', requiresRole: 'STUDENT' },
@@ -106,6 +142,12 @@ const router = createRouter({
           component: () => import('@/views/admin/AdminApplications.vue'),
         },
         {
+          path: 'admin/milestone-approvals',
+          name: 'admin-milestone-approvals',
+          meta: { title: 'Milestone approvals', requiresAdmin: true },
+          component: () => import('@/views/admin/MilestoneApprovals.vue'),
+        },
+        {
           path: 'admin/programs',
           name: 'admin-programs',
           meta: { title: 'Програми та виклики', requiresAdmin: true },
@@ -123,11 +165,61 @@ const router = createRouter({
           meta: { title: 'Звітність', requiresAnyRole: ['ADMIN', 'SUPER_ADMIN', 'EVALUATOR'] },
           component: () => import('@/views/admin/ReportingPage.vue'),
         },
+        {
+          path: 'admin/program-review-queue',
+          name: 'admin-program-review-queue',
+          meta: { title: 'Черга Program B', requiresAdmin: true },
+          component: () => import('@/views/admin/ProgramReviewQueue.vue'),
+        },
+        {
+          path: 'admin/organizations',
+          name: 'admin-organizations',
+          meta: { title: 'Організації', requiresAdmin: true },
+          component: () => import('@/views/admin/Organizations.vue'),
+        },
+        {
+          path: 'admin/organizations/:id',
+          name: 'OrganizationDetails',
+          meta: { title: 'Organization details', requiresAdmin: true },
+          component: () => import('@/views/admin/OrganizationDetails.vue'),
+        },
+        {
+          path: 'admin/mentorships',
+          name: 'admin-mentorships',
+          meta: { title: 'Mentorships', requiresAdmin: true },
+          component: () => import('@/views/admin/MentorshipsManagement.vue'),
+        },
+        {
+          path: 'org/register',
+          name: 'org-register',
+          meta: { title: 'Реєстрація організації', requiresRole: 'FIRM' },
+          component: () => import('@/views/organization/OrgRegisterView.vue'),
+        },
+        {
+          path: 'org/profile',
+          name: 'org-profile',
+          meta: { title: 'Профіль організації', requiresAnyRole: ['FIRM', 'FIRM_USER'] },
+          component: () => import('@/views/organization/OrgProfileView.vue'),
+        },
+        {
+          path: 'programs/my',
+          name: 'my-programs',
+          meta: { title: 'Мої програми B', requiresRole: 'FIRM' },
+          component: () => import('@/views/programs/MyPrograms.vue'),
+        },
+        {
+          path: 'mentor/my-mentorships',
+          name: 'mentor-my-mentorships',
+          meta: { title: 'My Mentorships', requiresRole: 'MENTOR' },
+          component: () => import('@/views/mentor/MyMentorships.vue'),
+        },
       ],
     },
 
     { path: '/dashboard', redirect: '/app/dashboard' },
     { path: '/admin/users', redirect: '/app/admin/users' },
+    { path: '/admin/organizations', redirect: '/app/admin/organizations' },
+    { path: '/app/org', redirect: '/app/org/profile' },
     {
       path: '/apply/a/:callId',
       redirect: (to) => ({ path: `/app/apply/a/${to.params.callId}` }),
@@ -135,6 +227,10 @@ const router = createRouter({
     {
       path: '/apply/b/:callId',
       redirect: (to) => ({ path: `/app/apply/b/${to.params.callId}` }),
+    },
+    {
+      path: '/applications/:id',
+      redirect: (to) => ({ path: `/app/applications/${to.params.id}` }),
     },
   ],
 })
