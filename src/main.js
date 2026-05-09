@@ -1,3 +1,5 @@
+import './api/axios'   // або './axios' — залежно від структури
+
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 

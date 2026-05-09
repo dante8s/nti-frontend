@@ -28,6 +28,7 @@
                         <option value="">Оберіть тип акаунту</option>
                         <option value="STUDENT">Студент</option>
                         <option value="FIRM">Компанія / Партнер</option>
+                        <option value="MENTOR">Mentor</option>
                     </select>
                 </div>
 
