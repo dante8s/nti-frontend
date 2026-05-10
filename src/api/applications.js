@@ -30,9 +30,9 @@ function mockResponse(data) {
 
 function requiredDocumentTypes(programType) {
   if (programType === 'A') {
-    return ['EXEC_SUMMARY', 'TECH_ARCH', 'ROADMAP', 'BUDGET', 'RISK_ANALYSIS', 'MONETIZATION']
+    return ['RESUME_A', 'TECHNICAL_ARCH', 'ROADMAP', 'BUDGET', 'RISK_ANALYSIS', 'MONETIZATION']
   }
-  return ['TEAM_CV', 'MOTIVATION_LETTER', 'SOLUTION_PROPOSAL']
+  return ['RESUME_B', 'MOTIVATION', 'SOLUTION_PROPOSAL', 'IMPLEMENTATION']
 }
 
 function getAttachmentTypes(payload) {
@@ -46,9 +46,10 @@ function canTransition(current, next) {
 }
 
 export const applicationsApi = {
+  /** Тіло лише { callId } — сумісно з бекендом. */
   create: (data) => {
     if (!MOCK_ENABLED) {
-      return api.post('/api/applications', data)
+      return api.post('/api/applications', { callId: data.callId })
     }
 
     const user = getCurrentUser()
@@ -63,11 +64,76 @@ export const applicationsApi = {
       status: 'DRAFT',
       adminComment: '',
       updatedAt: nowIso(),
+      formData: data.formData || null,
       payload: data,
     }
     items.unshift(item)
     setMockApps(items)
-    return mockResponse(item)
+    return mockResponse({
+      id: item.id,
+      callId: item.callId,
+      callTitle: item.callTitle,
+      programName: item.programName,
+      programType: item.programType === 'A' ? 'PROGRAM_A' : 'PROGRAM_B',
+      status: item.status,
+      adminComment: item.adminComment,
+      formData: item.formData,
+      createdAt: item.updatedAt,
+      updatedAt: item.updatedAt,
+    })
+  },
+
+  getMyByCall: (callId) => {
+    if (!MOCK_ENABLED) {
+      return api.get(`/api/applications/my/by-call/${callId}`)
+    }
+    const user = getCurrentUser()
+    const one = getMockApps().find(
+      (a) => a.userId === (user?.id || 0) && Number(a.callId) === Number(callId),
+    )
+    if (!one) {
+      return Promise.reject({ response: { status: 404 } })
+    }
+    return mockResponse({
+      id: one.id,
+      callId: one.callId,
+      callTitle: one.callTitle,
+      programName: one.programName,
+      programType: one.programType === 'A' ? 'PROGRAM_A' : 'PROGRAM_B',
+      status: one.status,
+      adminComment: one.adminComment || '',
+      formData: one.formData || null,
+      createdAt: one.updatedAt,
+      updatedAt: one.updatedAt,
+    })
+  },
+
+  update: (id, formData) => {
+    const body =
+      typeof formData === 'string' ? { formData } : { formData: JSON.stringify(formData) }
+    if (!MOCK_ENABLED) {
+      return api.put(`/api/applications/${id}`, body)
+    }
+    const items = getMockApps()
+    const idx = items.findIndex((a) => a.id === Number(id))
+    if (idx < 0) return Promise.reject(new Error('not found'))
+    items[idx].formData = body.formData
+    items[idx].payload = { ...items[idx].payload, formData: body.formData }
+    items[idx].updatedAt = nowIso()
+    setMockApps(items)
+    const one = items[idx]
+    return mockResponse({
+      id: one.id,
+      callId: one.callId,
+      callTitle: one.callTitle,
+      programName: one.programName,
+      programType: one.programType === 'A' ? 'PROGRAM_A' : 'PROGRAM_B',
+      status: one.status,
+      adminComment: one.adminComment || '',
+      formData: one.formData,
+      createdAt: one.updatedAt,
+      updatedAt: one.updatedAt,
+    })
   },
 
   submit: (id) => {
@@ -141,6 +207,7 @@ export const applicationsApi = {
       description: '',
       uploaded: present.includes(t),
       fileName: present.includes(t) ? `${String(t).toLowerCase()}.pdf` : undefined,
+      documentId: present.includes(t) ? 1 : null,
     }))
     return mockResponse(rows)
   },
@@ -149,8 +216,7 @@ export const applicationsApi = {
     if (!MOCK_ENABLED) {
       const fd = new FormData()
       fd.append('file', file)
-      fd.append('documentType', documentType)
-      return api.post(`/api/applications/${applicationId}/documents`, fd, {
+      return api.post(`/api/applications/${applicationId}/documents/${documentType}`, fd, {
         headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: (e) => {
           if (onProgress && e.lengthComputable) {

@@ -19,7 +19,9 @@ const isAdmin = computed(() =>
 const canStudentPortal = computed(
   () => hasStudentPortalAccess(auth.roles) || isSuperAdmin.value,
 )
-const isEvaluator = computed(() => auth.roles?.includes('EVALUATOR'))
+const isCommissionMember = computed(() =>
+  auth.roles?.some((r) => r === 'EVALUATOR' || r === 'SUPER_EVALUATOR'),
+)
 const showTeamLeaderBadge = computed(() => hasTeamLeaderRole(auth.roles))
 
 const studentNavGroupTitle = computed(() => {
@@ -51,8 +53,8 @@ const adminNav = computed(() => {
       { to: '/app/admin/mentorships', label: 'Mentorships', icon: '✦' },
     )
   }
-  if (isEvaluator.value) {
-    items.push({ to: '/app/evaluation', label: 'Оцінювання', icon: '◌' })
+  if (isCommissionMember.value) {
+    items.push({ to: '/app/commission', label: 'Комісія', icon: '◌' })
     if (!isAdmin.value) {
       items.push({ to: '/app/reporting', label: 'Звітність', icon: '⬒' })
     }

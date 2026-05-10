@@ -105,7 +105,10 @@ const router = createRouter({
         {
           path: 'member-profile/:userId',
           name: 'member-profile',
-          meta: { title: 'Профіль учасника', requiresRole: 'STUDENT' },
+          meta: {
+            title: 'Профіль учасника',
+            requiresAnyRole: ['STUDENT', 'EVALUATOR', 'SUPER_EVALUATOR', 'ADMIN', 'SUPER_ADMIN'],
+          },
           component: () => import('@/views/student/MemberProfileView.vue'),
         },
         {
@@ -113,7 +116,14 @@ const router = createRouter({
           name: 'application-details',
           meta: {
             title: 'Application details',
-            requiresAnyRole: ['STUDENT', 'MENTOR', 'ADMIN', 'SUPER_ADMIN'],
+            requiresAnyRole: [
+              'STUDENT',
+              'MENTOR',
+              'ADMIN',
+              'SUPER_ADMIN',
+              'EVALUATOR',
+              'SUPER_EVALUATOR',
+            ],
           },
           component: () => import('@/views/ApplicationDetails.vue'),
         },
@@ -155,15 +165,77 @@ const router = createRouter({
         },
         {
           path: 'evaluation',
-          name: 'evaluation',
-          meta: { title: 'Оцінювання', requiresAnyRole: ['EVALUATOR', 'ADMIN', 'SUPER_ADMIN'] },
-          component: () => import('@/views/evaluator/EvaluationPage.vue'),
+          redirect: { name: 'commission-hub' },
+        },
+        {
+          path: 'commission',
+          name: 'commission-hub',
+          meta: {
+            title: 'Комісія',
+            requiresAnyRole: ['EVALUATOR', 'SUPER_EVALUATOR', 'ADMIN', 'SUPER_ADMIN'],
+          },
+          component: () => import('@/views/commission/CommissionProgramHub.vue'),
+        },
+        {
+          path: 'commission/participants/:programType',
+          name: 'commission-participants',
+          meta: {
+            title: 'Учасники програми',
+            requiresAnyRole: ['EVALUATOR', 'SUPER_EVALUATOR', 'ADMIN', 'SUPER_ADMIN'],
+          },
+          component: () => import('@/views/commission/CommissionParticipantsView.vue'),
+        },
+        {
+          path: 'commission/call/:callId/application/:applicationId',
+          name: 'commission-evaluate',
+          meta: {
+            title: 'Оцінювання заявки',
+            requiresAnyRole: ['EVALUATOR', 'SUPER_EVALUATOR', 'ADMIN', 'SUPER_ADMIN'],
+          },
+          component: () => import('@/views/commission/CommissionApplicationEvaluateView.vue'),
         },
         {
           path: 'reporting',
-          name: 'reporting',
-          meta: { title: 'Звітність', requiresAnyRole: ['ADMIN', 'SUPER_ADMIN', 'EVALUATOR'] },
-          component: () => import('@/views/admin/ReportingPage.vue'),
+          component: () => import('@/views/reporting/ReportingLayout.vue'),
+          meta: {
+            title: 'Звітність',
+            requiresAnyRole: ['ADMIN', 'SUPER_ADMIN', 'EVALUATOR', 'SUPER_EVALUATOR'],
+          },
+          children: [
+            {
+              path: '',
+              name: 'reporting-index',
+              meta: { title: 'Звітність' },
+              component: () => import('@/views/reporting/ReportingIndexRedirect.vue'),
+            },
+            {
+              path: 'admin',
+              name: 'reporting-admin',
+              meta: {
+                title: 'Звітність — адміністрування',
+                requiresAnyRole: ['ADMIN', 'SUPER_ADMIN', 'EVALUATOR', 'SUPER_EVALUATOR'],
+              },
+              component: () => import('@/views/reporting/ReportingAdminView.vue'),
+            },
+            {
+              path: 'student',
+              name: 'reporting-student',
+              meta: {
+                title: 'Звітність — студент / команда',
+                requiresAnyRole: ['ADMIN', 'SUPER_ADMIN', 'EVALUATOR', 'SUPER_EVALUATOR'],
+              },
+              component: () => import('@/views/reporting/ReportingStudentPanelView.vue'),
+            },
+            {
+              path: 'firm',
+              name: 'reporting-firm',
+              meta: {
+                title: 'Звітність — компанія',
+                requiresAnyRole: ['ADMIN', 'SUPER_ADMIN', 'EVALUATOR', 'SUPER_EVALUATOR'],
+              },
+              component: () => import('@/views/reporting/ReportingFirmPanelView.vue'),
+            },
+          ],
         },
         {
           path: 'admin/program-review-queue',

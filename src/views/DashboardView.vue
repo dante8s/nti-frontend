@@ -69,7 +69,9 @@ const isAdmin = computed(() =>
   auth.roles?.some((r) => r === 'ADMIN' || r === 'SUPER_ADMIN'),
 )
 const canStudentPortal = computed(() => hasStudentPortalAccess(auth.roles))
-const isEvaluator = computed(() => auth.roles?.includes('EVALUATOR'))
+const isCommissionMember = computed(() =>
+  auth.roles?.some((r) => r === 'EVALUATOR' || r === 'SUPER_EVALUATOR'),
+)
 const isFirm = computed(() => auth.roles?.includes('FIRM'))
 const isOrgUser = computed(() => auth.roles?.some((r) => r === 'FIRM' || r === 'FIRM_USER'))
 const isMentor = computed(() => auth.roles?.includes('MENTOR'))
@@ -83,7 +85,8 @@ const roleLabels = {
   FIRM: 'Компанія',
   FIRM_USER: 'Представник фірми',
   MENTOR: 'Ментор',
-  EVALUATOR: 'Комісія',
+  EVALUATOR: 'Комісія (перегляд)',
+  SUPER_EVALUATOR: 'Комісія — рішення',
   ADMIN: 'Адмін',
   SUPER_ADMIN: 'Супер-адмін',
 }
@@ -184,12 +187,12 @@ const cards = computed(() => {
     )
   }
 
-  if (isEvaluator.value || isSuperAdmin.value) {
+  if (isCommissionMember.value || isSuperAdmin.value) {
     out.push(
       {
-        to: '/app/evaluation',
-        title: 'Оцінювання',
-        desc: 'Черга заявок, критерії, скоринг і рішення комісії',
+        to: '/app/commission',
+        title: 'Комісія',
+        desc: 'Черга заявок і матеріали; скоринг і рішення — лише для SUPER_EVALUATOR / адмінів',
         icon: '◌',
       },
       {

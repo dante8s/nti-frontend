@@ -53,15 +53,30 @@ function ensureSeedData() {
   }
 }
 
+/** Тіло для Spring: вкладені сутності з id. */
+function buildEvaluationScoreBody(payload) {
+  return {
+    application: { id: Number(payload.applicationId) },
+    evaluator: { id: Number(payload.evaluatorId) },
+    criteria: { id: Number(payload.criteriaId) },
+    score: Number(payload.score),
+    comment: payload.comment ?? null,
+    recommendation: payload.recommendation ?? null,
+  }
+}
+
 export const evaluationApi = {
   getCriteria: (callId) => {
-    if (!MOCK_ENABLED) return api.get(`/api/evaluation/calls/${callId}/criteria`)
+    if (!MOCK_ENABLED) return api.get(`/api/evaluations/criteria/${callId}`)
     ensureSeedData()
     return ok(getItems(CRITERIA_KEY))
   },
 
+  /** Черга заявок для виклику (комісія). */
   getQueue: (callId) => {
-    if (!MOCK_ENABLED) return api.get('/api/evaluation/queue', { params: { callId } })
+    if (!MOCK_ENABLED) {
+      return api.get(`/api/evaluations/calls/${callId}/applications`)
+    }
     ensureSeedData()
     const cid = Number(callId)
     const fromPortal = getPortalApplications()
@@ -79,7 +94,9 @@ export const evaluationApi = {
   },
 
   submitScore: (payload) => {
-    if (!MOCK_ENABLED) return api.post('/api/evaluation/scores', payload)
+    if (!MOCK_ENABLED) {
+      return api.post('/api/evaluations/score', buildEvaluationScoreBody(payload))
+    }
 
     const scores = getItems(SCORES_KEY)
     const next = {
@@ -96,8 +113,22 @@ export const evaluationApi = {
     return ok(next)
   },
 
+  getScores: (applicationId) => {
+    if (!MOCK_ENABLED) return api.get(`/api/evaluations/${applicationId}/scores`)
+    return ok([])
+  },
+
+  getMyScores: (applicationId, evaluatorId) => {
+    if (!MOCK_ENABLED) {
+      return api.get(`/api/evaluations/${applicationId}/mine`, {
+        params: { evaluatorId },
+      })
+    }
+    return ok([])
+  },
+
   getAverage: (applicationId) => {
-    if (!MOCK_ENABLED) return api.get(`/api/evaluation/applications/${applicationId}/average`)
+    if (!MOCK_ENABLED) return api.get(`/api/evaluations/${applicationId}/average`)
 
     const scores = getItems(SCORES_KEY).filter((item) => item.applicationId === Number(applicationId))
     if (!scores.length) return ok({ simpleAverage: null, weightedAverage: null })
@@ -121,8 +152,8 @@ export const evaluationApi = {
 
   getCompletion: (applicationId, evaluatorId, callId) => {
     if (!MOCK_ENABLED) {
-      return api.get('/api/evaluation/completion', {
-        params: { applicationId, evaluatorId, callId },
+      return api.get(`/api/evaluations/${applicationId}/complete`, {
+        params: { evaluatorId, callId },
       })
     }
 

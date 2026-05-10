@@ -11,6 +11,19 @@ const router = useRouter()
 
 const userId = computed(() => Number(route.params.userId))
 
+/** Безпечне повернення з потоку комісії (query `back=/app/...`). */
+const commissionBackTo = computed(() => {
+  const b = route.query.back
+  if (typeof b !== 'string' || !b) return null
+  try {
+    const decoded = decodeURIComponent(b)
+    if (!decoded.startsWith('/') || decoded.startsWith('//')) return null
+    return decoded
+  } catch {
+    return null
+  }
+})
+
 const loading = ref(true)
 const error = ref('')
 const profile = ref(null)
@@ -124,7 +137,8 @@ const hasCv = computed(() => {
 <template>
   <div class="page">
     <div class="back">
-      <a href="#" class="back-link" @click.prevent="router.back()">← Назад</a>
+      <router-link v-if="commissionBackTo" class="back-link" :to="commissionBackTo">← Назад</router-link>
+      <a v-else href="#" class="back-link" @click.prevent="router.back()">← Назад</a>
     </div>
 
     <div class="card">
