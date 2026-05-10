@@ -37,10 +37,37 @@ function mapPortalAppToQueueRow(a) {
 function ensureSeedData() {
   if (!getItems(CRITERIA_KEY).length) {
     setItems(CRITERIA_KEY, [
-      { id: 1, name: 'Innovation potential', weightPercent: 30, maxScore: 10 },
-      { id: 2, name: 'Technical feasibility', weightPercent: 30, maxScore: 10 },
-      { id: 3, name: 'Team readiness', weightPercent: 20, maxScore: 10 },
-      { id: 4, name: 'Market value', weightPercent: 20, maxScore: 10 },
+      {
+        id: 1,
+        name: 'Оригінальність ідеї',
+        description:
+          'Наскільки проєкт відрізняється від уже відомих рішень, свіжість формулювання проблеми та підходів.',
+        weightPercent: 25,
+        maxScore: 100,
+      },
+      {
+        id: 2,
+        name: 'Технічна реалізованість',
+        description: 'Реалістичність технічного плану, архітектури та дорожньої карти виконання.',
+        weightPercent: 25,
+        maxScore: 100,
+      },
+      {
+        id: 3,
+        name: 'Соціальний та ринковий вплив',
+        description:
+          'Користь для аудиторії, соціально-екологічний або економічний ефект, потенціал масштабування.',
+        weightPercent: 25,
+        maxScore: 100,
+      },
+      {
+        id: 4,
+        name: 'Якість і повнота матеріалів',
+        description:
+          'Структурованість поданої документації: бюджет, аналіз ризиків, монетизація та відповідність вимогам виклику.',
+        weightPercent: 25,
+        maxScore: 100,
+      },
     ])
   }
 

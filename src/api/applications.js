@@ -83,6 +83,14 @@ export const applicationsApi = {
     })
   },
 
+  /** Аліаси для ApplicationFormA/B (логіка як у origin/main). */
+  createDraft(callId) {
+    return this.create({ callId })
+  },
+  updateDraft(id, formData) {
+    return this.update(id, formData)
+  },
+
   getMyByCall: (callId) => {
     if (!MOCK_ENABLED) {
       return api.get(`/api/applications/my/by-call/${callId}`)
@@ -200,17 +208,64 @@ export const applicationsApi = {
     const app = getMockApps().find((a) => a.id === Number(applicationId))
     if (!app) return mockResponse([])
     const types = requiredDocumentTypes(app.programType)
-    const present = getAttachmentTypes(app.payload)
-    const rows = types.map((t) => ({
-      documentType: t,
-      label: t,
-      description: '',
-      uploaded: present.includes(t),
-      fileName: present.includes(t) ? `${String(t).toLowerCase()}.pdf` : undefined,
-      documentId: present.includes(t) ? 1 : null,
-    }))
+    const atts = app.payload?.attachments || []
+    const rows = types.map((t) => {
+      const att = atts.find((x) => x.type === t)
+      return {
+        documentType: t,
+        label: t,
+        description: '',
+        uploaded: !!att,
+        fileName: att?.fileName,
+        documentId: att ? 1 : null,
+      }
+    })
     return mockResponse(rows)
   },
+
+  /**
+   * Blob документа: inline (перегляд PDF) або attachment (зберегти файл).
+   */
+  fetchDocumentBlob: (applicationId, documentType, disposition = 'inline') => {
+    if (!MOCK_ENABLED) {
+      return api.get(`/api/applications/${applicationId}/documents/${documentType}`, {
+        params: { disposition },
+        responseType: 'blob',
+      })
+    }
+    const app = getMockApps().find((a) => a.id === Number(applicationId))
+    if (!app) {
+      return Promise.reject({
+        response: { status: 404, data: { message: 'Заявку не знайдено' } },
+      })
+    }
+    const att = (app.payload?.attachments || []).find((x) => x.type === documentType)
+    if (!att) {
+      return Promise.reject({
+        response: { status: 404, data: { message: 'Файл не знайдено' } },
+      })
+    }
+    const name = att.fileName || `${documentType}.pdf`
+    const mime = att.mimeType || 'application/octet-stream'
+    const blob = new Blob(
+      [`[mock] ${documentType}\nОригінал: ${name}\n`],
+      { type: mime },
+    )
+    return Promise.resolve({
+      data: blob,
+      headers: {
+        'content-disposition': `attachment; filename="${encodeURIComponent(name)}"`,
+        'content-type': mime,
+      },
+      status: 200,
+    })
+  },
+
+  /**
+   * Завантажити файл на диск (комісія, адмін, студент).
+   */
+  downloadDocument: (applicationId, documentType) =>
+    applicationsApi.fetchDocumentBlob(applicationId, documentType, 'attachment'),
 
   uploadDocument: (applicationId, documentType, file, onProgress) => {
     if (!MOCK_ENABLED) {

@@ -24,34 +24,74 @@
       </div>
     </section>
 
+    <ApplicationDocumentsDownload
+      v-if="numericApplicationId"
+      :application-id="numericApplicationId"
+    />
+
     <section v-if="isReadOnlyCommission && criteria.length" class="panel">
       <h2>Критерії (перегляд)</h2>
-      <div v-for="item in criteria" :key="item.id" class="rowline">
+      <div v-for="item in criteria" :key="item.id" class="rowline rowline--readonly">
         <div>
           <strong>{{ item.name }}</strong>
-          <p class="hint">Вага: {{ item.weightPercent }}% · Макс.: {{ item.maxScore }}</p>
+          <p class="hint">Вага: {{ item.weightPercent }}% · Бал за шкалою 1–100</p>
+          <p v-if="item.description" class="hint criteria-desc-inline">
+            {{ item.description }}
+          </p>
         </div>
       </div>
     </section>
 
     <section v-if="canScoreAndDecide" class="panel panel--criteria">
-      <h2>Критерії</h2>
-      <div v-if="!criteria.length" class="hint">Натисніть «Критерії», щоб завантажити список.</div>
-      <div v-for="item in criteria" :key="item.id" class="rowline">
-        <div>
-          <strong>{{ item.name }}</strong>
-          <p class="hint">Вага: {{ item.weightPercent }}% · Макс.: {{ item.maxScore }}</p>
-        </div>
-        <input
-          v-model="scores[item.id]"
-          type="number"
-          min="0"
-          :max="item.maxScore"
-          step="0.1"
-          class="score"
-        />
-        <button type="button" :disabled="busy" @click="saveScore(item.id)">Надіслати</button>
+      <div class="criteria-head">
+        <h2>Критерії</h2>
+        <button type="button" class="btn-save-all" :disabled="busy || !criteria.length" @click="saveAllScores">
+          Зберегти всі
+        </button>
       </div>
+      <p v-if="!criteria.length && !busy" class="hint">
+        Для цього виклику немає критеріїв або виклик не знайдено. Перезавантажте сторінку після запуску
+        бекенда (можливе автоматичне створення стандартного набору) або зверніться до адміністратора.
+      </p>
+      <ul v-else class="criteria-list">
+        <li v-for="item in criteria" :key="item.id" class="criteria-card">
+          <div class="criteria-card__head">
+            <strong class="criteria-name">{{ item.name }}</strong>
+            <span class="criteria-meta">Вага: {{ item.weightPercent ?? '—' }}%</span>
+          </div>
+          <p v-if="item.description" class="criteria-desc">
+            {{ item.description }}
+          </p>
+          <div class="criteria-grid">
+            <label class="field-compact">
+              <span class="field-label">Оцінка (1–100) *</span>
+              <input
+                v-model.number="scores[item.id]"
+                type="number"
+                min="1"
+                max="100"
+                step="1"
+                class="score-input"
+                placeholder="1–100"
+              >
+            </label>
+            <label class="field-compact field-compact--grow">
+              <span class="field-label">Коментар</span>
+              <textarea
+                v-model="comments[item.id]"
+                rows="2"
+                class="comment-input"
+                placeholder="Примітка щодо цього критерію…"
+              />
+            </label>
+          </div>
+          <div class="criteria-actions">
+            <button type="button" class="btn-row-save" :disabled="busy" @click="saveScore(item.id)">
+              Зберегти пункт
+            </button>
+          </div>
+        </li>
+      </ul>
     </section>
 
     <section v-if="canScoreAndDecide" class="panel panel--decision">
@@ -109,15 +149,16 @@ import { evaluationApi } from '@/api/evaluation'
 import { applicationsApi } from '@/api/applications'
 import { adminAllowedNextStatuses, statusLabel } from '@/utils/applicationStatus'
 import { useCommissionAuth } from '@/composables/useCommissionAuth'
+import ApplicationDocumentsDownload from '@/components/ApplicationDocumentsDownload.vue'
 
 const route = useRoute()
 const { auth, isReadOnlyCommission, canScoreAndDecide } = useCommissionAuth()
 
-const callId = computed(() => Number(route.params.callId))
 const applicationId = computed(() => Number(route.params.applicationId))
 
 const criteria = ref([])
 const scores = reactive({})
+const comments = reactive({})
 const average = ref(null)
 const complete = ref(null)
 const message = ref('')
@@ -128,10 +169,23 @@ const loadingApplication = ref(false)
 const decisionBusy = ref(false)
 const evaluatorId = ref('')
 
+/** Спочатку callId з заявки (джерело істини); інакше з маршруту — усуває порожній список критеріїв при гонці watch. */
+const effectiveCallId = computed(() => {
+  const fromApp = loadedApplication.value?.callId
+  const nApp = fromApp != null && fromApp !== '' ? Number(fromApp) : NaN
+  if (Number.isInteger(nApp) && nApp > 0) {
+    return nApp
+  }
+  const nRoute = Number(route.params.callId)
+  return Number.isInteger(nRoute) && nRoute > 0 ? nRoute : null
+})
+
 const listBack = computed(() => ({
   name: 'commission-participants',
   params: { programType: route.query.program === 'b' ? 'b' : 'a' },
 }))
+
+const numericApplicationId = computed(() => asPositiveInt(applicationId.value))
 
 function asPositiveInt(n) {
   return Number.isInteger(n) && n > 0 ? n : null
@@ -169,24 +223,32 @@ async function loadApplication() {
 }
 
 async function loadCriteria() {
-  const call = asPositiveInt(callId.value)
+  const call = asPositiveInt(effectiveCallId.value)
   if (!call) {
-    message.value = 'Некоректний ID виклику.'
+    criteria.value = []
+    message.value = loadedApplication.value
+      ? 'Не вдалося визначити виклик для цієї заявки (немає callId).'
+      : 'Некоректний ID виклику — спочатку дочекайтесь завантаження заявки.'
     return
   }
   busy.value = true
   try {
     const res = await evaluationApi.getCriteria(call)
-    criteria.value = res.data || []
+    const list = Array.isArray(res.data) ? res.data : []
+    criteria.value = list
     for (const item of criteria.value) {
-      scores[item.id] = scores[item.id] ?? ''
+      if (scores[item.id] === undefined) scores[item.id] = ''
+      if (comments[item.id] === undefined) comments[item.id] = ''
     }
     if (canScoreAndDecide.value && auth.user?.id) {
       evaluatorId.value = String(auth.user.id)
       await prefetchMyScores()
     }
-    message.value = 'Критерії завантажено.'
+    message.value = list.length
+      ? `Завантажено критеріїв: ${list.length}.`
+      : `Для виклику №${call} сервер повернув порожній список критеріїв.`
   } catch {
+    criteria.value = []
     message.value = 'Не вдалося завантажити критерії.'
   } finally {
     busy.value = false
@@ -205,10 +267,20 @@ async function prefetchMyScores() {
       if (cid != null && evRow.score != null) {
         scores[cid] = evRow.score
       }
+      if (cid != null && evRow.comment != null) {
+        comments[cid] = evRow.comment
+      }
     }
   } catch {
     /* ignore */
   }
+}
+
+function clampScore(raw) {
+  const n = Number(raw)
+  if (Number.isNaN(n)) return null
+  if (n < 1 || n > 100) return null
+  return n
 }
 
 async function saveScore(criteriaId) {
@@ -220,9 +292,9 @@ async function saveScore(criteriaId) {
     return
   }
   busy.value = true
-  const raw = Number(scores[criteriaId])
-  if (Number.isNaN(raw)) {
-    message.value = 'Вкажіть числовий бал.'
+  const valid = clampScore(scores[criteriaId])
+  if (valid == null) {
+    message.value = 'Вкажіть бал від 1 до 100.'
     busy.value = false
     return
   }
@@ -231,9 +303,10 @@ async function saveScore(criteriaId) {
       applicationId: app,
       evaluatorId: evaluator,
       criteriaId: Number(criteriaId),
-      score: raw,
+      score: valid,
+      comment: String(comments[criteriaId] ?? '').trim() || null,
     })
-    message.value = `Збережено критерій #${criteriaId}.`
+    message.value = `Збережено критерій "${criteria.value.find((c) => c.id === criteriaId)?.name ?? criteriaId}".`
   } catch {
     message.value = 'Не вдалося зберегти оцінку.'
   } finally {
@@ -241,9 +314,37 @@ async function saveScore(criteriaId) {
   }
 }
 
+async function saveAllScores() {
+  if (!criteria.value.length) return
+  busy.value = true
+  try {
+    let saved = 0
+    for (const item of criteria.value) {
+      const valid = clampScore(scores[item.id])
+      if (valid == null) continue
+      const app = asPositiveInt(applicationId.value)
+      const evaluator = asPositiveInt(Number(evaluatorId.value))
+      await evaluationApi.submitScore({
+        applicationId: app,
+        evaluatorId: evaluator,
+        criteriaId: Number(item.id),
+        score: valid,
+        comment: String(comments[item.id] ?? '').trim() || null,
+      })
+      saved += 1
+    }
+    message.value = saved ? `Збережено оцінок: ${saved}.` : 'Немає жодного балу 1–100 для збереження.'
+    await refreshSummary()
+  } catch {
+    message.value = 'Не вдалося зберегти оцінки.'
+  } finally {
+    busy.value = false
+  }
+}
+
 async function refreshSummary() {
   const app = asPositiveInt(applicationId.value)
-  const call = asPositiveInt(callId.value)
+  const call = asPositiveInt(effectiveCallId.value)
   if (!app || !call) {
     message.value = 'Некоректні параметри заявки або виклику.'
     return
@@ -301,9 +402,12 @@ onMounted(async () => {
   await refreshSummary()
 })
 
-watch(applicationId, () => {
-  loadApplication()
-  refreshSummary()
+watch(applicationId, async () => {
+  Object.keys(scores).forEach((k) => delete scores[k])
+  Object.keys(comments).forEach((k) => delete comments[k])
+  await loadApplication()
+  await loadCriteria()
+  await refreshSummary()
 })
 </script>
 
@@ -393,6 +497,158 @@ watch(applicationId, () => {
 
 .rowline:last-child {
   border-bottom: none;
+}
+
+.rowline--readonly {
+  align-items: flex-start;
+}
+
+.criteria-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.criteria-head h2 {
+  margin: 0;
+}
+
+.btn-save-all {
+  border: none;
+  border-radius: 999px;
+  background: #9d174d;
+  color: #fff;
+  font-weight: 700;
+  padding: 0.4rem 0.95rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.btn-save-all:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.criteria-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.criteria-card {
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(180, 120, 150, 0.45);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+}
+
+.criteria-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.criteria-name {
+  font-size: 1rem;
+  color: #1e293b;
+}
+
+.criteria-meta {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.criteria-desc {
+  margin: 0 0 0.65rem;
+  font-size: 0.84rem;
+  color: #475569;
+  line-height: 1.4;
+}
+
+.criteria-desc-inline {
+  margin: 0.25rem 0 0;
+  max-width: 100%;
+}
+
+.criteria-grid {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: minmax(100px, 140px) 1fr;
+}
+
+@media (max-width: 560px) {
+  .criteria-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.field-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.field-compact--grow {
+  min-width: 0;
+}
+
+.field-label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.score-input {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  padding: 0.45rem 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.comment-input {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  padding: 0.45rem 0.5rem;
+  font: inherit;
+  resize: vertical;
+  min-height: 52px;
+}
+
+.criteria-actions {
+  margin-top: 0.6rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-row-save {
+  border: none;
+  border-radius: 999px;
+  background: #be185d;
+  color: #fff;
+  font-weight: 700;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.btn-row-save:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .score {
