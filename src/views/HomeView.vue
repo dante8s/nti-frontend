@@ -12,7 +12,6 @@
                 <div class="hero-actions">
                     <router-link to="/programs/a" class="btn btn-primary">Програма A</router-link>
                     <router-link to="/programs/b" class="btn btn-secondary">Програма B</router-link>
-                    <router-link to="/register" class="btn btn-ghost">Створити акаунт</router-link>
                     <router-link to="/login" class="btn btn-ghost">Увійти</router-link>
                 </div>
             </div>
