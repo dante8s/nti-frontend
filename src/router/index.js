@@ -94,7 +94,7 @@ const router = createRouter({
           name: 'application-details',
           meta: {
             title: 'Application details',
-            requiresAnyRole: ['STUDENT', 'MENTOR', 'ADMIN', 'SUPER_ADMIN'],
+            requiresAnyRole: ['STUDENT', 'MENTOR', 'ADMIN', 'SUPER_ADMIN', 'FIRM', 'FIRM_USER'],
           },
           component: () => import('@/views/ApplicationDetails.vue'),
         },

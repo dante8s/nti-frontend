@@ -9,6 +9,8 @@ export const applicationsApi = {
 
   getOne: (id) => api.get(`/api/applications/${id}`),
 
+  getByCall: (callId) => api.get(`/api/applications/by-call/${callId}`),
+
   // ADMIN
   getAll: () => api.get('/api/admin/applications'),
 
@@ -17,4 +19,7 @@ export const applicationsApi = {
       status,
       comment,
     }),
+
+  setProductOwner: (applicationId, userId) =>
+    api.patch(`/api/applications/${applicationId}/product-owner`, null, { params: { userId } }),
 }

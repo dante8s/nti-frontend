@@ -26,6 +26,7 @@ export const useAuthStore = defineStore('auth', () => {
     const data = response.data
     token.value = data.token
     user.value = {
+      id: data.id ?? data.userId ?? null,
       name: data.name,
       email: data.email,
       roles: data.roles ?? [],

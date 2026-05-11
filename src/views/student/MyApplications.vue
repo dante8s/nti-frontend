@@ -52,14 +52,24 @@
 
         <footer class="card__foot">
           <span class="muted">Оновлено: {{ formatDt(app.updatedAt) }}</span>
-          <router-link
-            v-if="app.status === 'DRAFT'"
-            :to="draftRoute(app)"
-            class="link-continue"
-            @click.stop
-          >
-            Продовжити чернетку →
-          </router-link>
+          <div class="card__foot-actions">
+            <button
+              v-if="programDetailRoute(app)"
+              type="button"
+              class="program-proposal-btn"
+              @click.stop="openProgramProposal(app)"
+            >
+              Open Program Proposal
+            </button>
+            <router-link
+              v-if="app.status === 'DRAFT'"
+              :to="draftRoute(app)"
+              class="link-continue"
+              @click.stop
+            >
+              Продовжити чернетку →
+            </router-link>
+          </div>
         </footer>
 
         <p v-if="app.adminComment" class="comment">
@@ -96,6 +106,13 @@
                 </tr>
               </tbody>
             </table>
+            <div class="mentorship__consultations">
+              <ConsultationsPanel
+                v-for="m in mentorshipsFor(app.id)"
+                :key="`consultations-${m.id}`"
+                :mentorship-id="m.id"
+              />
+            </div>
           </div>
         </section>
 
@@ -147,6 +164,7 @@
               <p class="milestone-item__desc">
                 {{ m.description || '—' }}
               </p>
+              <MilestoneDetailsPanel :milestone-id="m.id" />
               <div v-if="m.status === 'PENDING_APPROVAL'" class="milestone-item__actions">
                 <button type="button" class="milestone-action-btn" @click="openEditMilestoneModal(app.id, m)">
                   Edit
@@ -177,16 +195,20 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
+import { useRouter } from 'vue-router'
 import { applicationsApi } from '@/api/applications'
 import { statusLabel } from '@/utils/applicationStatus'
 import { useMentorshipStore } from '@/stores/mentorship'
 import { useNoteStore } from '@/stores/note'
 import { useMilestoneStore } from '@/stores/milestone'
 import MilestoneFormModal from '@/components/MilestoneFormModal.vue'
+import MilestoneDetailsPanel from '@/components/MilestoneDetailsPanel.vue'
+import ConsultationsPanel from '@/components/ConsultationsPanel.vue'
 
 const items = ref([])
 const loading = ref(true)
 const error = ref('')
+const router = useRouter()
 
 const mentorshipStore = useMentorshipStore()
 const { mentorshipsByApplication } = storeToRefs(mentorshipStore)
@@ -343,6 +365,30 @@ function timelineSteps(status) {
 function draftRoute(app) {
   const t = (app.programType || '').includes('A') ? 'a' : 'b'
   return { name: `apply-${t}`, params: { callId: app.callId } }
+}
+
+function programDetailRoute(app) {
+  const programId = app?.call?.program?.id ?? app?.programId
+  if (!programId) return null
+  const rawType = app?.call?.program?.type || app?.programType || ''
+  if (rawType) {
+    const typeQuery = String(rawType).includes('B') ? 'B' : 'A'
+    return {
+      name: 'program-detail',
+      params: { type: typeQuery.toLowerCase(), id: String(programId) },
+      query: { type: typeQuery },
+    }
+  }
+  return {
+    name: 'program-detail',
+    params: { type: 'a', id: String(programId) },
+  }
+}
+
+function openProgramProposal(app) {
+  const route = programDetailRoute(app)
+  if (!route) return
+  router.push(route)
 }
 
 </script>
@@ -523,9 +569,27 @@ function draftRoute(app) {
   border-top: 1px solid rgba(15, 23, 42, 0.06);
 }
 
+.card__foot-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
 .muted {
   font-size: 0.82rem;
   color: #94a3b8;
+}
+
+.program-proposal-btn {
+  border: 1px solid rgba(79, 70, 229, 0.25);
+  background: #fff;
+  color: #4338ca;
+  border-radius: 10px;
+  padding: 0.35rem 0.65rem;
+  font-weight: 600;
+  font-size: 0.8rem;
+  cursor: pointer;
 }
 
 .link-continue {
@@ -591,6 +655,10 @@ function draftRoute(app) {
   letter-spacing: 0.06em;
   color: #64748b;
   background: rgba(79, 70, 229, 0.04);
+}
+
+.mentorship__consultations {
+  padding: 0.6rem 0.75rem 0.75rem;
 }
 
 .notes {
