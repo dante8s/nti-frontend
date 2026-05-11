@@ -112,7 +112,7 @@ async function handleLogin() {
 
         router.push('/app/dashboard')
     } catch (e) {
-        error.value = e.response?.data?.message || e.response?.data || 'Невірний email або пароль'
+        error.value = e.response?.data?.message || e.response?.data || e.message || 'Невірний email або пароль'
     } finally {
         loading.value = false
     }
@@ -203,4 +203,5 @@ p {
 a {
     color: #4f46e5;
 }
+
 </style>

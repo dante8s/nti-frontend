@@ -232,7 +232,7 @@ const inviteError = ref('')
 
 const allRoles = [
     'STUDENT', 'FIRM', 'FIRM_USER',
-    'MENTOR', 'EVALUATOR', 'ADMIN', 'SUPER_ADMIN'
+    'MENTOR', 'EVALUATOR', 'SUPER_EVALUATOR', 'ADMIN', 'SUPER_ADMIN'
 ]
 
 const rejectModal = reactive({
@@ -429,7 +429,8 @@ function roleLabel(role) {
         FIRM: 'Компанія',
         FIRM_USER: 'Представник фірми',
         MENTOR: 'Ментор',
-        EVALUATOR: 'Комісія',
+        EVALUATOR: 'Комісія (перегляд)',
+        SUPER_EVALUATOR: 'Комісія — рішення / скоринг',
         ADMIN: 'Адмін',
         SUPER_ADMIN: 'Супер адмін'
     }
