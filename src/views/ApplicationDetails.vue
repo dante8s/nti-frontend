@@ -23,8 +23,66 @@
             {{ application.callTitle || '—' }}
           </p>
         </div>
-        <StatusBadge :status="application.status" :label="statusLabel(application.status)" />
+        <div class="application-details__header-actions">
+          <!-- <button
+            v-if="programProposalRoute"
+            type="button"
+            class="application-details__proposal-btn"
+            @click="openProgramProposal"
+          >
+            Open Program Proposal
+          </button> -->
+          <StatusBadge :status="application.status" :label="statusLabel(application.status)" />
+        </div>
       </header>
+
+      <section v-if="canAssignProductOwner" class="application-details__product-owner">
+        <div class="application-details__section-head">
+          <h2 class="application-details__section-title">Product Owner</h2>
+        </div>
+        <p v-if="productOwnerError" class="application-details__error">
+          {{ productOwnerError }}
+        </p>
+        <p v-if="membersError" class="application-details__error">
+          {{ membersError }}
+        </p>
+        <div v-if="membersLoading" class="application-details__meta">
+          Loading organization members...
+        </div>
+        <div v-else-if="!applicationOrganizationId" class="application-details__meta">
+          Organization not found for this application.
+        </div>
+        <div v-else-if="eligibleOrganizationMembers.length === 0" class="application-details__meta">
+          No eligible organization members found.
+        </div>
+        <div v-else class="application-details__product-owner-row">
+          <select
+            v-model="productOwnerUserId"
+            class="application-details__select"
+            :disabled="assigningProductOwner"
+            @change="onAssignProductOwner"
+          >
+            <option value="">
+              Assign Product Owner
+            </option>
+            <option
+  v-for="member in eligibleOrganizationMembers"
+  :key="member.id"
+  :value="String(member.userId ?? member.id)"
+>
+  {{ memberDisplayName(member) }}
+</option>
+          </select>
+          <span class="application-details__meta">
+            {{ assigningProductOwner ? 'Saving...' : 'Organization members' }}
+          </span>
+        </div>
+
+        <div v-if="currentProductOwnerName" class="application-details__current-po">
+          <span class="application-details__current-po-label">Current Product Owner:</span>
+          <strong class="application-details__current-po-value">{{ currentProductOwnerName }}</strong>
+        </div>
+      </section>
 
       <nav class="application-details__tabs" aria-label="Application sections">
         <button
@@ -68,7 +126,7 @@
         <div class="application-details__section-head">
           <h2 class="application-details__section-title">Milestones</h2>
           <button
-            v-if="isStudent"
+            v-if="canCreateMilestone"
             type="button"
             class="application-details__primary-btn"
             @click="openCreateMilestoneModal"
@@ -122,6 +180,8 @@
             <p class="application-details__description">
               {{ milestone.description || '—' }}
             </p>
+
+            <MilestoneDetailsPanel :milestone-id="milestone.id" />
 
             <div class="application-details__actions">
               <button
@@ -191,6 +251,7 @@
             <p class="application-details__meta">
               Assigned: {{ formatDateTime(mentorship.startDate || mentorship.createdAt) }}
             </p>
+            <ConsultationsPanel :mentorship-id="mentorship.id" />
             <div v-if="isAdmin && mentorship.status === MentorshipStatus.ACTIVE" class="application-details__actions">
               <select v-model="mentorshipNextStatuses[mentorship.id]" class="application-details__select">
                 <option disabled value="">
@@ -334,16 +395,20 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { applicationsApi } from '@/api/applications'
 import StatusBadge from '@/components/StatusBadge.vue'
 import MilestoneFormModal from '@/components/MilestoneFormModal.vue'
+import ConsultationsPanel from '@/components/ConsultationsPanel.vue'
+import MilestoneDetailsPanel from '@/components/MilestoneDetailsPanel.vue'
 import { MilestoneStatus, useMilestoneStore } from '@/stores/milestone'
 import { MentorshipStatus, useMentorshipStore } from '@/stores/mentorship'
 import { useNoteStore } from '@/stores/note'
 import { useAuthStore } from '@/stores/auth'
+import { useOrganizationStore } from '@/stores/organization'
+import { useApplicationsStore } from '@/stores/applications'
 import { statusLabel } from '@/utils/applicationStatus'
 
 const route = useRoute()
@@ -352,10 +417,13 @@ const authStore = useAuthStore()
 const milestoneStore = useMilestoneStore()
 const mentorshipStore = useMentorshipStore()
 const noteStore = useNoteStore()
+const organizationStore = useOrganizationStore()
+const applicationsStore = useApplicationsStore()
 
 const { milestones } = storeToRefs(milestoneStore)
 const { mentorshipsByApplication, publicMentors } = storeToRefs(mentorshipStore)
 const { notesByApplication } = storeToRefs(noteStore)
+const { members: organizationMembers } = storeToRefs(organizationStore)
 
 const loading = ref(true)
 const error = ref('')
@@ -374,6 +442,12 @@ const mentorshipError = ref('')
 const noteModalOpen = ref(false)
 const editingNote = ref(null)
 const noteFormContent = ref('')
+const productOwnerUserId = ref('')
+const assigningProductOwner = ref(false)
+const productOwnerError = ref('')
+const loadedMembersOrgId = ref(null)
+const membersLoading = ref(false)
+const membersError = ref('')
 
 const tabs = [
   { key: 'overview', label: 'Overview' },
@@ -386,6 +460,67 @@ const roles = computed(() => authStore.roles || [])
 const isAdmin = computed(() => roles.value.some((r) => r === 'ADMIN' || r === 'SUPER_ADMIN'))
 const isStudent = computed(() => roles.value.includes('STUDENT'))
 const isMentor = computed(() => roles.value.includes('MENTOR'))
+const isFirm = computed(() => roles.value.includes('FIRM'))
+const isFirmUser = computed(() => roles.value.includes('FIRM_USER'))
+const isProgramBApplication = computed(() =>
+  application.value?.call?.program?.type === 'PROGRAM_B'
+  || application.value?.programType === 'PROGRAM_B',
+)
+
+/** Same navigation shape as AdminPrograms.openProgramDetails — program from nested call.program or flattened application fields */
+const programProposalRoute = computed(() => {
+  const app = application.value
+  console.log('Computed Triggered. Application Value:', app)
+
+  if (!app) return null
+
+  // Based on your console log, let's try these specific fields:
+  // 1. Check for programId, then fallback to program.id, then call.programId
+  // If your API doesn't provide programId, we might need to use callId or similar
+  const pId = app.programId ||
+              app.program?.id ||
+              app.call?.programId ||
+              app.call?.program?.id ||
+              app.callId; // Adding callId as a desperate fallback
+
+  // 2. Resolve Type
+  const rawType = app.programType || (app.program?.type) || '';
+
+  console.log('ID check:', { pId, rawType });
+
+  if (!pId) return null
+
+  const isTypeB = String(rawType).toUpperCase().includes('B')
+
+  return {
+    name: 'program-detail',
+    params: {
+      type: isTypeB ? 'b' : 'a',
+      id: String(pId)
+    },
+    query: {
+      type: isTypeB ? 'B' : 'A'
+    }
+  }
+})
+const canAssignProductOwner = computed(() => isAdmin.value && !!application.value?.id)
+const applicationOrganizationId = computed(() =>
+  application.value?.call?.program?.organization?.id
+  ?? application.value?.call?.program?.organizationId
+  ?? application.value?.organizationId
+  ?? null,
+)
+const selectedProductOwnerId = computed(() =>
+  application.value?.productOwnerId
+  ?? application.value?.productOwner?.id
+  ?? application.value?.assignedProductOwnerId
+  ?? null,
+)
+const canCreateMilestone = computed(() =>
+  isAdmin.value
+  || isStudent.value
+  || ((isFirm.value || isFirmUser.value) && isProgramBApplication.value),
+)
 
 const applicationIdNumber = computed(() => Number(route.params.id))
 
@@ -412,6 +547,15 @@ const noteList = computed(() =>
 )
 
 onMounted(loadApplicationDetails)
+watch(() => route.params.id, loadApplicationDetails)
+watch(selectedProductOwnerId, (value) => {
+  productOwnerUserId.value = value != null ? String(value) : ''
+})
+watch(applicationOrganizationId, async (orgId) => {
+  if (!canAssignProductOwner.value) return
+  if (!orgId) return
+  await loadOrganizationMembers(orgId)
+})
 
 async function loadApplicationDetails() {
   if (!Number.isFinite(applicationIdNumber.value) || applicationIdNumber.value <= 0) {
@@ -421,14 +565,21 @@ async function loadApplicationDetails() {
   }
   loading.value = true
   error.value = ''
+  productOwnerError.value = ''
+  membersError.value = ''
   try {
     const appResponse = await applicationsApi.getOne(applicationIdNumber.value)
     application.value = appResponse.data
-    await Promise.all([
+    if (applicationOrganizationId.value) await loadOrganizationMembers(applicationOrganizationId.value)
+    const [fetchedMilestones] = await Promise.all([
       milestoneStore.fetchByApplication(applicationIdNumber.value),
       mentorshipStore.getByApplication(applicationIdNumber.value),
       noteStore.fetchNotesByApplication(applicationIdNumber.value),
     ])
+    const milestoneIds = (fetchedMilestones || [])
+      .map((milestone) => milestone?.id)
+      .filter(Boolean)
+    await Promise.all(milestoneIds.map((milestoneId) => milestoneStore.getComments(milestoneId)))
   } catch (e) {
     error.value = e.response?.data?.message || 'Failed to load application details.'
   } finally {
@@ -436,8 +587,95 @@ async function loadApplicationDetails() {
   }
 }
 
+async function loadOrganizationMembers(organizationId) {
+  if (!organizationId) return
+  if (loadedMembersOrgId.value === organizationId && (organizationMembers.value || []).length > 0) return
+  membersLoading.value = true
+  membersError.value = ''
+  try {
+    await organizationStore.fetchMembers(organizationId)
+    loadedMembersOrgId.value = organizationId
+  } catch (e) {
+    membersError.value = e?.response?.data?.message || 'Failed to load organization members.'
+  } finally {
+    membersLoading.value = false
+  }
+}
+
+// FIX 1: Safely supports checking nesting in case the api returns a user details object inside member
+function memberDisplayName(member) {
+  if (!member) return '—'
+  return (
+    member.userName ||
+    member.name ||
+    member.fullName ||
+    member.userEmail ||
+    member.email ||
+    `User #${member.userId || member.id || '—'}`
+  )
+}
+
+const eligibleOrganizationMembers = computed(() => {
+  const raw = organizationMembers.value || []
+  // If backend returns user roles, keep only FIRM/FIRM_USER; otherwise fall back to full list.
+  const withRoleInfo = raw.filter((m) => Array.isArray(m?.userRoles) || Array.isArray(m?.roles))
+  if (!withRoleInfo.length) return raw
+  return raw.filter((m) => {
+    const rolesList = m?.userRoles || m?.roles || []
+    return rolesList.includes('FIRM') || rolesList.includes('FIRM_USER')
+  })
+})
+
+// FIX 2: Resolves the display name of the selected Product Owner securely
+const currentProductOwnerName = computed(() => {
+  if (!selectedProductOwnerId.value) return null
+
+  // 1. Look for matching member in loaded organization list (by member.id or nested user.id)
+  const member = (organizationMembers.value || []).find((m) => {
+    const memberId = String(m?.id)
+    const userId = String(m?.user?.id || m?.userId || '')
+    const targetId = String(selectedProductOwnerId.value)
+    return memberId === targetId || userId === targetId
+  })
+
+  if (member) {
+    return memberDisplayName(member)
+  }
+
+  // 2. Fallback directly to the application's nested product owner profile payload if loaded
+  if (application.value?.productOwner) {
+    const po = application.value.productOwner
+    return po.name || po.fullName || po.email || `User #${po.id}`
+  }
+
+  return `User #${selectedProductOwnerId.value}`
+})
+
+async function onAssignProductOwner() {
+  if (!application.value?.id || !productOwnerUserId.value) return
+  assigningProductOwner.value = true
+  productOwnerError.value = ''
+  try {
+    const updatedApplication = await applicationsStore.assignProductOwner(
+      application.value.id,
+      Number(productOwnerUserId.value),
+    )
+    application.value = updatedApplication
+  } catch (e) {
+    productOwnerError.value = e?.response?.data?.message || 'Failed to assign Product Owner.'
+  } finally {
+    assigningProductOwner.value = false
+  }
+}
+
 function goBack() {
   router.back()
+}
+
+function openProgramProposal() {
+  const route = programProposalRoute.value
+  if (!route) return
+  router.push(route)
 }
 
 function formatDateTime(value) {
@@ -637,8 +875,32 @@ async function deleteNote(note) {
 .application-details__header {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
   gap: 1rem;
   margin-bottom: 1rem;
+}
+
+.application-details__header-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.application-details__proposal-btn {
+  border: 1px solid rgba(79, 70, 229, 0.25);
+  background: white;
+  color: #4338ca;
+  border-radius: 10px;
+  padding: 0.43rem 0.8rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.application-details__proposal-btn:hover {
+  background: rgba(79, 70, 229, 0.06);
 }
 
 .application-details__title {
@@ -681,6 +943,41 @@ async function deleteNote(note) {
 
 .application-details__panel {
   margin-top: 1rem;
+}
+
+.application-details__product-owner {
+  margin-top: 0.9rem;
+  border: 1px solid rgba(79, 70, 229, 0.12);
+  border-radius: 12px;
+  padding: 0.8rem;
+  background: rgba(99, 102, 241, 0.03);
+}
+
+.application-details__product-owner-row {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* styles for newly introduced product owner text component */
+.application-details__current-po {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed rgba(79, 70, 229, 0.15);
+  font-size: 0.9rem;
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.application-details__current-po-label {
+  color: #64748b;
+}
+
+.application-details__current-po-value {
+  color: #0f172a;
+  font-weight: 600;
 }
 
 .application-details__overview-grid {
@@ -827,6 +1124,110 @@ async function deleteNote(note) {
   align-items: center;
 }
 
+.application-details__milestone-details {
+  margin-top: 0.75rem;
+  border: 1px solid rgba(79, 70, 229, 0.12);
+  border-radius: 12px;
+  padding: 0.7rem;
+  background: rgba(99, 102, 241, 0.03);
+}
+
+.application-details__milestone-details-head {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.application-details__milestone-details-body {
+  margin-top: 0.6rem;
+}
+
+.application-details__mini-tabs {
+  display: flex;
+  gap: 0.45rem;
+  margin-bottom: 0.6rem;
+}
+
+.application-details__mini-tab-btn {
+  border: 1px solid rgba(79, 70, 229, 0.2);
+  border-radius: 999px;
+  background: white;
+  color: #4338ca;
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 0.25rem 0.6rem;
+  cursor: pointer;
+}
+
+.application-details__mini-tab-btn--active {
+  background: #4f46e5;
+  color: white;
+  border-color: #4f46e5;
+}
+
+.application-details__mini-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.application-details__mini-item {
+  border: 1px solid rgba(79, 70, 229, 0.12);
+  border-radius: 10px;
+  padding: 0.55rem 0.65rem;
+  background: white;
+}
+
+.application-details__mini-item-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.application-details__comment-composer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.application-details__upload {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.application-details__file-input {
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 0.35rem 0.5rem;
+  background: white;
+}
+
+.application-details__link {
+  color: #4338ca;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.application-details__link:hover {
+  text-decoration: underline;
+}
+
+.application-details__icon-btn {
+  border: 1px solid rgba(79, 70, 229, 0.2);
+  background: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1;
+  padding: 0.2rem 0.35rem;
+}
+
+.application-details__icon-btn--danger {
+  border-color: rgba(220, 38, 38, 0.25);
+  color: #b91c1c;
+}
+
 .application-details__primary-btn,
 .application-details__secondary-btn,
 .application-details__danger-btn {
@@ -834,7 +1235,6 @@ async function deleteNote(note) {
   padding: 0.43rem 0.8rem;
   font-size: 0.82rem;
   font-weight: 600;
-  cursor: pointer;
 }
 
 .application-details__primary-btn {

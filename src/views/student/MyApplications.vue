@@ -67,6 +67,27 @@
           </div>
         </div>
 
+        <footer class="card__foot">
+          <span class="muted">Оновлено: {{ formatDt(app.updatedAt) }}</span>
+          <div class="card__foot-actions">
+            <button
+              v-if="programDetailRoute(app)"
+              type="button"
+              class="program-proposal-btn"
+              @click.stop="openProgramProposal(app)"
+            >
+              Open Program Proposal
+            </button>
+            <router-link
+              v-if="app.status === 'DRAFT'"
+              :to="draftRoute(app)"
+              class="link-continue"
+              @click.stop
+            >
+              Продовжити чернетку →
+            </router-link>
+          </div>
+        </footer>
         <!-- Кнопка редагувати якщо DRAFT -->
         <div v-if="selected.status === 'DRAFT'
           || selected.status === 'NEEDS_REVISION'" class="edit-section">
@@ -91,6 +112,107 @@
           <div v-if="submitError" class="submit-error">
             {{ submitError }}
           </div>
+          <div v-else class="mentorship__table-wrap">
+            <table class="mentorship__table">
+              <thead>
+                <tr>
+                  <th>Mentor</th>
+                  <th>Status</th>
+                  <th>Assigned</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="m in mentorshipsFor(app.id)" :key="m.id">
+                  <td class="cell-title">
+                    {{ m.mentorName || '—' }}
+                  </td>
+                  <td>
+                    <span class="pill pill--muted">
+                      {{ m.status || '—' }}
+                    </span>
+                  </td>
+                  <td class="muted">
+                    {{ mentorshipAssignedDt(m) }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="mentorship__consultations">
+              <ConsultationsPanel
+                v-for="m in mentorshipsFor(app.id)"
+                :key="`consultations-${m.id}`"
+                :mentorship-id="m.id"
+              />
+            </div>
+          </div>
+        </section>
+
+        <section class="notes">
+          <div class="notes__head">
+            <h3 class="notes__title">Consultation Notes</h3>
+          </div>
+          <div v-if="notesFor(app.id).length === 0" class="notes__empty">
+            No notes yet.
+          </div>
+          <div v-else class="notes__list">
+            <article v-for="n in notesFor(app.id)" :key="n.id" class="note">
+              <header class="note__head">
+                <div class="note__meta">
+                  <strong>{{ n.createdByName || '—' }}</strong>
+                  <span>{{ formatDt(n.createdAt) }}</span>
+                </div>
+              </header>
+              <p class="note__content">
+                {{ n.content }}
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section class="milestones">
+          <div class="milestones__head">
+            <h3 class="milestones__title">Milestones</h3>
+            <button type="button" class="milestones__add-btn" @click="openMilestoneModal(app.id)">
+              Add Milestone
+            </button>
+          </div>
+          <div v-if="milestonesFor(app.id).length === 0" class="milestones__empty">
+            No milestones yet.
+          </div>
+          <div v-else class="milestones__list">
+            <article v-for="m in milestonesFor(app.id)" :key="m.id" class="milestone-item">
+              <div class="milestone-item__top">
+                <h4 class="milestone-item__title">
+                  {{ m.title || '—' }}
+                </h4>
+                <span class="milestone-status" :class="milestoneStatusClass(m.status)">
+                  {{ m.status || '—' }}
+                </span>
+              </div>
+              <p class="milestone-item__meta">
+                Due: {{ formatMilestoneDate(m.dueDate) }}
+              </p>
+              <p class="milestone-item__desc">
+                {{ m.description || '—' }}
+              </p>
+              <MilestoneDetailsPanel :milestone-id="m.id" />
+              <div v-if="m.status === 'PENDING_APPROVAL'" class="milestone-item__actions">
+                <button type="button" class="milestone-action-btn" @click="openEditMilestoneModal(app.id, m)">
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  class="milestone-action-btn milestone-action-btn--danger"
+                  @click="deleteMilestone(app.id, m.id)"
+                >
+                  Delete
+                </button>
+              </div>
+            </article>
+          </div>
+        </section>
+      </article>
+    </div>
           <button class="btn-submit" :disabled="submitting" @click="submitApp">
             {{ submitting
               ? 'Відправка...'
@@ -130,6 +252,17 @@
 </template>
 
 <script setup>
+import { onMounted, ref } from 'vue'
+import { storeToRefs } from 'pinia'
+import { useRouter } from 'vue-router'
+import { applicationsApi } from '@/api/applications'
+import { statusLabel } from '@/utils/applicationStatus'
+import { useMentorshipStore } from '@/stores/mentorship'
+import { useNoteStore } from '@/stores/note'
+import { useMilestoneStore } from '@/stores/milestone'
+import MilestoneFormModal from '@/components/MilestoneFormModal.vue'
+import MilestoneDetailsPanel from '@/components/MilestoneDetailsPanel.vue'
+import ConsultationsPanel from '@/components/ConsultationsPanel.vue'
 import { ref, onMounted } from 'vue'
 import { applicationsApi } from '@/api/applications'
 import DocumentUpload from '@/components/DocumentUpload.vue'
@@ -138,6 +271,15 @@ import StatusTimeline from '@/components/StatusTimeline.vue'
 const applications = ref([])
 const selected = ref(null)
 const loading = ref(true)
+const error = ref('')
+const router = useRouter()
+
+const mentorshipStore = useMentorshipStore()
+const { mentorshipsByApplication } = storeToRefs(mentorshipStore)
+const noteStore = useNoteStore()
+const { notesByApplication } = storeToRefs(noteStore)
+const milestoneStore = useMilestoneStore()
+const { milestones } = storeToRefs(milestoneStore)
 const submitting = ref(false)
 const submitError = ref('')
 const timelineRef = ref(null)
@@ -232,6 +374,99 @@ function formatDt(value) {
     minute: '2-digit',
   })
 }
+
+function openMilestoneModal(applicationId) {
+  editingMilestone.value = null
+  selectedMilestoneAppId.value = applicationId
+  milestoneModalOpen.value = true
+}
+
+function openEditMilestoneModal(applicationId, milestone) {
+  selectedMilestoneAppId.value = applicationId
+  editingMilestone.value = milestone
+  milestoneModalOpen.value = true
+}
+
+async function onMilestoneCreated(created) {
+  editingMilestone.value = null
+  if (created?.applicationId) {
+    await milestoneStore.fetchByApplication(created.applicationId)
+    return
+  }
+  if (selectedMilestoneAppId.value) {
+    await milestoneStore.fetchByApplication(selectedMilestoneAppId.value)
+  }
+}
+
+async function deleteMilestone(applicationId, milestoneId) {
+  await milestoneStore.delete(milestoneId, applicationId)
+}
+
+function timelineSteps(status) {
+  const lastLabel =
+    status === 'APPROVED'
+      ? 'Схвалено'
+      : status === 'REJECTED'
+        ? 'Відхилено'
+        : status === 'NEEDS_REVISION'
+          ? 'Потрібні зміни'
+          : 'Рішення'
+
+  const phase = (s) => {
+    if (s === 'DRAFT') return 0
+    if (s === 'SUBMITTED') return 1
+    if (s === 'IN_REVIEW') return 2
+    if (s === 'NEEDS_REVISION' || s === 'APPROVED' || s === 'REJECTED') return 3
+    return 0
+  }
+
+  const p = phase(status)
+
+  return [
+    { key: 't1', label: 'Чернетка', done: p > 0, current: status === 'DRAFT' },
+    { key: 't2', label: 'Подано', done: p > 1, current: status === 'SUBMITTED' },
+    { key: 't3', label: 'На розгляді', done: p > 2, current: status === 'IN_REVIEW' },
+    {
+      key: 't4',
+      label: lastLabel,
+      done: status === 'APPROVED' || status === 'REJECTED',
+      current:
+        status === 'NEEDS_REVISION'
+        || status === 'APPROVED'
+        || status === 'REJECTED',
+    },
+  ]
+}
+
+function draftRoute(app) {
+  const t = (app.programType || '').includes('A') ? 'a' : 'b'
+  return { name: `apply-${t}`, params: { callId: app.callId } }
+}
+
+function programDetailRoute(app) {
+  const programId = app?.call?.program?.id ?? app?.programId
+  if (!programId) return null
+  const rawType = app?.call?.program?.type || app?.programType || ''
+  if (rawType) {
+    const typeQuery = String(rawType).includes('B') ? 'B' : 'A'
+    return {
+      name: 'program-detail',
+      params: { type: typeQuery.toLowerCase(), id: String(programId) },
+      query: { type: typeQuery },
+    }
+  }
+  return {
+    name: 'program-detail',
+    params: { type: 'a', id: String(programId) },
+  }
+}
+
+function openProgramProposal(app) {
+  const route = programDetailRoute(app)
+  if (!route) return
+  router.push(route)
+}
+
 </script>
 
 <style scoped>
@@ -323,6 +558,33 @@ h1 {
   text-transform: uppercase;
 }
 
+.card__foot-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.muted {
+  font-size: 0.82rem;
+  color: #94a3b8;
+}
+
+.program-proposal-btn {
+  border: 1px solid rgba(79, 70, 229, 0.25);
+  background: #fff;
+  color: #4338ca;
+  border-radius: 10px;
+  padding: 0.35rem 0.65rem;
+  font-weight: 600;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.link-continue {
+  font-weight: 600;
+  color: #4f46e5;
+  text-decoration: none;
 .card-title {
   font-size: 0.9rem;
   font-weight: 500;
@@ -383,6 +645,14 @@ h1 {
   color: #6b7280;
 }
 
+.mentorship__consultations {
+  padding: 0.6rem 0.75rem 0.75rem;
+}
+
+.notes {
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
 .detail {
   background: white;
   border: 1px solid #e5e7eb;

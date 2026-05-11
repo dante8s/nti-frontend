@@ -307,6 +307,8 @@ export const applicationsApi = {
     })
   },
 
+  getByCall: (callId) => api.get(`/api/applications/by-call/${callId}`),
+
   // ADMIN
   getAll: () => {
     if (!MOCK_ENABLED) return api.get('/api/admin/applications')
@@ -356,6 +358,14 @@ export const applicationsApi = {
       }
     }
 
+  changeStatus: (id, status, comment) =>
+    api.patch(`/api/admin/applications/${id}/status`, {
+      status,
+      comment,
+    }),
+
+  setProductOwner: (applicationId, userId) =>
+    api.patch(`/api/applications/${applicationId}/product-owner`, null, { params: { userId } }),
     setMockApps(apps)
     return mockResponse(apps[idx])
   },

@@ -17,6 +17,9 @@ export const useOrganizationStore = defineStore('organization', () => {
   const organizations = ref([])
   const currentOrganization = ref(null)
   const members = ref([])
+  const requirements = ref(null)
+  const requirementsLoading = ref(false)
+  const requirementsError = ref(null)
 
   function upsertOrganizationInList(org) {
     if (!org?.id) return
@@ -79,6 +82,11 @@ export const useOrganizationStore = defineStore('organization', () => {
     return response.data
   }
 
+  // Alias used by some views for clarity.
+  async function fetchMembers(id) {
+    return await getMembers(id)
+  }
+
   async function addMember(id, data) {
     const response = await organizationsApi.addMember(id, data)
     members.value = [...members.value, response.data]
@@ -114,6 +122,61 @@ export const useOrganizationStore = defineStore('organization', () => {
     return response.data
   }
 
+  async function fetchRequirements(programId) {
+    requirementsLoading.value = true
+    requirementsError.value = null
+    try {
+      const response = await organizationsApi.getRequirements(programId)
+      requirements.value = response.data
+      return requirements.value
+    } catch (error) {
+      requirementsError.value = error
+      throw error
+    } finally {
+      requirementsLoading.value = false
+    }
+  }
+
+  async function uploadSpecFile(programId, file) {
+    requirementsLoading.value = true
+    requirementsError.value = null
+    try {
+      const response = await organizationsApi.uploadSpecification(programId, file)
+      requirements.value = response.data
+      return requirements.value
+    } catch (error) {
+      requirementsError.value = error
+      throw error
+    } finally {
+      requirementsLoading.value = false
+    }
+  }
+
+  async function uploadBudgetFile(programId, file) {
+    requirementsLoading.value = true
+    requirementsError.value = null
+    try {
+      const response = await organizationsApi.uploadBudget(programId, file)
+      requirements.value = response.data
+      return requirements.value
+    } catch (error) {
+      requirementsError.value = error
+      throw error
+    } finally {
+      requirementsLoading.value = false
+    }
+  }
+
+  async function downloadSpecificationFile(programId, inline = false) {
+    const response = await organizationsApi.getSpecificationFile(programId, inline)
+    return response
+  }
+
+  async function downloadBudgetFile(programId, inline = false) {
+    const response = await organizationsApi.getBudgetFile(programId, inline)
+    return response
+  }
+
   return {
     // Enums (usable in UI logic)
     OrgStatus,
@@ -123,6 +186,9 @@ export const useOrganizationStore = defineStore('organization', () => {
     organizations,
     currentOrganization,
     members,
+    requirements,
+    requirementsLoading,
+    requirementsError,
 
     // Actions (mapped to API)
     getPublicAll,
@@ -133,11 +199,17 @@ export const useOrganizationStore = defineStore('organization', () => {
     update,
     delete: remove,
     getMembers,
+    fetchMembers,
     addMember,
     inviteMember,
     transferOwnership,
     removeMember,
     changeStatus,
+    fetchRequirements,
+    uploadSpecFile,
+    uploadBudgetFile,
+    downloadSpecificationFile,
+    downloadBudgetFile,
   }
 })
 

@@ -71,6 +71,14 @@
               >
                 Змінити статус
               </button>
+              <!-- <button
+                v-if="programDetailRoute(row)"
+                type="button"
+                class="btn-sm btn-sm--ghost"
+                @click.stop="openProgramProposal(row)"
+              >
+                Open Program Proposal
+              </button> -->
             </td>
           </tr>
         </tbody>
@@ -83,7 +91,7 @@
         <p class="modal-meta">
           {{ modal.row?.programName }} · {{ modal.row?.callTitle }}
         </p>
-        
+
         <p>
           Поточний статус:
           <strong>{{ statusLabel(modal.row?.status) }}</strong>
@@ -430,6 +438,20 @@ function openApplication(id) {
   router.push(`/applications/${id}`)
 }
 
+function programDetailRoute(row) {
+  const programId = row?.call?.program?.id ?? row?.programId
+  const rawType = row?.call?.program?.type || row?.programType || ''
+  if (!programId || !rawType) return null
+  const type = String(rawType).includes('A') ? 'a' : 'b'
+  return { name: 'program-detail', params: { type, id: String(programId) } }
+}
+
+function openProgramProposal(row) {
+  const route = programDetailRoute(row)
+  if (!route) return
+  router.push(route)
+}
+
 </script>
 
 <style scoped>
@@ -583,6 +605,10 @@ function openApplication(id) {
 
 .actions {
   text-align: right;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  flex-wrap: wrap;
 }
 
 
