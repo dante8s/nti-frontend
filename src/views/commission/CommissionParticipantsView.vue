@@ -3,18 +3,18 @@
     <header class="commission-page__head">
       <router-link class="back" :to="{ name: 'commission-hub' }">← Програми</router-link>
       <h1>{{ title }}</h1>
-      <p v-if="call" class="commission-page__lead">
-        Виклик: <strong>{{ call.title || `№${call.id}` }}</strong>
+      <p v-if="calls.length" class="commission-page__lead">
+        Виклики: <strong>{{ callsLabel }}</strong>
         <span v-if="program"> · {{ program.name }}</span>
       </p>
       <p v-else-if="!loading" class="commission-page__lead commission-page__lead--warn">
-        Не знайдено відкритого виклику для цієї програми. Створіть виклик у адмінці або перевірте каталог.
+        Не знайдено викликів для цієї програми. Створіть виклик у адмінці або перевірте каталог.
       </p>
     </header>
 
     <div v-if="loading" class="state">Завантаження…</div>
     <div v-else-if="error" class="state state--err">{{ error }}</div>
-    <div v-else-if="!call" class="state">Немає даних для відображення.</div>
+    <div v-else-if="!calls.length" class="state">Немає даних для відображення.</div>
 
     <section v-else class="panel panel--list">
       <h2 class="panel__title">Команди та заявки</h2>
@@ -27,7 +27,7 @@
             class="btn-eval"
             :to="{
               name: 'commission-evaluate',
-              params: { callId: call.id, applicationId: row.applicationId },
+              params: { callId: row.callId, applicationId: row.applicationId },
               query: { program: programLetter },
             }"
           >
@@ -37,6 +37,7 @@
         <p class="hint">
           Заявка №{{ row.applicationId }} · {{ statusLabel(row.status) }}
           <span v-if="row.programName"> · {{ row.programName }}</span>
+          <span v-if="row.callTitle"> · {{ row.callTitle }}</span>
         </p>
         <ul class="members">
           <li v-for="m in row.members" :key="m.userId">
@@ -68,7 +69,7 @@ const route = useRoute()
 const loading = ref(true)
 const error = ref('')
 const program = ref(null)
-const call = ref(null)
+const calls = ref([])
 const applications = ref([])
 const teamByApplicant = ref(new Map())
 
@@ -79,27 +80,38 @@ const title = computed(() =>
 )
 
 const backToParticipants = computed(() => route.fullPath)
+const callsLabel = computed(() => {
+  if (calls.value.length === 1) {
+    const only = calls.value[0]
+    return only.title || `№${only.id}`
+  }
+  return `${calls.value.length} виклики`
+})
 
 function normalizeProgramType(letter) {
   return letter === 'b' ? 'B' : 'A'
 }
 
-async function resolvePrimaryCall(letter) {
+async function resolveProgramCalls(letter) {
   const type = normalizeProgramType(letter)
-  const { data: programs } = await programsApi.getAllByType(type)
-  const list = Array.isArray(programs) ? programs : []
+  const { data: programsRaw } = await programsApi.getAllByType(type)
+  const list = Array.isArray(programsRaw) ? programsRaw : []
   const candidates = list.filter((p) => p?.status === 'APPROVED' || !p.status)
   const ordered = candidates.length ? candidates : list
 
+  const foundCalls = []
+  let primaryProgram = null
   for (const p of ordered) {
     const { data: callsRaw } = await programsApi.getCallsByProgram(p.id)
-    const calls = Array.isArray(callsRaw) ? callsRaw : []
-    const chosen = calls.find((c) => c.status === 'OPEN') || calls[0]
-    if (chosen) {
-      return { program: p, call: chosen }
+    const programCalls = Array.isArray(callsRaw) ? callsRaw : []
+    if (programCalls.length && !primaryProgram) {
+      primaryProgram = p
+    }
+    for (const call of programCalls) {
+      foundCalls.push({ ...call, program: p })
     }
   }
-  return null
+  return { program: primaryProgram || ordered[0] || null, calls: foundCalls }
 }
 
 async function loadTeamForApplicant(applicantId) {
@@ -140,8 +152,10 @@ const rows = computed(() => {
     }
     out.push({
       applicationId: app.id,
+      callId: app.callId,
       status: app.status,
       programName: app.programName,
+      callTitle: app.callTitle,
       title,
       members,
     })
@@ -153,21 +167,32 @@ async function load() {
   loading.value = true
   error.value = ''
   program.value = null
-  call.value = null
+  calls.value = []
   applications.value = []
   teamByApplicant.value = new Map()
 
   try {
-    const resolved = await resolvePrimaryCall(programLetter.value)
-    if (!resolved) {
+    const resolved = await resolveProgramCalls(programLetter.value)
+    if (!resolved.calls.length) {
       loading.value = false
       return
     }
     program.value = resolved.program
-    call.value = resolved.call
+    calls.value = resolved.calls
 
-    const { data: queue } = await evaluationApi.getQueue(resolved.call.id)
-    const list = Array.isArray(queue) ? queue : []
+    const queueResults = await Promise.all(
+      resolved.calls.map(async (call) => {
+        const { data: queue } = await evaluationApi.getQueue(call.id)
+        const list = Array.isArray(queue) ? queue : []
+        return list.map((app) => ({
+          ...app,
+          callId: call.id,
+          callTitle: call.title || `№${call.id}`,
+          programName: app.programName || call.program?.name,
+        }))
+      }),
+    )
+    const list = queueResults.flat()
     applications.value = list.filter((a) => a.status && a.status !== 'DRAFT')
 
     const ids = [...new Set(applications.value.map((a) => a.applicantId).filter(Boolean))]
