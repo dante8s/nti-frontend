@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useOrganizationStore } from '@/stores/organization'
+import { hasStudentPortalAccess, hasTeamLeaderRole } from '@/utils/roles'
 
 const auth = useAuthStore()
 const orgStore = useOrganizationStore()
@@ -15,7 +16,24 @@ const isSuperAdmin = computed(() => auth.roles?.includes('SUPER_ADMIN'))
 const isAdmin = computed(() =>
   auth.roles?.some((r) => r === 'ADMIN' || r === 'SUPER_ADMIN'),
 )
-const isStudent = computed(() => auth.roles?.includes('STUDENT'))
+const canStudentPortal = computed(
+  () => hasStudentPortalAccess(auth.roles) || isSuperAdmin.value,
+)
+const isCommissionMember = computed(() =>
+  auth.roles?.some((r) => r === 'EVALUATOR' || r === 'SUPER_EVALUATOR'),
+)
+const showTeamLeaderBadge = computed(() => hasTeamLeaderRole(auth.roles))
+
+const studentNavGroupTitle = computed(() => {
+  if (showTeamLeaderBadge.value && hasStudentPortalAccess(auth.roles)) {
+    return 'Студентський портал'
+  }
+  if (showTeamLeaderBadge.value) {
+    return 'Лідер команди'
+  }
+  return 'Студент'
+})
+
 const isOrgUser = computed(() => auth.roles?.some((r) => r === 'FIRM' || r === 'FIRM_USER'))
 const isMentor = computed(() => auth.roles?.includes('MENTOR'))
 
@@ -31,8 +49,15 @@ const adminNav = computed(() => {
       { to: '/app/admin/programs', label: 'Програми та виклики', icon: '◇' },
       { to: '/app/admin/program-review-queue', label: 'Program B Review Queue', icon: '◬' },
       { to: '/app/admin/organizations', label: 'Організації', icon: '◈' },
-      { to: '/app/admin/mentorships', label: 'Mentorships', icon: '✦'}
+      { to: '/app/reporting', label: 'Звітність', icon: '⬒' },
+      { to: '/app/admin/mentorships', label: 'Mentorships', icon: '✦' },
     )
+  }
+  if (isCommissionMember.value) {
+    items.push({ to: '/app/commission', label: 'Комісія', icon: '◌' })
+    if (!isAdmin.value) {
+      items.push({ to: '/app/reporting', label: 'Звітність', icon: '⬒' })
+    }
   }
   if (isSuperAdmin.value) {
     items.push({ to: '/app/admin/users', label: 'Користувачі', icon: '◎' })
@@ -41,8 +66,12 @@ const adminNav = computed(() => {
 })
 
 const studentNav = computed(() => {
-  if (!isStudent.value) return []
-  return [{ to: '/app/my-applications', label: 'Мої заявки', icon: '▸' }]
+  if (!canStudentPortal.value) return []
+  return [
+    { to: '/app/my-applications', label: 'Мої заявки', icon: '▸' },
+    { to: '/app/my-profile', label: 'Мій профіль', icon: '◉' },
+    { to: '/app/teams', label: 'Моя команда', icon: '◍' },
+  ]
 })
 
 const organizationNav = computed(() => {
@@ -117,7 +146,12 @@ async function checkFirmOrg() {
         </RouterLink>
 
         <p v-if="studentNav.length" class="shell__group-label">
-          Студент
+          {{ studentNavGroupTitle }}
+          <span
+            v-if="showTeamLeaderBadge"
+            class="shell__group-tag"
+            title="Роль у системі: лідер команди"
+          >Лідер</span>
         </p>
         <RouterLink
           v-for="item in studentNav"
@@ -224,6 +258,9 @@ async function checkFirmOrg() {
       <div class="shell__user">
         <div class="shell__user-name">{{ auth.user?.name || 'Користувач' }}</div>
         <div class="shell__user-email">{{ auth.user?.email }}</div>
+        <div v-if="showTeamLeaderBadge" class="shell__role-row" aria-label="Додаткові ролі">
+          <span class="shell__pill shell__pill--leader">Лідер команди</span>
+        </div>
         <button type="button" class="shell__logout" @click="logout">
           Вийти
         </button>
@@ -318,6 +355,46 @@ async function checkFirmOrg() {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: #94a3b8;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.shell__group-tag {
+  display: inline-block;
+  padding: 0.12rem 0.42rem;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+  color: #065f46;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.shell__role-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.55rem;
+}
+
+.shell__pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.28rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.shell__pill--leader {
+  background: linear-gradient(135deg, #eef2ff, #e0e7ff);
+  color: #3730a3;
+  border: 1px solid rgba(79, 70, 229, 0.28);
 }
 
 .shell__link {

@@ -12,6 +12,7 @@
                 <div class="hero-actions">
                     <router-link to="/programs/a" class="btn btn-primary">Програма A</router-link>
                     <router-link to="/programs/b" class="btn btn-secondary">Програма B</router-link>
+                    <router-link to="/login" class="btn btn-ghost">Увійти</router-link>
                 </div>
             </div>
             <div class="hero-wave" aria-hidden="true"></div>
@@ -37,8 +38,40 @@
                 <div class="info-card">
                     <h2>Подайте заявку</h2>
                     <p>
-                        Перегляньте опис програм, оберіть свій виклик і подайте заявку.
-                        Щоб завершити заявку, потрібно зареєструватися та увійти в систему.
+                        Перегляньте опис програм, оберіть виклик і подайте заявку від команди.
+                        Щоб подати заявку та керувати нею в кабінеті, зареєструйтеся як студент і увійдіть у систему.
+                    </p>
+                </div>
+                <div class="info-card info-card--wide">
+                    <h2>Як працює портал NTI</h2>
+                    <ol class="steps-list">
+                        <li>
+                            <strong>Відвідувач</strong> — ознайомлюється з місією й програмами, переглядає умови виклику,
+                            створює акаунт.
+                        </li>
+                        <li>
+                            <strong>Студент / команда</strong> — заповнює профіль та CV у кабінеті, створює команду,
+                            оформлює заявку з обовʼязковими документами (Програма A або B) і надсилає її до комісії.
+                        </li>
+                        <li>
+                            <strong>Комісія</strong> — оцінює заявку за критеріями, може повернути її на доопрацювання,
+                            затвердити або відхилити; студент бачить статус та коментар у «Моїх заявках».
+                        </li>
+                    </ol>
+                    <router-link class="steps-link" to="/register">
+                        Зареєструватись і почати
+                    </router-link>
+                </div>
+                <div class="info-card info-card--wide">
+                    <h2>Умови участі (коротко)</h2>
+                    <ul class="terms-list">
+                        <li>Ви надаєте достовірні дані профілю та згоду на обробку персональних даних при реєстрації.</li>
+                        <li>Заявка подається в межах активного виклику, з дотриманням дедлайну та форматів документів.</li>
+                        <li>Вирішення комісії є підставою для подальшого онбордингу проєкту після схвалення заявки.</li>
+                    </ul>
+                    <p class="terms-meta">
+                        Повний регламент надається окремими правилами програми; у кабінеті відображаються лише ваші статуси
+                        та результати розгляду.
                     </p>
                 </div>
             </div>
@@ -196,6 +229,17 @@ const heroStyle = {
     border: 1px solid rgba(255, 255, 255, 0.28);
 }
 
+.btn-ghost {
+    background: transparent;
+    color: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    box-shadow: none;
+}
+
+.btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
 .hero-wave {
     position: absolute;
     bottom: 0;
@@ -241,6 +285,42 @@ const heroStyle = {
     margin: 1rem 0 0;
     color: #4b5563;
     line-height: 1.8;
+}
+
+.info-card--wide {
+    grid-column: 1 / -1;
+}
+
+.steps-list,
+.terms-list {
+    margin: 0.75rem 0 0;
+    padding-left: 1.25rem;
+    color: #4b5563;
+    line-height: 1.75;
+}
+
+.steps-list li + li,
+.terms-list li + li {
+    margin-top: 0.55rem;
+}
+
+.steps-link {
+    display: inline-block;
+    margin-top: 1rem;
+    font-weight: 700;
+    color: #4f46e5;
+    text-decoration: none;
+}
+
+.steps-link:hover {
+    text-decoration: underline;
+}
+
+.terms-meta {
+    margin: 0.85rem 0 0;
+    font-size: 0.88rem;
+    color: #64748b;
+    line-height: 1.6;
 }
 
 @media (max-width: 900px) {

@@ -53,7 +53,7 @@
                 {{ row.programName }}
               </div>
               <div class="cell-meta">
-                {{ row.programType === 'PROGRAM_A' ? 'Програма A' : 'Програма B' }}
+                {{ row.programType === 'PROGRAM_A' || row.programType === 'A' ? 'Програма A' : 'Програма B' }}
               </div>
             </td>
             <td>{{ row.callTitle }}</td>
@@ -246,6 +246,7 @@ import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { applicationsApi } from '@/api/applications'
 import { adminAllowedNextStatuses, statusLabel } from '@/utils/applicationStatus'
+import { useAuthStore } from '@/stores/auth'
 import { useMentorshipStore } from '@/stores/mentorship'
 import { useNoteStore } from '@/stores/note'
 
@@ -254,6 +255,7 @@ const loading = ref(true)
 const error = ref('')
 const search = ref('')
 const saving = ref(false)
+const auth = useAuthStore()
 const router = useRouter()
 
 const mentorshipStore = useMentorshipStore()
@@ -354,7 +356,12 @@ async function submitStatus() {
       modal.nextStatus,
       modal.comment?.trim() || null,
     )
-    showToast('Статус оновлено', 'success')
+    const isSuperAdmin = (auth.user?.roles || []).includes('SUPER_ADMIN')
+    if (modal.nextStatus === 'APPROVED' && isSuperAdmin) {
+      showToast('Схвалено SUPER_ADMIN: запущено онбординг проєкту', 'success')
+    } else {
+      showToast('Статус оновлено', 'success')
+    }
     modal.show = false
     await load()
   } catch (e) {

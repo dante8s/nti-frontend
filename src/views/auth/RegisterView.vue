@@ -28,6 +28,7 @@
                         <option value="">Оберіть тип акаунту</option>
                         <option value="STUDENT">Студент</option>
                         <option value="FIRM">Компанія / Партнер</option>
+                        <option value="MENTOR">Mentor</option>
                     </select>
                 </div>
 
@@ -123,7 +124,7 @@ async function handleRegister() {
         const message = await auth.register(payload)
         success.value = message || 'Реєстрація пройшла успішно. Перевірте пошту.'
     } catch (e) {
-        error.value = e.response?.data?.message || e.response?.data || 'Помилка реєстрації'
+        error.value = e.response?.data?.message || e.response?.data || e.message || 'Помилка реєстрації'
     } finally {
         loading.value = false
     }
@@ -230,4 +231,5 @@ button:disabled {
     margin-bottom: 1rem;
     font-size: 0.875rem;
 }
+
 </style>
