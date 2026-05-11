@@ -10,10 +10,6 @@
       <p class="welcome__text">
         Це ваш кабінет NTI: швидкі дії та розділи залежно від ролі.
       </p>
-      <p v-if="leaderWelcomeLine" class="welcome__pill-line">
-        <span class="welcome__pill">Лідер команди</span>
-        {{ leaderWelcomeLine }}
-      </p>
     </section>
 
     <div class="grid">
@@ -59,7 +55,6 @@
 import { computed, onMounted, ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useOrganizationStore } from '@/stores/organization'
-import { hasStudentPortalAccess, hasTeamLeaderRole } from '@/utils/roles'
 
 const auth = useAuthStore()
 const orgStore = useOrganizationStore()
@@ -68,10 +63,7 @@ const isSuperAdmin = computed(() => auth.roles?.includes('SUPER_ADMIN'))
 const isAdmin = computed(() =>
   auth.roles?.some((r) => r === 'ADMIN' || r === 'SUPER_ADMIN'),
 )
-const canStudentPortal = computed(() => hasStudentPortalAccess(auth.roles))
-const isCommissionMember = computed(() =>
-  auth.roles?.some((r) => r === 'EVALUATOR' || r === 'SUPER_EVALUATOR'),
-)
+const isStudent = computed(() => auth.roles?.includes('STUDENT'))
 const isFirm = computed(() => auth.roles?.includes('FIRM'))
 const isOrgUser = computed(() => auth.roles?.some((r) => r === 'FIRM' || r === 'FIRM_USER'))
 const isMentor = computed(() => auth.roles?.includes('MENTOR'))
@@ -81,12 +73,10 @@ const firmHasOrg = ref(false)
 
 const roleLabels = {
   STUDENT: 'Студент',
-  TEAM_LEADER: 'Лідер команди',
   FIRM: 'Компанія',
   FIRM_USER: 'Представник фірми',
   MENTOR: 'Ментор',
-  EVALUATOR: 'Комісія (перегляд)',
-  SUPER_EVALUATOR: 'Комісія — рішення',
+  EVALUATOR: 'Комісія',
   ADMIN: 'Адмін',
   SUPER_ADMIN: 'Супер-адмін',
 }
@@ -96,11 +86,6 @@ const rolesLine = computed(() =>
     .map((r) => roleLabels[r] || r)
     .join(', '),
 )
-
-const leaderWelcomeLine = computed(() => {
-  if (!hasTeamLeaderRole(auth.user?.roles)) return ''
-  return 'У вашому профілі активна роль лідера: запросіть учасників у «Моїй команді» та подайте заявку на програму від команди.'
-})
 
 const cards = computed(() => {
   const out = []
@@ -143,65 +128,16 @@ const cards = computed(() => {
         desc: 'Редагування програм і дедлайнів',
         icon: '◇',
       },
-      {
-        to: '/app/admin/program-review-queue',
-        title: 'Черга Program B',
-        desc: 'Перегляд нових пропозицій програми B',
-        icon: '◬',
-      },
-      {
-        to: '/app/admin/organizations',
-        title: 'Організації',
-        desc: 'Каталог організацій-партнерів',
-        icon: '◈',
-      },
-      {
-        to: '/app/reporting',
-        title: 'Звітність',
-        desc: 'Панель статистики та експорти CSV/XLSX/PDF/DOCX',
-        icon: '⬒',
-      },
     )
   }
 
-  if (canStudentPortal.value || isSuperAdmin.value) {
-    out.push(
-      {
-        to: '/app/my-applications',
-        title: 'Мої заявки',
-        desc: 'Статуси подань та коментарі комісії',
-        icon: '▸',
-      },
-      {
-        to: '/app/my-profile',
-        title: 'Мій профіль',
-        desc: 'Редагування даних профілю та CV',
-        icon: '◉',
-      },
-      {
-        to: '/app/teams',
-        title: 'Моя команда',
-        desc: 'Створення команди та керування інвайтами',
-        icon: '◍',
-      },
-    )
-  }
-
-  if (isCommissionMember.value || isSuperAdmin.value) {
-    out.push(
-      {
-        to: '/app/commission',
-        title: 'Комісія',
-        desc: 'Черга заявок і матеріали; скоринг і рішення — лише для SUPER_EVALUATOR / адмінів',
-        icon: '◌',
-      },
-      {
-        to: '/app/reporting',
-        title: 'Звітність',
-        desc: 'Перевірки готовності та експорт звітів',
-        icon: '⬒',
-      },
-    )
+  if (isStudent.value) {
+    out.push({
+      to: '/app/my-applications',
+      title: 'Мої заявки',
+      desc: 'Статуси подань та коментарі комісії',
+      icon: '▸',
+    })
   }
 
   if (isMentor.value) {
@@ -286,31 +222,6 @@ async function checkFirmOrg() {
   max-width: 36rem;
   color: #475569;
   line-height: 1.6;
-}
-
-.welcome__pill-line {
-  margin: 0.85rem 0 0;
-  max-width: 40rem;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 0.5rem 0.65rem;
-  font-size: 0.88rem;
-  color: #0f766e;
-  line-height: 1.5;
-}
-
-.welcome__pill {
-  flex-shrink: 0;
-  display: inline-block;
-  padding: 0.2rem 0.55rem;
-  border-radius: 999px;
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  background: linear-gradient(135deg, #d1fae5, #a7f3d0);
-  color: #065f46;
 }
 
 .grid {

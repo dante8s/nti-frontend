@@ -1,6 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { hasStudentPortalAccess } from '@/utils/roles'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -91,39 +90,11 @@ const router = createRouter({
           component: () => import('@/views/student/MyApplications.vue'),
         },
         {
-          path: 'my-profile',
-          name: 'my-profile',
-          meta: { title: 'Мій профіль', requiresRole: 'STUDENT' },
-          component: () => import('@/views/student/StudentProfilePage.vue'),
-        },
-        {
-          path: 'teams',
-          name: 'teams',
-          meta: { title: 'Моя команда', requiresRole: 'STUDENT' },
-          component: () => import('@/views/student/TeamsPage.vue'),
-        },
-        {
-          path: 'member-profile/:userId',
-          name: 'member-profile',
-          meta: {
-            title: 'Профіль учасника',
-            requiresAnyRole: ['STUDENT', 'EVALUATOR', 'SUPER_EVALUATOR', 'ADMIN', 'SUPER_ADMIN'],
-          },
-          component: () => import('@/views/student/MemberProfileView.vue'),
-        },
-        {
           path: 'applications/:id',
           name: 'application-details',
           meta: {
             title: 'Application details',
-            requiresAnyRole: [
-              'STUDENT',
-              'MENTOR',
-              'ADMIN',
-              'SUPER_ADMIN',
-              'EVALUATOR',
-              'SUPER_EVALUATOR',
-            ],
+            requiresAnyRole: ['STUDENT', 'MENTOR', 'ADMIN', 'SUPER_ADMIN'],
           },
           component: () => import('@/views/ApplicationDetails.vue'),
         },
@@ -162,80 +133,6 @@ const router = createRouter({
           name: 'admin-programs',
           meta: { title: 'Програми та виклики', requiresAdmin: true },
           component: () => import('@/views/admin/AdminPrograms.vue'),
-        },
-        {
-          path: 'evaluation',
-          redirect: { name: 'commission-hub' },
-        },
-        {
-          path: 'commission',
-          name: 'commission-hub',
-          meta: {
-            title: 'Комісія',
-            requiresAnyRole: ['EVALUATOR', 'SUPER_EVALUATOR', 'ADMIN', 'SUPER_ADMIN'],
-          },
-          component: () => import('@/views/commission/CommissionProgramHub.vue'),
-        },
-        {
-          path: 'commission/participants/:programType',
-          name: 'commission-participants',
-          meta: {
-            title: 'Учасники програми',
-            requiresAnyRole: ['EVALUATOR', 'SUPER_EVALUATOR', 'ADMIN', 'SUPER_ADMIN'],
-          },
-          component: () => import('@/views/commission/CommissionParticipantsView.vue'),
-        },
-        {
-          path: 'commission/call/:callId/application/:applicationId',
-          name: 'commission-evaluate',
-          meta: {
-            title: 'Оцінювання заявки',
-            requiresAnyRole: ['EVALUATOR', 'SUPER_EVALUATOR', 'ADMIN', 'SUPER_ADMIN'],
-          },
-          component: () => import('@/views/commission/CommissionApplicationEvaluateView.vue'),
-        },
-        {
-          path: 'reporting',
-          component: () => import('@/views/reporting/ReportingLayout.vue'),
-          meta: {
-            title: 'Звітність',
-            requiresAnyRole: ['ADMIN', 'SUPER_ADMIN', 'EVALUATOR', 'SUPER_EVALUATOR'],
-          },
-          children: [
-            {
-              path: '',
-              name: 'reporting-index',
-              meta: { title: 'Звітність' },
-              component: () => import('@/views/reporting/ReportingIndexRedirect.vue'),
-            },
-            {
-              path: 'admin',
-              name: 'reporting-admin',
-              meta: {
-                title: 'Звітність — адміністрування',
-                requiresAnyRole: ['ADMIN', 'SUPER_ADMIN', 'EVALUATOR', 'SUPER_EVALUATOR'],
-              },
-              component: () => import('@/views/reporting/ReportingAdminView.vue'),
-            },
-            {
-              path: 'student',
-              name: 'reporting-student',
-              meta: {
-                title: 'Звітність — студент / команда',
-                requiresAnyRole: ['ADMIN', 'SUPER_ADMIN', 'EVALUATOR', 'SUPER_EVALUATOR'],
-              },
-              component: () => import('@/views/reporting/ReportingStudentPanelView.vue'),
-            },
-            {
-              path: 'firm',
-              name: 'reporting-firm',
-              meta: {
-                title: 'Звітність — компанія',
-                requiresAnyRole: ['ADMIN', 'SUPER_ADMIN', 'EVALUATOR', 'SUPER_EVALUATOR'],
-              },
-              component: () => import('@/views/reporting/ReportingFirmPanelView.vue'),
-            },
-          ],
         },
         {
           path: 'admin/program-review-queue',
@@ -311,55 +208,36 @@ function hasAdminRole(roles) {
   return roles?.some((r) => r === 'ADMIN' || r === 'SUPER_ADMIN')
 }
 
-function isSuperAdmin(roles) {
-  return roles?.includes('SUPER_ADMIN')
-}
-
-router.beforeEach(async (to) => {
+router.beforeEach((to) => {
   const auth = useAuthStore()
-  const requiresAuth = to.matched.some((r) => r.meta.requiresAuth)
 
-  if (requiresAuth && !auth.isLoggedIn) {
+  if (to.matched.some((r) => r.meta.requiresAuth) && !auth.isLoggedIn) {
     return { name: 'login' }
   }
 
-  if (requiresAuth && auth.isLoggedIn && !auth.sessionHydrated) {
-    await auth.hydrateSession()
-  }
-
-  const roles = auth.user?.roles || []
-  const superAdmin = isSuperAdmin(roles)
-
-  // SUPER_ADMIN gets full access across portal pages for testing/operations.
-  if (superAdmin) return true
-
   if (to.meta.requiresRole) {
-    const required = to.meta.requiresRole
-    const ok =
-      required === 'STUDENT'
-        ? hasStudentPortalAccess(roles)
-        : roles.includes(required)
+    const ok = auth.user?.roles?.includes(to.meta.requiresRole)
     if (!ok) {
       return { name: 'dashboard' }
     }
   }
 
   if (to.meta.requiresAnyRole) {
-    const allowed = to.meta.requiresAnyRole
-    const ok = allowed.some((role) => roles.includes(role))
+    const required = Array.isArray(to.meta.requiresAnyRole) ? to.meta.requiresAnyRole : []
+    const ok = required.some((r) => auth.user?.roles?.includes(r))
     if (!ok) {
       return { name: 'dashboard' }
     }
   }
 
   if (to.meta.requiresSuperAdmin) {
-    if (!superAdmin) {
+    if (!auth.user?.roles?.includes('SUPER_ADMIN')) {
       return { name: 'dashboard' }
     }
   }
 
   if (to.meta.requiresAdmin) {
-    if (!hasAdminRole(roles)) {
+    if (!hasAdminRole(auth.user?.roles)) {
       return { name: 'dashboard' }
     }
   }
