@@ -1,31 +1,5 @@
 import api from './axios'
 
-export const programsApi = {
-  // Публічні — без токена
-  getAll: () => api.get('/api/public/programs'),
-
-  getAllByType: (type) => api.get(`/api/public/programs-${type.toLowerCase()}`),
-
-  getOne: (id) => api.get(`/api/public/programs/${id}`),
-
-  getOneByType: (id, type) => api.get(`/api/public/programs-${type.toLowerCase()}/${id}`),
-
-  fetchProgramA: (id) => api.get(`/api/public/programs-a/${id}`),
-
-  fetchProgramB: (id) => api.get(`/api/public/programs-b/${id}`),
-
-  getCallsByProgram: (programId) => api.get(`/api/public/programs/${programId}/calls`),
-
-  getAllOpenCalls: () => api.get('/api/public/calls'),
-
-  getCall: (id) => api.get(`/api/public/calls/${id}`),
-
-  getAllCallsByProgram: (programId) => api.get(`/api/calls?programId=${programId}`),
-
-  getByProgram: (programId) => api.get(`/api/calls?programId=${programId}`),
-
-  // Тільки ADMIN
-  create: (data) => api.post('/api/admin/programs', data),
 const MOCK_ENABLED = import.meta.env.VITE_ENABLE_AUTH_MOCK === 'true'
 
 const PROGRAMS_KEY = 'mock_programs'
