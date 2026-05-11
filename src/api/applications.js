@@ -11,6 +11,8 @@ export const applicationsApi = {
   getMyByCall: (callId) =>
     api.get(`/api/applications/my/by-call/${callId}`),
 
+
+  getByCall: (callId) => api.get(`/api/applications/by-call/${callId}`),
   createDraft: (callId) =>
     api.post('/api/applications', { callId }),
 
@@ -51,5 +53,9 @@ export const applicationsApi = {
     api.patch(
       `/api/admin/applications/${id}/status`,
       { status, comment }
-    )
+    ),
+    
+  setProductOwner: (applicationId, userId) =>
+    api.patch(`/api/applications/${applicationId}/product-owner`, null, { params: { userId } }),
 }
+
