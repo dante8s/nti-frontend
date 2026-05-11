@@ -1,10 +1,6 @@
 <template>
   <div class="page">
     <h1>Мої заявки</h1>
-    <p class="lead">
-      Ваші заявки за програмами A та B: статуси узгоджені з процесом розгляду комісією (подання, розгляд, рішення або
-      повернення на доопрацювання з коментарем).
-    </p>
 
     <div v-if="loading" class="loading">
       Завантаження...
@@ -12,7 +8,7 @@
 
     <div v-else-if="applications.length === 0" class="empty">
       <p>У вас поки немає заявок</p>
-      <router-link to="/programs/a" class="btn-go">
+      <router-link to="/programs" class="btn-go">
         Переглянути програми
       </router-link>
     </div>
@@ -70,13 +66,9 @@
         <!-- Кнопка редагувати якщо DRAFT -->
         <div v-if="selected.status === 'DRAFT'
           || selected.status === 'NEEDS_REVISION'" class="edit-section">
-          <router-link
-            :to="{
-              name: selected.programType === 'PROGRAM_A' ? 'apply-a' : 'apply-b',
-              params: { callId: selected.callId },
-            }"
-            class="btn-edit"
-          >
+          <router-link :to="`/apply/${selected.programType === 'PROGRAM_A'
+              ? 'a' : 'b'
+            }/${selected.callId}`" class="btn-edit">
             ✏️ Редагувати заявку
           </router-link>
         </div>
@@ -102,23 +94,6 @@
 
         <!-- Таймлайн -->
         <StatusTimeline :key="'audit-' + selected.id" :application-id="selected.id" ref="timelineRef" />
-
-        <p v-if="selected.status === 'APPROVED'" class="comment comment--ok">
-          <strong>Далі:</strong> заявка схвалена. Очікуйте онбординг від NTI та повідомлення про старт проєкту.
-        </p>
-        <div v-if="selected.onboarding && selected.status === 'APPROVED'" class="onboarding">
-          <p class="onboarding__title">
-            Онбординг: {{ selected.onboarding.status }}
-          </p>
-          <p class="onboarding__meta">
-            Підтверджено: {{ selected.onboarding.approvedBy }} · {{ formatDt(selected.onboarding.approvedAt) }}
-          </p>
-          <ul class="onboarding__list">
-            <li v-for="step in selected.onboarding.steps || []" :key="step.key">
-              {{ step.done ? '✓' : '•' }} {{ step.label }}
-            </li>
-          </ul>
-        </div>
 
       </div>
 
@@ -164,7 +139,8 @@ function select(app) {
 async function refreshSelected() {
   if (!selected.value) return
   try {
-    const res = await applicationsApi.getById(selected.value.id)
+    const res = await applicationsApi
+      .getById(selected.value.id)
     selected.value = res.data
     // Оновлюємо також в списку
     const idx = applications.value
@@ -221,17 +197,6 @@ function formatDate(date) {
     day: '2-digit', month: 'short', year: 'numeric'
   })
 }
-
-function formatDt(value) {
-  if (!value) return '—'
-  return new Date(value).toLocaleString('uk-UA', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
 </script>
 
 <style scoped>
@@ -243,15 +208,7 @@ function formatDt(value) {
 
 h1 {
   font-size: 1.75rem;
-  margin-bottom: 0.5rem;
-}
-
-.lead {
-  margin: 0 0 1.5rem;
-  max-width: 48rem;
-  color: #64748b;
-  line-height: 1.55;
-  font-size: 0.95rem;
+  margin-bottom: 1.5rem;
 }
 
 .layout {
@@ -496,44 +453,5 @@ h1 {
   border-radius: 8px;
   text-decoration: none;
   margin-top: 1rem;
-}
-
-.comment {
-  margin: 1rem 0 0;
-  padding: 0.75rem 1rem;
-  font-size: 0.9rem;
-  color: #334155;
-}
-
-.comment--ok {
-  background: rgba(5, 150, 105, 0.1);
-  color: #065f46;
-  border-radius: 8px;
-}
-
-.onboarding {
-  margin-top: 0.65rem;
-  padding: 0.75rem 1rem;
-  border-radius: 12px;
-  background: rgba(14, 116, 144, 0.08);
-  color: #0f172a;
-}
-
-.onboarding__title {
-  margin: 0;
-  font-weight: 700;
-}
-
-.onboarding__meta {
-  margin: 0.2rem 0 0.45rem;
-  color: #475569;
-  font-size: 0.82rem;
-}
-
-.onboarding__list {
-  margin: 0;
-  padding-left: 1rem;
-  color: #334155;
-  font-size: 0.84rem;
 }
 </style>
