@@ -8,43 +8,12 @@ export const MentorshipStatus = Object.freeze({
   CANCELLED: 'CANCELLED',
 })
 
-function normalizeLocalDate(value) {
-  if (!value) return value
-  if (value instanceof Date) {
-    const y = value.getFullYear()
-    const m = String(value.getMonth() + 1).padStart(2, '0')
-    const d = String(value.getDate()).padStart(2, '0')
-    return `${y}-${m}-${d}`
-  }
-  if (typeof value === 'string') {
-    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value
-    const parsed = new Date(value)
-    if (!Number.isNaN(parsed.getTime())) {
-      const y = parsed.getFullYear()
-      const m = String(parsed.getMonth() + 1).padStart(2, '0')
-      const d = String(parsed.getDate()).padStart(2, '0')
-      return `${y}-${m}-${d}`
-    }
-  }
-  return value
-}
-
-function normalizeConsultationPayload(payload = {}) {
-  return {
-    ...payload,
-    consultationDate: normalizeLocalDate(payload.consultationDate),
-  }
-}
-
 export const useMentorshipStore = defineStore('mentorship', () => {
   const mentorships = ref([])
   const myMentorships = ref([])
   const publicMentors = ref([])
   const mentorshipsByApplication = ref({})
   const currentMentorship = ref(null)
-  const consultationsByMentorship = ref({})
-  const consultationsLoading = ref(false)
-  const consultationsError = ref(null)
 
   function upsertMentorshipInList(listRef, mentorship) {
     if (!mentorship?.id) return
@@ -111,71 +80,6 @@ export const useMentorshipStore = defineStore('mentorship', () => {
     return mentorshipsByApplication.value[applicationId]
   }
 
-  async function getConsultations(mentorshipId) {
-    consultationsLoading.value = true
-    consultationsError.value = null
-    try {
-      const response = await mentorshipsApi.getConsultations(mentorshipId)
-      consultationsByMentorship.value = {
-        ...consultationsByMentorship.value,
-        [String(mentorshipId)]: response.data || [],
-      }
-      return consultationsByMentorship.value[String(mentorshipId)]
-    } catch (error) {
-      consultationsError.value = error
-      throw error
-    } finally {
-      consultationsLoading.value = false
-    }
-  }
-
-  async function createConsultation(payload) {
-    const normalizedPayload = normalizeConsultationPayload(payload)
-    const response = await mentorshipsApi.createConsultation(normalizedPayload)
-    const mentorshipId = normalizedPayload?.mentorshipId ?? response.data?.mentorshipId
-    if (mentorshipId) {
-      const key = String(mentorshipId)
-      consultationsByMentorship.value = {
-        ...consultationsByMentorship.value,
-        [key]: [...(consultationsByMentorship.value[key] || []), response.data],
-      }
-    }
-    return response.data
-  }
-
-  async function updateConsultation(id, payload) {
-    const normalizedPayload = normalizeConsultationPayload(payload)
-    const response = await mentorshipsApi.updateConsultation(id, normalizedPayload)
-    const mentorshipId = normalizedPayload?.mentorshipId ?? response.data?.mentorshipId
-    if (mentorshipId) {
-      const key = String(mentorshipId)
-      const list = consultationsByMentorship.value[key] || []
-      const idx = list.findIndex((consultation) => consultation?.id === id)
-      if (idx >= 0) {
-        const next = [...list]
-        next.splice(idx, 1, response.data)
-        consultationsByMentorship.value = {
-          ...consultationsByMentorship.value,
-          [key]: next,
-        }
-      }
-    }
-    return response.data
-  }
-
-  async function deleteConsultation(id, mentorshipId) {
-    await mentorshipsApi.deleteConsultation(id)
-    if (mentorshipId) {
-      const key = String(mentorshipId)
-      consultationsByMentorship.value = {
-        ...consultationsByMentorship.value,
-        [key]: (consultationsByMentorship.value[key] || []).filter(
-          (consultation) => consultation?.id !== id,
-        ),
-      }
-    }
-  }
-
   return {
     // Enums (usable in UI logic)
     MentorshipStatus,
@@ -186,9 +90,6 @@ export const useMentorshipStore = defineStore('mentorship', () => {
     publicMentors,
     mentorshipsByApplication,
     currentMentorship,
-    consultationsByMentorship,
-    consultationsLoading,
-    consultationsError,
 
     // Actions (mapped to API)
     create,
@@ -200,10 +101,6 @@ export const useMentorshipStore = defineStore('mentorship', () => {
     getPublicMentors,
     getAll,
     getByApplication,
-    getConsultations,
-    createConsultation,
-    updateConsultation,
-    deleteConsultation,
   }
 })
 

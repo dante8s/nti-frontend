@@ -123,7 +123,6 @@ const router = createRouter({
               'SUPER_ADMIN',
               'EVALUATOR',
               'SUPER_EVALUATOR',
-  'FIRM', 'FIRM_USER'
             ],
           },
           component: () => import('@/views/ApplicationDetails.vue'),

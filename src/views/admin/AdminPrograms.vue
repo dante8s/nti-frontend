@@ -54,9 +54,6 @@
             <button type="button" class="btn-sm" @click="openProgramModal(p)">
               Редагувати
             </button>
-            <button type="button" class="btn-sm btn-sm--ghost" @click="openProgramDetails(p)">
-              Open Details
-            </button>
           </div>
         </div>
 
@@ -158,12 +155,10 @@
 
 <script setup>
 import { reactive, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import { programsApi } from '@/api/programs'
 import { apiErrorMessage } from '@/utils/apiError'
 import StatusBadge from '@/components/StatusBadge.vue'
 
-const router = useRouter()
 const tab = ref('A')
 const programs = ref([])
 const loading = ref(true)
@@ -379,22 +374,6 @@ function showToast(message, type = 'success') {
   toast.type = type
   toast.show = true
   setTimeout(() => { toast.show = false }, 3000)
-}
-
-function openProgramDetails(program) {
-  const programId = program?.id
-  const rawType = program?.type || (tab.value === 'A' ? 'PROGRAM_A' : 'PROGRAM_B')
-  if (!programId) return
-
-  // We pass 'B' or 'A' in the query so ProgramDetail can find it easily
-  const typeQuery = String(rawType).includes('B') ? 'B' : 'A'
-
-  router.push({
-    name: 'program-detail',
-    // keep required route param happy, but rely on query for strict fetching
-    params: { type: typeQuery.toLowerCase(), id: String(programId) },
-    query: { type: typeQuery },
-  })
 }
 </script>
 

@@ -19,13 +19,5 @@ export const mentorshipsApi = {
 
   getByApplication: (applicationId) =>
     api.get(`/api/mentorships/by-application/${applicationId}`),
-
-  getConsultations: (mentorshipId) => api.get('/api/consultations', { params: { mentorshipId } }),
-
-  createConsultation: (payload) => api.post('/api/consultations', payload),
-
-  updateConsultation: (id, payload) => api.put(`/api/consultations/${id}`, payload),
-
-  deleteConsultation: (id) => api.delete(`/api/consultations/${id}`),
 }
 

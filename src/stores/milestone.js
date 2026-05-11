@@ -35,12 +35,6 @@ export const useMilestoneStore = defineStore('milestone', () => {
   // Admin pending approval list
   const pendingMilestones = ref([])
   const currentMilestone = ref(null)
-  const commentsByMilestone = ref({})
-  const attachmentsByMilestone = ref({})
-  const commentsLoading = ref(false)
-  const commentsError = ref(null)
-  const attachmentsLoading = ref(false)
-  const attachmentsError = ref(null)
 
   function upsertMilestoneInAppList(applicationId, milestone) {
     if (!applicationId || !milestone?.id) return
@@ -140,135 +134,11 @@ export const useMilestoneStore = defineStore('milestone', () => {
     return pendingMilestones.value
   }
 
-  async function getComments(milestoneId) {
-    commentsLoading.value = true
-    commentsError.value = null
-    try {
-      const response = await milestonesApi.getComments(milestoneId)
-      commentsByMilestone.value = {
-        ...commentsByMilestone.value,
-        [String(milestoneId)]: response.data || [],
-      }
-      return commentsByMilestone.value[String(milestoneId)]
-    } catch (error) {
-      commentsError.value = error
-      throw error
-    } finally {
-      commentsLoading.value = false
-    }
-  }
-
-  async function addComment(milestoneId, content) {
-    const response = await milestonesApi.addComment(milestoneId, content)
-    const key = String(milestoneId)
-    const createdComment = {
-      ...response.data,
-      createdAt: response.data?.createdAt || new Date().toISOString(),
-    }
-    const current = commentsByMilestone.value[key] || []
-    commentsByMilestone.value = {
-      ...commentsByMilestone.value,
-      [key]: [createdComment, ...current],
-    }
-    // Force map replacement to make sure all computed consumers update immediately.
-    commentsByMilestone.value = { ...commentsByMilestone.value }
-    return createdComment
-  }
-
-  async function deleteComment(milestoneId, commentId) {
-    await milestonesApi.deleteComment(milestoneId, commentId)
-    const key = String(milestoneId)
-    commentsByMilestone.value = {
-      ...commentsByMilestone.value,
-      [key]: (commentsByMilestone.value[key] || []).filter((comment) => comment?.id !== commentId),
-    }
-  }
-
-  async function getAttachments(milestoneId) {
-    attachmentsLoading.value = true
-    attachmentsError.value = null
-    try {
-      const response = await milestonesApi.getAttachments(milestoneId)
-      attachmentsByMilestone.value = {
-        ...attachmentsByMilestone.value,
-        [String(milestoneId)]: response.data || [],
-      }
-      return attachmentsByMilestone.value[String(milestoneId)]
-    } catch (error) {
-      attachmentsError.value = error
-      throw error
-    } finally {
-      attachmentsLoading.value = false
-    }
-  }
-
-  async function addAttachment(milestoneId, file) {
-    const response = await milestonesApi.addAttachment(milestoneId, file)
-    const key = String(milestoneId)
-    attachmentsByMilestone.value = {
-      ...attachmentsByMilestone.value,
-      [key]: [...(attachmentsByMilestone.value[key] || []), response.data],
-    }
-    return response.data
-  }
-
-  async function deleteAttachment(milestoneId, attachmentId) {
-    await milestonesApi.deleteAttachment(milestoneId, attachmentId)
-    const key = String(milestoneId)
-    attachmentsByMilestone.value = {
-      ...attachmentsByMilestone.value,
-      [key]: (attachmentsByMilestone.value[key] || []).filter(
-        (attachment) => attachment?.id !== attachmentId,
-      ),
-    }
-  }
-
-  function attachmentFilename(contentDisposition, fallbackName = 'attachment') {
-    if (!contentDisposition) return fallbackName
-    const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i)
-    if (utf8Match?.[1]) return decodeURIComponent(utf8Match[1])
-    const plainMatch = contentDisposition.match(/filename="?([^"]+)"?/i)
-    if (plainMatch?.[1]) return plainMatch[1]
-    return fallbackName
-  }
-
-  async function openAttachmentFile(milestoneId, attachmentId, inline = false, fallbackName = 'attachment') {
-    const response = await milestonesApi.getAttachmentFile(milestoneId, attachmentId, inline)
-    const blob = response.data instanceof Blob
-      ? response.data
-      : new Blob([response.data], {
-          type: response.headers?.['content-type'] || 'application/octet-stream',
-        })
-    const url = URL.createObjectURL(blob)
-
-    if (inline) {
-      window.open(url, '_blank')
-      setTimeout(() => URL.revokeObjectURL(url), 60000)
-      return
-    }
-
-    const filename = attachmentFilename(response.headers?.['content-disposition'], fallbackName)
-    const link = document.createElement('a')
-    link.style.display = 'none'
-    link.href = url
-    link.download = filename
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    URL.revokeObjectURL(url)
-  }
-
   return {
     MilestoneStatus,
     milestones,
     pendingMilestones,
     currentMilestone,
-    commentsByMilestone,
-    attachmentsByMilestone,
-    commentsLoading,
-    commentsError,
-    attachmentsLoading,
-    attachmentsError,
     create,
     getAll,
     fetchByApplication,
@@ -277,13 +147,6 @@ export const useMilestoneStore = defineStore('milestone', () => {
     delete: remove,
     changeStatus,
     getPendingApproval,
-    getComments,
-    addComment,
-    deleteComment,
-    getAttachments,
-    addAttachment,
-    deleteAttachment,
-    openAttachmentFile,
     getAllowedTransitions,
     upsertMilestoneInAppList,
     removeMilestoneFromAppList,
