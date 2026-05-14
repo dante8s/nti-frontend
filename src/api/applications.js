@@ -1,64 +1,61 @@
 import api from './axios'
 
 export const applicationsApi = {
-  /** Тіло лише { callId } — сумісно з бекендом. */
-  create: (data) => api.post('/api/applications', { callId: data.callId }),
 
-  createDraft(callId) {
-    return this.create({ callId })
-  },
-  updateDraft(id, formData) {
-    return this.update(id, formData)
-  },
+  getMy: () =>
+    api.get('/api/applications/my'),
 
-  getMyByCall: (callId) => api.get(`/api/applications/my/by-call/${callId}`),
+  getById: (id) =>
+    api.get(`/api/applications/${id}`),
 
-  update: (id, formData) => {
-    const body =
-      typeof formData === 'string' ? { formData } : { formData: JSON.stringify(formData) }
-    return api.put(`/api/applications/${id}`, body)
-  },
+  getMyByCall: (callId) =>
+    api.get(`/api/applications/my/by-call/${callId}`),
 
-  submit: (id) => api.patch(`/api/applications/${id}/submit`),
 
-  getMy: () => api.get('/api/applications/my'),
+  getByCall: (callId) => api.get(`/api/applications/by-call/${callId}`),
+  createDraft: (callId) =>
+    api.post('/api/applications', { callId }),
 
-  getOne: (id) => api.get(`/api/applications/${id}`),
+  updateDraft: (id, formData) =>
+    api.put(`/api/applications/${id}`, { formData }),
 
-  getById: (id) => api.get(`/api/applications/${id}`),
+  submit: (id) =>
+    api.patch(`/api/applications/${id}/submit`),
 
-  getDocumentStatus: (applicationId) =>
-    api.get(`/api/applications/${applicationId}/documents/status`),
+  getDocumentStatus: (id) =>
+    api.get(`/api/applications/${id}/documents/status`),
 
-  /**
-   * Blob документа: inline (перегляд PDF) або attachment (зберегти файл).
-   */
-  fetchDocumentBlob: (applicationId, documentType, disposition = 'inline') =>
-    api.get(`/api/applications/${applicationId}/documents/${documentType}`, {
-      params: { disposition },
-      responseType: 'blob',
-    }),
-
-  downloadDocument: (applicationId, documentType) =>
-    applicationsApi.fetchDocumentBlob(applicationId, documentType, 'attachment'),
-
-  uploadDocument: (applicationId, documentType, file, onProgress) => {
-    const fd = new FormData()
-    fd.append('file', file)
-    return api.post(`/api/applications/${applicationId}/documents/${documentType}`, fd, {
-      onUploadProgress: (e) => {
-        if (onProgress && e.lengthComputable) {
-          onProgress(Math.round((e.loaded * 100) / e.total))
+  // Прогрес завантаження як callback
+  uploadDocument: (id, documentType, file, onProgress) => {
+    const form = new FormData()
+    form.append('file', file)
+    return api.post(
+      `/api/applications/${id}/documents/${documentType}`,
+      form,
+      {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (e) => {
+          if (onProgress && e.total) {
+            onProgress(Math.round(
+              (e.loaded * 100) / e.total
+            ))
+          }
         }
-      },
-    })
+      }
+    )
   },
 
-  getAll: () => api.get('/api/admin/applications'),
+  // Для адміна — тільки не чернетки
+  getAll: () =>
+    api.get('/api/admin/applications'),
 
   changeStatus: (id, status, comment) =>
-    api.patch(`/api/admin/applications/${id}/status`, {
-      status,
-      comment,
-    }),
+    api.patch(
+      `/api/admin/applications/${id}/status`,
+      { status, comment }
+    ),
+
+  setProductOwner: (applicationId, userId) =>
+    api.patch(`/api/applications/${applicationId}/product-owner`, null, { params: { userId } }),
 }
+

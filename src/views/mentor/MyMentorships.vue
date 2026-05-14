@@ -47,6 +47,22 @@
         </tbody>
       </table>
     </div>
+
+    <section v-if="rows.length" class="consultations-section">
+      <h2 class="consultations-section__title">Consultation Logs</h2>
+      <div class="consultations-section__list">
+        <article
+          v-for="row in rows"
+          :key="`consult-${row.id}`"
+          class="consultations-section__item"
+        >
+          <h3 class="consultations-section__item-title">
+            Mentorship #{{ row.id }} • Application #{{ row.applicationId ?? '—' }}
+          </h3>
+          <ConsultationsPanel :mentorship-id="row.id" />
+        </article>
+      </div>
+    </section>
   </div>
 </template>
 
@@ -54,6 +70,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useMentorshipStore } from '@/stores/mentorship'
+import ConsultationsPanel from '@/components/ConsultationsPanel.vue'
 
 const mentorshipStore = useMentorshipStore()
 const { myMentorships } = storeToRefs(mentorshipStore)
@@ -205,6 +222,35 @@ function pillClass(status) {
 
 .btn-sm:hover {
   background: #4338ca;
+}
+
+.consultations-section {
+  margin-top: 1.25rem;
+}
+
+.consultations-section__title {
+  margin: 0 0 0.8rem;
+  color: #0f172a;
+}
+
+.consultations-section__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.consultations-section__item {
+  border-radius: 16px;
+  border: 1px solid rgba(79, 70, 229, 0.12);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.06);
+  padding: 0.85rem 1rem;
+}
+
+.consultations-section__item-title {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #334155;
 }
 </style>
 

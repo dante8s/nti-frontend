@@ -53,7 +53,7 @@
                 {{ row.programName }}
               </div>
               <div class="cell-meta">
-                {{ row.programType === 'PROGRAM_A' || row.programType === 'A' ? 'Програма A' : 'Програма B' }}
+                {{ row.programType === 'PROGRAM_A' ? 'Програма A' : 'Програма B' }}
               </div>
             </td>
             <td>{{ row.callTitle }}</td>
@@ -71,6 +71,14 @@
               >
                 Змінити статус
               </button>
+              <!-- <button
+                v-if="programDetailRoute(row)"
+                type="button"
+                class="btn-sm btn-sm--ghost"
+                @click.stop="openProgramProposal(row)"
+              >
+                Open Program Proposal
+              </button> -->
             </td>
           </tr>
         </tbody>
@@ -83,7 +91,7 @@
         <p class="modal-meta">
           {{ modal.row?.programName }} · {{ modal.row?.callTitle }}
         </p>
-        
+
         <p>
           Поточний статус:
           <strong>{{ statusLabel(modal.row?.status) }}</strong>
@@ -238,7 +246,6 @@ import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { applicationsApi } from '@/api/applications'
 import { adminAllowedNextStatuses, statusLabel } from '@/utils/applicationStatus'
-import { useAuthStore } from '@/stores/auth'
 import { useMentorshipStore } from '@/stores/mentorship'
 import { useNoteStore } from '@/stores/note'
 
@@ -247,7 +254,6 @@ const loading = ref(true)
 const error = ref('')
 const search = ref('')
 const saving = ref(false)
-const auth = useAuthStore()
 const router = useRouter()
 
 const mentorshipStore = useMentorshipStore()
@@ -348,12 +354,7 @@ async function submitStatus() {
       modal.nextStatus,
       modal.comment?.trim() || null,
     )
-    const isSuperAdmin = (auth.user?.roles || []).includes('SUPER_ADMIN')
-    if (modal.nextStatus === 'APPROVED' && isSuperAdmin) {
-      showToast('Схвалено SUPER_ADMIN: запущено онбординг проєкту', 'success')
-    } else {
-      showToast('Статус оновлено', 'success')
-    }
+    showToast('Статус оновлено', 'success')
     modal.show = false
     await load()
   } catch (e) {
@@ -428,6 +429,20 @@ function notesFor(applicationId) {
 
 function openApplication(id) {
   router.push(`/applications/${id}`)
+}
+
+function programDetailRoute(row) {
+  const programId = row?.call?.program?.id ?? row?.programId
+  const rawType = row?.call?.program?.type || row?.programType || ''
+  if (!programId || !rawType) return null
+  const type = String(rawType).includes('A') ? 'a' : 'b'
+  return { name: 'program-detail', params: { type, id: String(programId) } }
+}
+
+function openProgramProposal(row) {
+  const route = programDetailRoute(row)
+  if (!route) return
+  router.push(route)
 }
 
 </script>
@@ -583,6 +598,10 @@ function openApplication(id) {
 
 .actions {
   text-align: right;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  flex-wrap: wrap;
 }
 
 

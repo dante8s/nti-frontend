@@ -1,11 +1,14 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { programsApi } from '@/api/programs'
+import { applicationsApi } from '@/api/applications'
 
 export const useProgramStore = defineStore('program', () => {
   const programs = ref([])
   const myPrograms = ref([])
   const pendingPrograms = ref([])
+  const callsByProgram = ref({})
+  const applicationsByCall = ref({})
   const loading = ref(false)
   const error = ref(null)
 
@@ -123,10 +126,38 @@ export const useProgramStore = defineStore('program', () => {
     })
   }
 
+  async function fetchCallsForProgram(programId) {
+    if (!programId) return []
+    return withRequest(async () => {
+      const response = await programsApi.getAllCallsByProgram(programId)
+      const calls = Array.isArray(response.data) ? response.data : []
+      callsByProgram.value = {
+        ...callsByProgram.value,
+        [programId]: calls,
+      }
+      return calls
+    })
+  }
+
+  async function fetchApplicationsForCall(callId) {
+    if (!callId) return []
+    return withRequest(async () => {
+      const response = await applicationsApi.getByCall(callId)
+      const applications = Array.isArray(response.data) ? response.data : []
+      applicationsByCall.value = {
+        ...applicationsByCall.value,
+        [callId]: applications,
+      }
+      return applications
+    })
+  }
+
   return {
     programs,
     myPrograms,
     pendingPrograms,
+    callsByProgram,
+    applicationsByCall,
     loading,
     error,
     submitProgramB,
@@ -136,5 +167,7 @@ export const useProgramStore = defineStore('program', () => {
     fetchMyPrograms,
     getPendingReview,
     reviewProgram,
+    fetchCallsForProgram,
+    fetchApplicationsForCall,
   }
 })

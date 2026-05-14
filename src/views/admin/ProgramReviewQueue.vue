@@ -86,6 +86,69 @@
           <textarea :value="modal.program?.description || '—'" rows="4" readonly />
         </label>
 
+        <div v-if="modal.program?.id" class="requirements">
+          <p class="requirements__title">
+            Program B Requirements
+          </p>
+
+          <div v-if="canManageRequirements" class="requirements__upload-grid">
+            <label class="requirements__file-btn">
+              Upload Specification
+              <input
+                type="file"
+                class="requirements__file-input"
+                :disabled="isRequirementActionLoading(modal.program.id)"
+                @change="onSpecificationSelected(modal.program, $event)"
+              >
+            </label>
+
+            <label class="requirements__file-btn">
+              Upload Budget
+              <input
+                type="file"
+                class="requirements__file-input"
+                :disabled="isRequirementActionLoading(modal.program.id)"
+                @change="onBudgetSelected(modal.program, $event)"
+              >
+            </label>
+          </div>
+
+          <p v-if="requirementsByProgram[modal.program.id]?.specificationName" class="requirements__row">
+            <span class="requirements__name">
+              Specification: {{ requirementsByProgram[modal.program.id].specificationName }}
+            </span>
+            <span class="requirements__actions">
+              <button type="button" class="btn-ghost" :disabled="isRequirementActionLoading(modal.program.id)" @click="viewRequirement(modal.program.id, 'specification')">
+                View
+              </button>
+              <button type="button" class="btn-ghost" :disabled="isRequirementActionLoading(modal.program.id)" @click="downloadRequirement(modal.program.id, 'specification')">
+                Download
+              </button>
+            </span>
+          </p>
+
+          <p v-if="requirementsByProgram[modal.program.id]?.budgetName" class="requirements__row">
+            <span class="requirements__name">
+              Budget: {{ requirementsByProgram[modal.program.id].budgetName }}
+            </span>
+            <span class="requirements__actions">
+              <button type="button" class="btn-ghost" :disabled="isRequirementActionLoading(modal.program.id)" @click="viewRequirement(modal.program.id, 'budget')">
+                View
+              </button>
+              <button type="button" class="btn-ghost" :disabled="isRequirementActionLoading(modal.program.id)" @click="downloadRequirement(modal.program.id, 'budget')">
+                Download
+              </button>
+            </span>
+          </p>
+
+          <p
+            v-if="!requirementsByProgram[modal.program.id]?.specificationName && !requirementsByProgram[modal.program.id]?.budgetName"
+            class="meta"
+          >
+            No requirement files uploaded yet.
+          </p>
+        </div>
+
         <div v-if="existingAdminComment" class="current-comment">
           <p class="current-comment__title">
             Current Comment
@@ -131,15 +194,21 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useProgramStore } from '@/stores/program'
+import { useOrganizationStore } from '@/stores/organization'
+import { useAuthStore } from '@/stores/auth'
 import ProgramStatusBadge from '@/components/ProgramStatusBadge.vue'
 import { apiErrorMessage } from '@/utils/apiError'
 
 const programStore = useProgramStore()
+const orgStore = useOrganizationStore()
+const authStore = useAuthStore()
 const { pendingPrograms, loading: storeLoading } = storeToRefs(programStore)
 
 const loadError = ref('')
 const actionError = ref('')
 const submitting = ref(false)
+const requirementsByProgram = ref({})
+const requirementsLoadingByProgram = ref({})
 
 const modal = reactive({
   show: false,
@@ -158,6 +227,9 @@ const existingAdminComment = computed(() => {
   if (c == null || typeof c !== 'string') return ''
   return c.trim()
 })
+const canManageRequirements = computed(() =>
+  (authStore.roles || []).some((role) => ['FIRM', 'ADMIN', 'SUPER_ADMIN'].includes(role)),
+)
 
 onMounted(loadPending)
 
@@ -170,10 +242,11 @@ async function loadPending() {
   }
 }
 
-function openReview(program) {
+async function openReview(program) {
   modal.program = program
   modal.adminComment = ''
   actionError.value = ''
+  await loadProgramRequirements(program?.id)
   modal.show = true
 }
 
@@ -232,6 +305,111 @@ function formatDt(value) {
     hour: '2-digit',
     minute: '2-digit',
   })
+}
+
+async function loadProgramRequirements(programId) {
+  if (!programId) return
+  try {
+    const data = await orgStore.fetchRequirements(programId)
+    requirementsByProgram.value = { ...requirementsByProgram.value, [programId]: data || {} }
+  } catch {
+    requirementsByProgram.value = { ...requirementsByProgram.value, [programId]: {} }
+  }
+}
+
+function isRequirementActionLoading(programId) {
+  return !!requirementsLoadingByProgram.value[programId]
+}
+
+function setRequirementActionLoading(programId, isLoading) {
+  requirementsLoadingByProgram.value = {
+    ...requirementsLoadingByProgram.value,
+    [programId]: isLoading,
+  }
+}
+
+async function onSpecificationSelected(program, event) {
+  const file = event?.target?.files?.[0]
+  if (!program?.id || !file) return
+  setRequirementActionLoading(program.id, true)
+  try {
+    const updated = await orgStore.uploadSpecFile(program.id, file)
+    requirementsByProgram.value = { ...requirementsByProgram.value, [program.id]: updated || {} }
+  } catch (error) {
+    actionError.value = apiErrorMessage(error, 'Failed to upload specification')
+  } finally {
+    event.target.value = ''
+    setRequirementActionLoading(program.id, false)
+  }
+}
+
+async function onBudgetSelected(program, event) {
+  const file = event?.target?.files?.[0]
+  if (!program?.id || !file) return
+  setRequirementActionLoading(program.id, true)
+  try {
+    const updated = await orgStore.uploadBudgetFile(program.id, file)
+    requirementsByProgram.value = { ...requirementsByProgram.value, [program.id]: updated || {} }
+  } catch (error) {
+    actionError.value = apiErrorMessage(error, 'Failed to upload budget')
+  } finally {
+    event.target.value = ''
+    setRequirementActionLoading(program.id, false)
+  }
+}
+
+function filenameFromContentDisposition(contentDisposition, fallback) {
+  if (!contentDisposition) return fallback
+  const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i)
+  if (utf8Match?.[1]) return decodeURIComponent(utf8Match[1])
+  const plainMatch = contentDisposition.match(/filename="?([^"]+)"?/i)
+  if (plainMatch?.[1]) return plainMatch[1]
+  return fallback
+}
+
+async function openRequirement(programId, fileType, inline) {
+  if (!programId) return
+  setRequirementActionLoading(programId, true)
+  actionError.value = ''
+  try {
+    const response = fileType === 'specification'
+      ? await orgStore.downloadSpecificationFile(programId, inline)
+      : await orgStore.downloadBudgetFile(programId, inline)
+
+    const blob = response.data instanceof Blob
+      ? response.data
+      : new Blob([response.data], { type: response.headers?.['content-type'] || 'application/octet-stream' })
+    const objectUrl = URL.createObjectURL(blob)
+
+    if (inline) {
+      window.open(objectUrl, '_blank', 'noopener')
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 60000)
+      return
+    }
+
+    const fallback = `${fileType}-${programId}`
+    const filename = filenameFromContentDisposition(response.headers?.['content-disposition'], fallback)
+    const link = document.createElement('a')
+    link.style.display = 'none'
+    link.href = objectUrl
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(objectUrl)
+  } catch (error) {
+    actionError.value = apiErrorMessage(error, `Failed to ${inline ? 'view' : 'download'} ${fileType}`)
+  } finally {
+    setRequirementActionLoading(programId, false)
+  }
+}
+
+async function viewRequirement(programId, fileType) {
+  await openRequirement(programId, fileType, true)
+}
+
+async function downloadRequirement(programId, fileType) {
+  await openRequirement(programId, fileType, false)
 }
 </script>
 
@@ -462,5 +640,62 @@ function formatDt(value) {
   color: #334155;
   line-height: 1.5;
   white-space: pre-wrap;
+}
+
+.requirements {
+  margin: 0.8rem 0;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 10px;
+  padding: 0.65rem;
+  background: #f8fafc;
+}
+
+.requirements__title {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.requirements__upload-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.55rem;
+  margin-bottom: 0.55rem;
+}
+
+.requirements__file-btn {
+  border: 1px solid rgba(79, 70, 229, 0.25);
+  background: #fff;
+  color: #4338ca;
+  border-radius: 10px;
+  padding: 0.4rem 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  width: fit-content;
+}
+
+.requirements__file-input {
+  display: none;
+}
+
+.requirements__row {
+  margin: 0.35rem 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.requirements__name {
+  font-size: 0.84rem;
+  color: #334155;
+  word-break: break-word;
+}
+
+.requirements__actions {
+  display: flex;
+  gap: 0.4rem;
 }
 </style>

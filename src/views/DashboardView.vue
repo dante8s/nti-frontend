@@ -68,6 +68,7 @@ const isSuperAdmin = computed(() => auth.roles?.includes('SUPER_ADMIN'))
 const isAdmin = computed(() =>
   auth.roles?.some((r) => r === 'ADMIN' || r === 'SUPER_ADMIN'),
 )
+
 const canStudentPortal = computed(() => hasStudentPortalAccess(auth.roles))
 const isCommissionMember = computed(() =>
   auth.roles?.some((r) => r === 'EVALUATOR' || r === 'SUPER_EVALUATOR'),

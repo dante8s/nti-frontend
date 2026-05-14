@@ -1,53 +1,22 @@
 import axios from 'axios'
 
-const explicit = import.meta.env.VITE_API_BASE_URL
-const API_BASE_URL =
-  explicit !== undefined && String(explicit).trim() !== ''
-    ? String(explicit).trim()
-    : import.meta.env.DEV
-      ? ''
-      : 'http://localhost:8080'
-
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: 'http://localhost:8080',
+  // headers: {
+  //   'Content-Type': 'application/json',
+  // },
 })
 
-function stripContentType(config) {
-  const h = config.headers
-  if (!h) return
-  delete h['Content-Type']
-  if (typeof h.delete === 'function')
-    h.delete('Content-Type')
-}
-
-function shouldSendJsonBody(data) {
-  if (data == null || data === '')
-    return false
-  if (data instanceof FormData || data instanceof URLSearchParams)
-    return false
-  if (data instanceof Blob || data instanceof ArrayBuffer)
-    return false
-  if (ArrayBuffer.isView(data))
-    return false
-  return typeof data === 'object'
-}
-
+// Автоматично додає токен до кожного запиту
 api.interceptors.request.use((config) => {
-  if (config.data instanceof FormData) {
-    stripContentType(config)
-  } else if (shouldSendJsonBody(config.data)) {
-    config.headers['Content-Type'] = 'application/json'
-  } else {
-    stripContentType(config)
-  }
-
   const token = localStorage.getItem('token')
-  if (token)
+  if (token) {
     config.headers.Authorization = `Bearer ${token}`
-
+  }
   return config
 })
 
+// Якщо 401 — виганяємо на логін
 api.interceptors.response.use(
   (response) => response,
   (error) => {
