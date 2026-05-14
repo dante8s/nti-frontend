@@ -155,12 +155,6 @@ const cards = computed(() => {
         desc: 'Каталог організацій-партнерів',
         icon: '◈',
       },
-      {
-        to: '/app/reporting',
-        title: 'Звітність',
-        desc: 'Панель статистики та експорти CSV/XLSX/PDF/DOCX',
-        icon: '⬒',
-      },
     )
   }
 
@@ -195,13 +189,16 @@ const cards = computed(() => {
         desc: 'Черга заявок і матеріали; скоринг і рішення — лише для SUPER_EVALUATOR / адмінів',
         icon: '◌',
       },
-      {
-        to: '/app/reporting',
-        title: 'Звітність',
-        desc: 'Перевірки готовності та експорт звітів',
-        icon: '⬒',
-      },
     )
+  }
+
+  if (isAdmin.value || isCommissionMember.value || isSuperAdmin.value) {
+    out.push({
+      to: '/app/reporting',
+      title: 'Звітність',
+      desc: 'Статистика, перевірки готовності та експорт CSV/XLSX/PDF/DOCX',
+      icon: '⬒',
+    })
   }
 
   if (isMentor.value) {

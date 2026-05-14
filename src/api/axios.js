@@ -1,7 +1,5 @@
 import axios from 'axios'
 
-// Dev: empty base URL → same-origin requests; Vite proxies /api → backend (vite.config.js).
-// Set VITE_API_BASE_URL only to call the API directly (then match server.port and CORS app.frontend-url).
 const explicit = import.meta.env.VITE_API_BASE_URL
 const API_BASE_URL =
   explicit !== undefined && String(explicit).trim() !== ''
@@ -12,21 +10,44 @@ const API_BASE_URL =
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
 })
 
-// Автоматично додає токен до кожного запиту
+function stripContentType(config) {
+  const h = config.headers
+  if (!h) return
+  delete h['Content-Type']
+  if (typeof h.delete === 'function')
+    h.delete('Content-Type')
+}
+
+function shouldSendJsonBody(data) {
+  if (data == null || data === '')
+    return false
+  if (data instanceof FormData || data instanceof URLSearchParams)
+    return false
+  if (data instanceof Blob || data instanceof ArrayBuffer)
+    return false
+  if (ArrayBuffer.isView(data))
+    return false
+  return typeof data === 'object'
+}
+
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
+  if (config.data instanceof FormData) {
+    stripContentType(config)
+  } else if (shouldSendJsonBody(config.data)) {
+    config.headers['Content-Type'] = 'application/json'
+  } else {
+    stripContentType(config)
   }
+
+  const token = localStorage.getItem('token')
+  if (token)
+    config.headers.Authorization = `Bearer ${token}`
+
   return config
 })
 
-// Якщо 401 — виганяємо на логін
 api.interceptors.response.use(
   (response) => response,
   (error) => {

@@ -2,9 +2,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
-import { getProfile, getCvUrl } from '@/api/profileApi'
-
-const MOCK = import.meta.env.VITE_ENABLE_AUTH_MOCK === 'true'
+import { fetchProfilePhotoBlob, getProfile } from '@/api/profileApi'
 
 const route = useRoute()
 const router = useRouter()
@@ -31,12 +29,32 @@ const cvOpening = ref(false)
 /** Перегляд PDF у застосунку (без window.open) — працює у вбудованих переглядачах на кшталт Cursor Browser. */
 const cvModalOpen = ref(false)
 const cvBlobUrl = ref('')
+const avatarHeadUrl = ref('')
+
+function releaseAvatarHead() {
+  if (avatarHeadUrl.value.startsWith('blob:'))
+    URL.revokeObjectURL(avatarHeadUrl.value)
+  avatarHeadUrl.value = ''
+}
+
+async function loadAvatarHead(uid) {
+  releaseAvatarHead()
+  if (!profile.value?.avatarFilePath)
+    return
+  try {
+    const res = await fetchProfilePhotoBlob(uid)
+    avatarHeadUrl.value = URL.createObjectURL(res.data)
+  } catch {
+    /* ignore */
+  }
+}
 
 async function load() {
   const uid = userId.value
   if (!Number.isFinite(uid) || uid < 1) {
     error.value = 'Некоректний ідентифікатор користувача.'
     profile.value = null
+    releaseAvatarHead()
     loading.value = false
     return
   }
@@ -44,6 +62,7 @@ async function load() {
   error.value = ''
   try {
     profile.value = await getProfile(uid)
+    await loadAvatarHead(uid)
   } catch (e) {
     if (e?.response?.status === 403) {
       error.value =
@@ -55,6 +74,7 @@ async function load() {
         e?.response?.data?.message || 'Не вдалося завантажити профіль. Спробуйте пізніше.'
     }
     profile.value = null
+    releaseAvatarHead()
   } finally {
     loading.value = false
   }
@@ -92,20 +112,13 @@ onUnmounted(() => {
     escDismiss = null
   }
   closeCvModal()
+  releaseAvatarHead()
 })
 
 async function openCv() {
   const uid = userId.value
   if (!hasCv.value)
     return
-  if (MOCK) {
-    const url = getCvUrl(uid)
-    if (url && url !== '#') {
-      cvBlobUrl.value = url
-      cvModalOpen.value = true
-    }
-    return
-  }
   cvOpening.value = true
   error.value = ''
   try {
@@ -126,10 +139,6 @@ async function openCv() {
 const hasCv = computed(() => {
   if (!profile.value)
     return false
-  if (MOCK) {
-    const u = getCvUrl(userId.value)
-    return Boolean(u && u !== '#')
-  }
   return Boolean(profile.value.cvFilePath)
 })
 </script>
@@ -142,10 +151,24 @@ const hasCv = computed(() => {
     </div>
 
     <div class="card">
-      <h1>Профіль учасника</h1>
-      <p class="subtitle">
-        Ідентифікатор користувача: <strong>{{ userId }}</strong>
-      </p>
+      <div v-if="!loading && !error && profile" class="member-head">
+        <div class="member-avatar" aria-hidden="true">
+          <img v-if="avatarHeadUrl" class="member-avatar__img" :src="avatarHeadUrl" alt="">
+          <span v-else class="member-avatar__ph">?</span>
+        </div>
+        <div class="member-head__main">
+          <h1>Профіль учасника</h1>
+          <p class="subtitle">
+            Ідентифікатор користувача: <strong>{{ userId }}</strong>
+          </p>
+        </div>
+      </div>
+      <template v-else>
+        <h1>Профіль учасника</h1>
+        <p class="subtitle">
+          Ідентифікатор користувача: <strong>{{ userId }}</strong>
+        </p>
+      </template>
 
       <p v-if="loading" class="muted">
         Завантаження…
@@ -248,6 +271,46 @@ const hasCv = computed(() => {
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   padding: 1.5rem;
+}
+
+.member-head {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.member-head__main h1 {
+  margin: 0 0 0.35rem;
+}
+
+.member-head__main .subtitle {
+  margin: 0;
+}
+
+.member-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.member-avatar__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.member-avatar__ph {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #94a3b8;
 }
 
 h1 {

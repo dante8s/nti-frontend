@@ -1,16 +1,16 @@
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
-import { useAuthStore } from '@/stores/auth'
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import {
   createProfile,
   deleteCv,
-  getCvUrl,
+  deleteProfilePhoto,
+  fetchProfilePhotoBlob,
   getProfile,
   updateProfile,
   uploadCv,
+  uploadProfilePhoto,
 } from '@/api/profileApi'
 
-const auth = useAuthStore()
 const loading = ref(false)
 const saving = ref(false)
 const uploading = ref(false)
@@ -19,6 +19,12 @@ const profileExists = ref(false)
 const message = ref('')
 const messageType = ref('info')
 const selectedFile = ref(null)
+const selectedPhotoFile = ref(null)
+const photoInputRef = ref(null)
+const loadedProfile = ref(null)
+const avatarBlobUrl = ref('')
+const photoUploading = ref(false)
+const photoDeleting = ref(false)
 
 const form = reactive({
   studyProgram: '',
@@ -29,8 +35,28 @@ const form = reactive({
   profileAverageGrade: '',
 })
 
-const parsedUserId = computed(() => Number(auth.user?.id))
-const cvHref = computed(() => getCvUrl(parsedUserId.value > 0 ? parsedUserId.value : null))
+/** Завжди `/api/profile/me` — id з JWT, без залежності від (можливо застарілого) `auth.user.id` у localStorage. */
+const ME = null
+
+const hasAvatarPhoto = computed(() => Boolean(loadedProfile.value?.avatarFilePath))
+
+function releaseAvatarBlob() {
+  if (avatarBlobUrl.value.startsWith('blob:'))
+    URL.revokeObjectURL(avatarBlobUrl.value)
+  avatarBlobUrl.value = ''
+}
+
+async function refreshAvatarPreview() {
+  releaseAvatarBlob()
+  if (!loadedProfile.value?.avatarFilePath)
+    return
+  try {
+    const res = await fetchProfilePhotoBlob(ME)
+    avatarBlobUrl.value = URL.createObjectURL(res.data)
+  } catch {
+    /* 404 або мережа — без прев’ю */
+  }
+}
 
 function setMessage(text, type = 'info') {
   message.value = text
@@ -47,7 +73,7 @@ function extractApiError(error, fallback) {
   if (status === 403) {
     return (
       apiMessage
-      || 'Немає доступу до профілю. Для цієї сторінки потрібна роль STUDENT/ADMIN.'
+      || 'Доступ заборонено. Якщо ви студент або адмін — вийдіть і увійдіть знову, щоб синхронізувати сесію.'
     )
   }
   if (status === 404) return apiMessage || 'Профіль не знайдено.'
@@ -63,6 +89,9 @@ function clearForm() {
   form.hasRepeatedSubjects = false
   form.profileAverageGrade = ''
   selectedFile.value = null
+  selectedPhotoFile.value = null
+  if (photoInputRef.value)
+    photoInputRef.value.value = ''
 }
 
 function syncForm(profile) {
@@ -76,7 +105,7 @@ function syncForm(profile) {
 
 function buildPayload() {
   return {
-    userId: parsedUserId.value > 0 ? parsedUserId.value : null,
+    userId: null,
     studyProgram: form.studyProgram,
     yearOfStudy: form.yearOfStudy === '' ? null : Number(form.yearOfStudy),
     skills: form.skills,
@@ -91,13 +120,17 @@ async function loadProfile() {
   loading.value = true
   setMessage('')
   try {
-    const profile = await getProfile(parsedUserId.value > 0 ? parsedUserId.value : null)
+    const profile = await getProfile(ME)
+    loadedProfile.value = profile
     syncForm(profile)
     profileExists.value = true
     setMessage('Профіль завантажено.', 'success')
+    await refreshAvatarPreview()
   } catch (error) {
     if (error?.response?.status === 404) {
       profileExists.value = false
+      loadedProfile.value = null
+      releaseAvatarBlob()
       clearForm()
       setMessage('Профіль ще не створено. Заповніть поля та натисніть "Зберегти".')
       return
@@ -113,13 +146,14 @@ async function saveProfile() {
   setMessage('')
   try {
     const payload = buildPayload()
-    const userId = parsedUserId.value > 0 ? parsedUserId.value : null
     const profile = profileExists.value
-      ? await updateProfile(userId, payload)
+      ? await updateProfile(ME, payload)
       : await createProfile(payload)
+    loadedProfile.value = profile
     syncForm(profile)
     profileExists.value = true
     setMessage('Профіль успішно збережено.', 'success')
+    await refreshAvatarPreview()
   } catch (error) {
     setMessage(extractApiError(error, 'Не вдалося зберегти профіль.'), 'error')
   } finally {
@@ -150,8 +184,10 @@ async function submitCv() {
   uploading.value = true
   setMessage('')
   try {
-    await uploadCv(parsedUserId.value > 0 ? parsedUserId.value : null, selectedFile.value)
+    await uploadCv(ME, selectedFile.value)
     selectedFile.value = null
+    const profile = await getProfile(ME)
+    loadedProfile.value = profile
     setMessage('CV успішно завантажено.', 'success')
   } catch (error) {
     setMessage(extractApiError(error, 'Не вдалося завантажити CV.'), 'error')
@@ -164,7 +200,9 @@ async function removeCv() {
   deleting.value = true
   setMessage('')
   try {
-    await deleteCv(parsedUserId.value > 0 ? parsedUserId.value : null)
+    await deleteCv(ME)
+    const profile = await getProfile(ME)
+    loadedProfile.value = profile
     setMessage('CV видалено.', 'success')
   } catch (error) {
     setMessage(extractApiError(error, 'Не вдалося видалити CV.'), 'error')
@@ -173,11 +211,142 @@ async function removeCv() {
   }
 }
 
+const MAX_PHOTO_BYTES = 10 * 1024 * 1024
+
+function isBlockedImageName(name) {
+  const low = name.toLowerCase()
+  return ['.exe', '.bat', '.cmd', '.sh', '.dll', '.jar', '.php', '.html', '.htm'].some((s) =>
+    low.endsWith(s),
+  )
+}
+
+function isLikelyImageFile(file) {
+  if (!file?.name || isBlockedImageName(file.name))
+    return false
+  const t = (file.type || '').toLowerCase()
+  if (t.startsWith('image/'))
+    return true
+  return /\.(jpe?g|png|gif|webp|bmp|tif|tiff|heic|heif|avif|ico|jfif|pjpeg|pjp|svg)$/i.test(
+    file.name,
+  )
+}
+
+function onPhotoPicked(event) {
+  const file = event.target.files?.[0]
+  if (!file) {
+    selectedPhotoFile.value = null
+    return
+  }
+  if (!isLikelyImageFile(file)) {
+    setMessage('Оберіть файл зображення (типові формати фото).', 'error')
+    event.target.value = ''
+    selectedPhotoFile.value = null
+    return
+  }
+  if (file.size > MAX_PHOTO_BYTES) {
+    setMessage('Фото має бути не більше 10 МБ.', 'error')
+    event.target.value = ''
+    selectedPhotoFile.value = null
+    return
+  }
+  selectedPhotoFile.value = file
+}
+
+async function submitPhoto() {
+  if (!profileExists.value) {
+    setMessage('Спочатку збережіть профіль (блок нижче).', 'error')
+    return
+  }
+  if (!selectedPhotoFile.value) {
+    setMessage('Оберіть файл фото.', 'error')
+    return
+  }
+  photoUploading.value = true
+  setMessage('')
+  try {
+    const updated = await uploadProfilePhoto(ME, selectedPhotoFile.value)
+    loadedProfile.value = { ...(loadedProfile.value || {}), ...updated }
+    selectedPhotoFile.value = null
+    if (photoInputRef.value)
+      photoInputRef.value.value = ''
+    setMessage('Фото профілю оновлено.', 'success')
+    await refreshAvatarPreview()
+  } catch (error) {
+    setMessage(extractApiError(error, 'Не вдалося завантажити фото.'), 'error')
+  } finally {
+    photoUploading.value = false
+  }
+}
+
+async function removePhoto() {
+  if (!hasAvatarPhoto.value)
+    return
+  photoDeleting.value = true
+  setMessage('')
+  try {
+    const updated = await deleteProfilePhoto(ME)
+    loadedProfile.value = { ...(loadedProfile.value || {}), ...updated }
+    releaseAvatarBlob()
+    setMessage('Фото профілю видалено.', 'success')
+  } catch (error) {
+    setMessage(extractApiError(error, 'Не вдалося видалити фото.'), 'error')
+  } finally {
+    photoDeleting.value = false
+  }
+}
+
+onUnmounted(() => {
+  releaseAvatarBlob()
+})
+
 onMounted(loadProfile)
 </script>
 
 <template>
   <div class="page">
+
+    <article class="card card--photo">
+      <h3 class="title-sm">Фото профілю</h3>
+      <div class="photo-row">
+        <div class="photo-preview" aria-hidden="true">
+          <img v-if="avatarBlobUrl" class="photo-preview__img" :src="avatarBlobUrl" alt="">
+          <span v-else class="photo-preview__placeholder">
+            {{ profileExists ? 'Немає фото' : '—' }}
+          </span>
+        </div>
+        <div class="photo-actions">
+          <input
+            ref="photoInputRef"
+            type="file"
+            accept="image/*"
+            :disabled="!profileExists"
+            @change="onPhotoPicked"
+          >
+          <button
+            type="button"
+            class="btn"
+            :disabled="!profileExists || photoUploading || !selectedPhotoFile"
+            @click="submitPhoto"
+          >
+            {{ photoUploading ? 'Завантаження…' : 'Завантажити фото' }}
+          </button>
+          <button
+            type="button"
+            class="btn danger"
+            :disabled="!profileExists || photoDeleting || !hasAvatarPhoto"
+            @click="removePhoto"
+          >
+            {{ photoDeleting ? 'Видалення…' : 'Видалити фото' }}
+          </button>
+        </div>
+      </div>
+      <p v-if="!profileExists" class="photo-hint">
+        Збережіть профіль у блоці нижче, щоб додати фото.
+      </p>
+      <p v-else class="photo-hint photo-hint--muted">
+        JPEG, PNG, GIF, WebP, HEIC, SVG та інші поширені формати, до 10 МБ.
+      </p>
+    </article>
 
     <article class="card">
       <h3 class="title-sm">Дані профілю</h3>
@@ -260,6 +429,63 @@ onMounted(loadProfile)
   background: rgba(255, 255, 255, 0.95);
   border: 1px solid rgba(79, 70, 229, 0.1);
   box-shadow: 0 16px 40px rgba(15, 23, 42, 0.06);
+}
+
+.photo-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.photo-preview {
+  width: 104px;
+  height: 104px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #f1f5f9;
+  border: 2px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.photo-preview__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photo-preview__placeholder {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  text-align: center;
+  padding: 0.5rem;
+  line-height: 1.25;
+}
+
+.photo-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.photo-actions input[type='file'] {
+  width: auto;
+  max-width: 100%;
+}
+
+.photo-hint {
+  margin: 0.85rem 0 0;
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+.photo-hint--muted {
+  margin-top: 0.65rem;
 }
 
 .title,
