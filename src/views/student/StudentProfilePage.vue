@@ -350,42 +350,73 @@ onMounted(loadProfile)
 
     <article class="card">
       <h3 class="title-sm">Дані профілю</h3>
-      <div class="grid two">
-        <div>
-          <label class="label">Навчальна програма</label>
-          <input v-model="form.studyProgram" placeholder="Computer Science" />
+      <div class="profile-form">
+        <div class="grid two form-fields">
+          <div class="form-field">
+            <label class="label" for="study-program">Навчальна програма</label>
+            <input
+              id="study-program"
+              v-model="form.studyProgram"
+              type="text"
+              placeholder="Computer Science"
+            />
+          </div>
+          <div class="form-field">
+            <label class="label" for="year-of-study">Курс</label>
+            <input
+              id="year-of-study"
+              v-model="form.yearOfStudy"
+              type="number"
+              min="1"
+              max="8"
+              placeholder="2"
+            />
+          </div>
         </div>
-        <div>
-          <label class="label">Курс</label>
-          <input v-model="form.yearOfStudy" type="number" min="1" max="8" placeholder="2" />
-        </div>
-      </div>
 
-      <div class="grid two">
-        <div>
-          <label class="label">Середній бал</label>
-          <input
-            v-model="form.profileAverageGrade"
-            type="number"
-            min="0"
-            max="100"
-            step="0.1"
-            placeholder="89.5"
+        <div class="grid two form-fields">
+          <div class="form-field">
+            <label class="label" for="average-grade">Середній бал</label>
+            <input
+              id="average-grade"
+              v-model="form.profileAverageGrade"
+              type="number"
+              min="0"
+              max="100"
+              step="0.1"
+              placeholder="89.5"
+            />
+          </div>
+          <div class="form-field form-field--checkbox">
+            <label class="check-row">
+              <input v-model="form.hasRepeatedSubjects" type="checkbox" />
+              <span>Є перездачі</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-field">
+          <label class="label" for="skills">Навички</label>
+          <textarea
+            id="skills"
+            v-model="form.skills"
+            rows="3"
+            placeholder="Java, Spring, SQL..."
           />
         </div>
-        <label class="check-row">
-          <input v-model="form.hasRepeatedSubjects" type="checkbox" />
-          <span>Є перездачі</span>
-        </label>
+
+        <div class="form-field">
+          <label class="label" for="bio">Коротко про себе</label>
+          <textarea
+            id="bio"
+            v-model="form.bio"
+            rows="4"
+            placeholder="Ваш досвід та мотивація..."
+          />
+        </div>
       </div>
 
-      <label class="label">Навички</label>
-      <textarea v-model="form.skills" rows="3" placeholder="Java, Spring, SQL..." />
-
-      <label class="label">Коротко про себе</label>
-      <textarea v-model="form.bio" rows="4" placeholder="Ваш досвід та мотивація..." />
-
-      <button class="btn" :disabled="saving" @click="saveProfile">
+      <button class="btn profile-form__submit" :disabled="saving" @click="saveProfile">
         {{ saving ? 'Збереження...' : 'Зберегти профіль' }}
       </button>
     </article>
@@ -511,6 +542,30 @@ onMounted(loadProfile)
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.form-fields {
+  align-items: end;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.form-field--checkbox {
+  justify-content: flex-end;
+}
+
+.profile-form__submit {
+  margin-top: 0.35rem;
+}
+
 .label {
   display: block;
   margin-bottom: 0.35rem;
@@ -521,6 +576,7 @@ onMounted(loadProfile)
 input,
 textarea {
   width: 100%;
+  box-sizing: border-box;
   border: 1px solid #dbe3f0;
   border-radius: 12px;
   padding: 0.62rem 0.75rem;
@@ -537,11 +593,13 @@ textarea:focus {
 }
 
 .check-row {
-  margin-top: 1.5rem;
+  margin: 0;
   display: inline-flex;
   gap: 0.5rem;
   align-items: center;
+  min-height: calc(0.62rem * 2 + 1.25rem + 2px);
   color: #334155;
+  cursor: pointer;
 }
 
 .check-row input {

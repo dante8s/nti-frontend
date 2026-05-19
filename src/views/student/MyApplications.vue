@@ -6,6 +6,12 @@
       Завантаження...
     </div>
 
+    <div v-else-if="error" class="empty empty--error">
+      <p>{{ error }}</p>
+      <p class="hint">Переконайтесь, що Spring-бекенд запущений на порту 8080, і увійдіть знову.</p>
+      <button type="button" class="btn-go" @click="load">Спробувати ще раз</button>
+    </div>
+
     <div v-else-if="applications.length === 0" class="empty">
       <p>У вас поки немає заявок</p>
       <router-link to="/programs" class="btn-go">
@@ -22,10 +28,10 @@
           :key="app.id"
           class="app-card"
           :class="{
-            active: selected?.id === app.id,
+            active: sameApplicationId(selectedId, app.id),
             [statusClass(app.status)]: true
           }"
-          @click="select(app)"
+          @click="selectApplication(app)"
         >
           <div class="card-top">
             <span class="program-tag">
@@ -107,7 +113,7 @@
 
         <!-- Кнопка відправити -->
         <div
-          v-if="selected.status === 'DRAFT' || selected.status === 'NEEDS_REVISION'"
+          v-if="canSubmitApplication"
           class="submit-section"
         >
           <div v-if="submitError" class="submit-error">{{ submitError }}</div>
@@ -215,21 +221,27 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted, onActivated } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { applicationsApi } from '@/api/applications'
 import { useMentorshipStore } from '@/stores/mentorship'
-import { useNoteStore } from '@/stores/note'
 import { useMilestoneStore } from '@/stores/milestone'
-import MilestoneFormModal from '@/components/MilestoneFormModal.vue'
+import { apiErrorMessage } from '@/utils/apiError'
 import MilestoneDetailsPanel from '@/components/MilestoneDetailsPanel.vue'
 import ConsultationsPanel from '@/components/ConsultationsPanel.vue'
 import DocumentUpload from '@/components/DocumentUpload.vue'
 import StatusTimeline from '@/components/StatusTimeline.vue'
 
 const applications = ref([])
-const selected = ref(null)
+/** ID обраної заявки — надійніше за збереження всього об'єкта з масиву. */
+const selectedId = ref(null)
+const selected = computed(() => {
+  const id = selectedId.value
+  if (id == null || id === '') return null
+  return applications.value.find((a) => sameApplicationId(a.id, id)) ?? null
+})
+
 const loading = ref(true)
 const error = ref('')
 const router = useRouter()
@@ -239,53 +251,95 @@ const timelineRef = ref(null)
 
 const mentorshipStore = useMentorshipStore()
 const { mentorshipsByApplication } = storeToRefs(mentorshipStore)
-const noteStore = useNoteStore()
-const { notesByApplication } = storeToRefs(noteStore)
 const milestoneStore = useMilestoneStore()
 const { milestones } = storeToRefs(milestoneStore)
 
-onMounted(load)
+const canSubmitApplication = computed(() => {
+  const status = selected.value?.status
+  return status === 'DRAFT' || status === 'NEEDS_REVISION'
+})
+
+onMounted(() => {
+  void load()
+})
+
+onActivated(() => {
+  void load()
+})
+
+function sameApplicationId(a, b) {
+  if (a == null || b == null) return false
+  return Number(a) === Number(b)
+}
+
+function normalizeApplicationsList(data) {
+  if (Array.isArray(data)) return data
+  if (Array.isArray(data?.content)) return data.content
+  return []
+}
 
 async function load() {
   loading.value = true
+  error.value = ''
   try {
     const res = await applicationsApi.getMy()
-    applications.value = res.data
+    const list = normalizeApplicationsList(res.data)
+    applications.value = list
+    if (!list.length) {
+      selectedId.value = null
+    } else if (!list.some((a) => sameApplicationId(a.id, selectedId.value))) {
+      selectedId.value = Number(list[0].id)
+    }
   } catch (e) {
     console.error(e)
+    if (e.code === 'ECONNABORTED') {
+      error.value = 'Час очікування вичерпано. Перевірте, чи запущений бекенд (порт 8080).'
+    } else if (!e.response) {
+      error.value = 'Немає з’єднання з сервером. Запустіть бекенд і перезавантажте сторінку.'
+    } else if (e.response?.status === 403) {
+      error.value = 'Немає доступу до списку заявок. Увійдіть як студент або перезавантажте сторінку.'
+    } else {
+      error.value = apiErrorMessage(e, 'Не вдалося завантажити заявки.')
+    }
+    applications.value = []
+    selectedId.value = null
   } finally {
     loading.value = false
   }
 }
 
-function select(app) {
-  selected.value = app
+function selectApplication(app) {
+  if (app?.id == null) return
+  selectedId.value = Number(app.id)
   submitError.value = ''
 }
 
 async function refreshSelected() {
-  if (!selected.value) return
+  const id = selectedId.value
+  if (id == null) return
   try {
-    const res = await applicationsApi.getById(selected.value.id)
-    selected.value = res.data
-    const idx = applications.value.findIndex(a => a.id === res.data.id)
+    const res = await applicationsApi.getById(id)
+    const idx = applications.value.findIndex((a) => sameApplicationId(a.id, id))
     if (idx !== -1) applications.value[idx] = res.data
+    selectedId.value = Number(res.data.id)
   } catch (e) {
     console.error(e)
   }
 }
 
 async function submitApp() {
+  const id = selectedId.value
+  if (id == null) return
   submitError.value = ''
   submitting.value = true
   try {
-    const res = await applicationsApi.submit(selected.value.id)
-    selected.value = res.data
-    const idx = applications.value.findIndex(a => a.id === res.data.id)
+    const res = await applicationsApi.submit(id)
+    const idx = applications.value.findIndex((a) => sameApplicationId(a.id, id))
     if (idx !== -1) applications.value[idx] = res.data
+    selectedId.value = Number(res.data.id)
     if (timelineRef.value) timelineRef.value.reload()
   } catch (e) {
-    submitError.value = e.response?.data || 'Помилка при відправці'
+    submitError.value = apiErrorMessage(e, 'Помилка при відправці')
   } finally {
     submitting.value = false
   }
@@ -346,7 +400,7 @@ function mentorshipAssignedDt(m) {
 }
 
 function milestonesFor(appId) {
-  return milestones.value?.filter(m => m.applicationId === appId) || []
+  return milestones.value?.[String(appId)] || []
 }
 
 function milestoneStatusClass(status) {

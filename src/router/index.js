@@ -86,8 +86,20 @@ const router = createRouter({
         {
           path: 'my-applications',
           name: 'my-applications',
-          meta: { title: 'Мої заявки', requiresRole: 'STUDENT' },
+          meta: { title: 'Мої заявки', requiresAnyRole: ['STUDENT', 'SUPER_ADMIN'] },
           component: () => import('@/views/student/MyApplications.vue'),
+        },
+        {
+          path: 'my-profile',
+          name: 'my-profile',
+          meta: { title: 'Мій профіль', requiresAnyRole: ['STUDENT', 'SUPER_ADMIN'] },
+          component: () => import('@/views/student/StudentProfilePage.vue'),
+        },
+        {
+          path: 'teams',
+          name: 'teams',
+          meta: { title: 'Моя команда', requiresAnyRole: ['STUDENT', 'SUPER_ADMIN'] },
+          component: () => import('@/views/student/TeamsPage.vue'),
         },
         {
           path: 'applications/:id',
@@ -101,13 +113,13 @@ const router = createRouter({
         {
           path: 'apply/a/:callId',
           name: 'apply-a',
-          meta: { title: 'Заявка — програма A', requiresRole: 'STUDENT' },
+          meta: { title: 'Заявка — програма A', requiresAnyRole: ['STUDENT', 'SUPER_ADMIN'] },
           component: () => import('@/views/student/ApplicationFormA.vue'),
         },
         {
           path: 'apply/b/:callId',
           name: 'apply-b',
-          meta: { title: 'Заявка — програма B', requiresRole: 'STUDENT' },
+          meta: { title: 'Заявка — програма B', requiresAnyRole: ['STUDENT', 'SUPER_ADMIN'] },
           component: () => import('@/views/student/ApplicationFormB.vue'),
         },
         {
@@ -182,6 +194,82 @@ const router = createRouter({
           meta: { title: 'My Mentorships', requiresRole: 'MENTOR' },
           component: () => import('@/views/mentor/MyMentorships.vue'),
         },
+        {
+          path: 'commission',
+          name: 'commission-hub',
+          meta: {
+            title: 'Комісія',
+            requiresAnyRole: ['EVALUATOR', 'SUPER_EVALUATOR', 'ADMIN', 'SUPER_ADMIN'],
+          },
+          component: () => import('@/views/commission/CommissionProgramHub.vue'),
+        },
+        {
+          path: 'commission/:programType',
+          name: 'commission-participants',
+          meta: {
+            title: 'Комісія — учасники',
+            requiresAnyRole: ['EVALUATOR', 'SUPER_EVALUATOR', 'ADMIN', 'SUPER_ADMIN'],
+          },
+          component: () => import('@/views/commission/CommissionParticipantsView.vue'),
+        },
+        {
+          path: 'commission/:programType/call/:callId/application/:applicationId',
+          name: 'commission-evaluate',
+          meta: {
+            title: 'Оцінювання заявки',
+            requiresAnyRole: ['EVALUATOR', 'SUPER_EVALUATOR', 'ADMIN', 'SUPER_ADMIN'],
+          },
+          component: () => import('@/views/commission/CommissionApplicationEvaluateView.vue'),
+        },
+        {
+          path: 'members/:userId',
+          name: 'member-profile',
+          meta: {
+            title: 'Профіль учасника',
+            requiresAnyRole: [
+              'STUDENT',
+              'MENTOR',
+              'EVALUATOR',
+              'SUPER_EVALUATOR',
+              'ADMIN',
+              'SUPER_ADMIN',
+            ],
+          },
+          component: () => import('@/views/student/MemberProfileView.vue'),
+        },
+        {
+          path: 'reporting',
+          component: () => import('@/views/reporting/ReportingLayout.vue'),
+          meta: {
+            title: 'Звітність',
+            requiresAnyRole: ['EVALUATOR', 'SUPER_EVALUATOR', 'ADMIN', 'SUPER_ADMIN'],
+          },
+          children: [
+            {
+              path: '',
+              name: 'reporting',
+              component: () => import('@/views/reporting/ReportingIndexRedirect.vue'),
+            },
+            {
+              path: 'admin',
+              name: 'reporting-admin',
+              meta: { title: 'Звітність — зведення та експорт' },
+              component: () => import('@/views/reporting/ReportingAdminView.vue'),
+            },
+            {
+              path: 'student',
+              name: 'reporting-student',
+              meta: { title: 'Панель студента' },
+              component: () => import('@/views/reporting/ReportingStudentPanelView.vue'),
+            },
+            {
+              path: 'firm',
+              name: 'reporting-firm',
+              meta: { title: 'Панель компанії' },
+              component: () => import('@/views/reporting/ReportingFirmPanelView.vue'),
+            },
+          ],
+        },
       ],
     },
 
@@ -208,6 +296,14 @@ function hasAdminRole(roles) {
   return roles?.some((r) => r === 'ADMIN' || r === 'SUPER_ADMIN')
 }
 
+function metaFromMatched(to, key) {
+  for (let i = to.matched.length - 1; i >= 0; i--) {
+    const value = to.matched[i].meta[key]
+    if (value !== undefined) return value
+  }
+  return undefined
+}
+
 router.beforeEach((to) => {
   const auth = useAuthStore()
 
@@ -215,28 +311,30 @@ router.beforeEach((to) => {
     return { name: 'login' }
   }
 
-  if (to.meta.requiresRole) {
-    const ok = auth.user?.roles?.includes(to.meta.requiresRole)
+  const requiresRole = metaFromMatched(to, 'requiresRole')
+  if (requiresRole) {
+    const ok = auth.user?.roles?.includes(requiresRole)
     if (!ok) {
       return { name: 'dashboard' }
     }
   }
 
-  if (to.meta.requiresAnyRole) {
-    const required = Array.isArray(to.meta.requiresAnyRole) ? to.meta.requiresAnyRole : []
+  const requiresAnyRole = metaFromMatched(to, 'requiresAnyRole')
+  if (requiresAnyRole) {
+    const required = Array.isArray(requiresAnyRole) ? requiresAnyRole : []
     const ok = required.some((r) => auth.user?.roles?.includes(r))
     if (!ok) {
       return { name: 'dashboard' }
     }
   }
 
-  if (to.meta.requiresSuperAdmin) {
+  if (to.matched.some((r) => r.meta.requiresSuperAdmin)) {
     if (!auth.user?.roles?.includes('SUPER_ADMIN')) {
       return { name: 'dashboard' }
     }
   }
 
-  if (to.meta.requiresAdmin) {
+  if (to.matched.some((r) => r.meta.requiresAdmin)) {
     if (!hasAdminRole(auth.user?.roles)) {
       return { name: 'dashboard' }
     }
