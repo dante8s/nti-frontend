@@ -25,7 +25,7 @@ const isCommissionMember = computed(() =>
   auth.roles?.some((r) => r === 'EVALUATOR' || r === 'SUPER_EVALUATOR'),
 )
 const showReportingNav = computed(
-  () => isAdmin.value || isCommissionMember.value || isSuperAdmin.value,
+  () => isAdmin.value || isSuperAdmin.value,
 )
 
 const firmChecked = ref(false)

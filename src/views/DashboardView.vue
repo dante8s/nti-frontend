@@ -193,11 +193,11 @@ const cards = computed(() => {
     )
   }
 
-  if (isAdmin.value || isCommissionMember.value || isSuperAdmin.value) {
+  if (isAdmin.value) {
     out.push({
       to: '/app/reporting',
       title: 'Звітність',
-      desc: 'Статистика, перевірки готовності та експорт CSV/XLSX/PDF/DOCX',
+      desc: 'Зведення, команди та виклики, експорт CSV/XLSX/PDF/DOCX',
       icon: '⬒',
     })
   }

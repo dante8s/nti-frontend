@@ -242,7 +242,7 @@ const router = createRouter({
           component: () => import('@/views/reporting/ReportingLayout.vue'),
           meta: {
             title: 'Звітність',
-            requiresAnyRole: ['EVALUATOR', 'SUPER_EVALUATOR', 'ADMIN', 'SUPER_ADMIN'],
+            requiresAnyRole: ['ADMIN', 'SUPER_ADMIN'],
           },
           children: [
             {
