@@ -102,6 +102,23 @@ function normalizeProgramType(letter) {
   return letter === 'b' ? 'B' : 'A'
 }
 
+/** Підпис у списку: email учасника (пріоритет), інакше ім’я або id. */
+function memberLinkLabel(member, applicantFallback) {
+  const uid = member?.userId ?? applicantFallback?.userId
+  const email = (
+    member?.memberEmail ||
+    member?.email ||
+    (uid != null ? emailByUserId.value.get(uid) : '') ||
+    applicantFallback?.email ||
+    ''
+  )
+    .trim()
+  if (email) return email
+  const name = (member?.memberDisplayName || applicantFallback?.name || '').trim()
+  if (name) return name
+  return uid != null ? `Учасник #${uid}` : '—'
+}
+
 /** Усі виклики всіх схвалених програм типу A/B (не лише перший виклик першої програми). */
 async function resolveAllCallsForProgram(letter) {
   const type = normalizeProgramType(letter)
@@ -121,11 +138,21 @@ async function resolveAllCallsForProgram(letter) {
   return entries
 }
 
+const emailByUserId = ref(new Map())
+
 async function loadTeamForApplicant(applicantId) {
   if (!applicantId || teamByApplicant.value.has(applicantId)) return
   try {
     const { data } = await teamsApi.getTeamForUser(applicantId)
     teamByApplicant.value.set(applicantId, data)
+    if (data?.members?.length) {
+      for (const m of data.members) {
+        const email = m.memberEmail?.trim()
+        if (email && m.userId) {
+          emailByUserId.value.set(m.userId, email)
+        }
+      }
+    }
   } catch {
     teamByApplicant.value.set(applicantId, null)
   }
@@ -141,12 +168,17 @@ const rows = computed(() => {
     if (team?.name) {
       title = team.name
     }
+    const applicantFallback = {
+      email: app.applicantEmail,
+      name: app.applicantName,
+      userId: applicantId,
+    }
     if (team?.members?.length) {
       for (const m of team.members) {
         if (m.inviteStatus === 'ACCEPTED' || !m.inviteStatus) {
           members.push({
             userId: m.userId,
-            label: m.memberDisplayName || `Учасник #${m.userId}`,
+            label: memberLinkLabel(m, applicantFallback),
           })
         }
       }
@@ -154,7 +186,7 @@ const rows = computed(() => {
     if (!members.length && applicantId) {
       members.push({
         userId: applicantId,
-        label: `Учасник #${applicantId}`,
+        label: memberLinkLabel(null, applicantFallback),
       })
     }
     out.push({
@@ -178,6 +210,7 @@ async function load() {
   trackedCalls.value = []
   applications.value = []
   teamByApplicant.value = new Map()
+  emailByUserId.value = new Map()
 
   try {
     const entries = await resolveAllCallsForProgram(programLetter.value)
@@ -197,8 +230,16 @@ async function load() {
       for (const a of list) {
         if (!a?.status || a.status === 'DRAFT' || seen.has(a.id)) continue
         seen.add(a.id)
+        const applicantId = a.applicantId
+        const applicantEmail = a.applicantEmail?.trim()
+        if (applicantId && applicantEmail) {
+          emailByUserId.value.set(applicantId, applicantEmail)
+        }
         merged.push({
           ...a,
+          applicantId,
+          applicantEmail,
+          applicantName: a.applicantName,
           callId: c.id,
           callTitle: c.title || `Виклик №${c.id}`,
           programName: a.programName || prog?.name,

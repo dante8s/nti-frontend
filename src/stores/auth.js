@@ -29,17 +29,16 @@ export const useAuthStore = defineStore('auth', () => {
     return response.data
   }
 
-  /** Якщо в `user` немає `id` (старий кеш), підтягуємо з API й оновлюємо localStorage. */
+  /** Підтягує id та ролі з API (завжди оновлює id — важливо для запрошень у команду). */
   async function hydrateUserFromSession() {
-    if (!token.value) return
+    if (!token.value) return null
     const current = user.value
-    if (current?.id != null && current.id !== '') return
     try {
       const { data } = await authApi.getSessionBrief()
       const nextRoles = normalizeRoles(data.roles)
       const merged = {
         ...(current || {}),
-        id: data.userId ?? data.id ?? null,
+        id: data.userId ?? data.id ?? current?.id ?? null,
         name: data.name ?? current?.name ?? '',
         email: data.email ?? current?.email ?? '',
         roles: nextRoles.length ? nextRoles : (current?.roles || []),
@@ -49,8 +48,9 @@ export const useAuthStore = defineStore('auth', () => {
       }
       user.value = merged
       localStorage.setItem('user', JSON.stringify(merged))
+      return merged.id
     } catch {
-      /* 401 / мережа */
+      return current?.id ?? null
     }
   }
 

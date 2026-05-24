@@ -4,6 +4,7 @@ import { teamsApi } from '@/api/teams'
 import { getCallApplicationEligibility } from '@/api/profileApi'
 import { useAuthStore } from '@/stores/auth'
 import { hasTeamLeaderRole } from '@/utils/roles'
+import AppConfirmModal from '@/components/AppConfirmModal.vue'
 
 const auth = useAuthStore()
 
@@ -29,23 +30,135 @@ const team = reactive({
 })
 
 const teamId = ref(null)
-const invitedUserId = ref('')
+const invitedUserRef = ref('')
 const teamMembers = ref([])
 const pendingInvites = ref([])
 const message = ref('')
 const busy = ref(false)
+const removalNotice = ref(null)
+const removalNoticeDismissed = ref(false)
+
+const confirmModal = reactive({
+  open: false,
+  title: '',
+  message: '',
+  highlight: '',
+  profileLink: null,
+  variant: 'danger',
+  confirmLabel: 'Підтвердити',
+  action: null,
+  payload: null,
+})
+const confirmLoading = ref(false)
 /** Від GET /api/profile/me/call-application-eligibility */
 const callEligibility = ref(null)
 
 const acceptedCount = computed(
   () => teamMembers.value.filter((item) => item.inviteStatus === 'ACCEPTED').length,
 )
-const isSuperAdmin = computed(() => (auth.user?.roles || []).includes('SUPER_ADMIN'))
-const isTeamLeader = computed(() => Number(team.leaderId) === Number(auth.user?.id))
-const canManageTeam = computed(() => isTeamLeader.value || isSuperAdmin.value)
-const hasLeaderRoleBadge = computed(() =>
-  hasTeamLeaderRole(auth.user?.roles),
+const roles = computed(() =>
+  auth.roles?.length ? auth.roles : auth.user?.roles || [],
 )
+const isSuperAdmin = computed(() => roles.value.includes('SUPER_ADMIN'))
+const isAdmin = computed(() =>
+  roles.value.some((r) => r === 'ADMIN' || r === 'SUPER_ADMIN'),
+)
+const canViewTeamId = computed(() => isAdmin.value)
+const myMembership = computed(() =>
+  teamMembers.value.find((m) => Number(m.userId) === Number(auth.user?.id)),
+)
+const isTeamLeader = computed(
+  () =>
+    Number(team.leaderId) === Number(auth.user?.id) ||
+    myMembership.value?.role === 'LEADER',
+)
+const canManageTeam = computed(() => isTeamLeader.value || isSuperAdmin.value)
+const isTeamMemberOnly = computed(
+  () => !!teamId.value && !isTeamLeader.value && !isSuperAdmin.value,
+)
+const hasLeaderRoleBadge = computed(
+  () => isTeamLeader.value && hasTeamLeaderRole(auth.user?.roles),
+)
+const teamFormReadonly = computed(() => !!teamId.value && !canManageTeam.value)
+
+const leaderMember = computed(() =>
+  teamMembers.value.find(
+    (m) =>
+      m.role === 'LEADER' || Number(m.userId) === Number(team.leaderId),
+  ),
+)
+
+const leaderEmail = computed(() => {
+  const email = leaderMember.value?.memberEmail
+  if (email && String(email).trim()) return String(email).trim()
+  if (team.leaderId) return `користувач #${team.leaderId}`
+  return 'лідер команди'
+})
+
+function memberLinkLabel(member) {
+  const email = member?.memberEmail?.trim()
+  if (email) return email
+  const name = member?.memberDisplayName?.trim()
+  if (name) return name
+  return member?.userId != null ? `Користувач #${member.userId}` : '—'
+}
+
+function memberProfileRoute(userId) {
+  return {
+    name: 'member-profile',
+    params: { userId: String(userId) },
+    query: { back: '/app/teams' },
+  }
+}
+
+function canRemoveMember(member) {
+  if (!canManageTeam.value || !member?.userId) return false
+  if (member.role === 'LEADER') return false
+  if (Number(member.userId) === Number(auth.user?.id)) return false
+  return member.inviteStatus === 'ACCEPTED' || member.inviteStatus === 'PENDING'
+}
+
+function memberRemoveLabel(member) {
+  return member.inviteStatus === 'PENDING' ? 'Скасувати' : 'Виключити'
+}
+
+function removalNoticeStorageKey(teamId) {
+  return `nti-team-removal-seen-${teamId}`
+}
+
+async function loadRemovalNotice(uid) {
+  try {
+    const { data } = await teamsApi.getRemovalNotice(Number(uid))
+    removalNotice.value = data
+    removalNoticeDismissed.value =
+      sessionStorage.getItem(removalNoticeStorageKey(data.teamId)) === '1'
+  } catch {
+    removalNotice.value = null
+    removalNoticeDismissed.value = false
+  }
+}
+
+function dismissRemovalNotice() {
+  if (removalNotice.value?.teamId) {
+    sessionStorage.setItem(removalNoticeStorageKey(removalNotice.value.teamId), '1')
+  }
+  removalNoticeDismissed.value = true
+}
+
+function formatRemovedAt(iso) {
+  if (!iso) return ''
+  try {
+    return new Date(iso).toLocaleString('uk-UA', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  } catch {
+    return ''
+  }
+}
 
 /** Є команда й ви можете діяти від імені лідера (або SUPER_ADMIN для тесту). */
 const canSeeApplyInstructions = computed(
@@ -76,12 +189,19 @@ async function loadMyTeam() {
     team.maxCapacity = Math.min(Number(data.maxCapacity) || 3, 3)
     team.description = data.description ?? ''
     teamMembers.value = data.members || []
+    removalNotice.value = null
+    removalNoticeDismissed.value = false
     message.value = `Команда завантажена: ${data.name}`
   } catch (err) {
     if (err?.response?.status === 404) {
-      message.value = 'Команда ще не створена. Створіть нову або прийміть запрошення.'
       teamId.value = null
       teamMembers.value = []
+      await loadRemovalNotice(uid)
+      if (removalNotice.value) {
+        message.value = ''
+      } else {
+        message.value = 'Команда ще не створена. Створіть нову або прийміть запрошення.'
+      }
       return
     }
     message.value = apiErrorMessage(err, 'Не вдалося завантажити команду.')
@@ -93,20 +213,18 @@ async function loadMyTeam() {
 
 async function loadMyInvites(options = {}) {
   const silent = options.silent === true
-  busy.value = true
   try {
-    const userId = auth.user?.id
-    if (!userId) {
-      message.value = 'Не вдалося визначити користувача.'
-      return
-    }
-    const res = await teamsApi.getPendingInvites(Number(userId))
+    await auth.hydrateUserFromSession()
+    const res = await teamsApi.getMyPendingInvites()
     pendingInvites.value = res.data || []
-    if (!silent) message.value = 'Запрошення оновлено.'
-  } catch {
-    message.value = 'Не вдалося завантажити запрошення.'
-  } finally {
-    busy.value = false
+    if (!silent && pendingInvites.value.length) {
+      message.value = 'Є нові запрошення в команду — перегляньте нижче.'
+    }
+  } catch (e) {
+    pendingInvites.value = []
+    if (!silent) {
+      message.value = apiErrorMessage(e, 'Не вдалося завантажити запрошення.')
+    }
   }
 }
 
@@ -120,11 +238,16 @@ async function loadCallEligibility() {
 
 /** При відкритті сторінки підтягуємо команду й вхідні інвайти (раніше список лишався порожнім без ручної дії). */
 onMounted(async () => {
+  await auth.hydrateUserFromSession()
   await loadMyTeam()
   await loadMyInvites({ silent: true })
 })
 
 async function onCreateTeam() {
+  if (teamId.value && !canManageTeam.value) {
+    message.value = 'Ви вже в команді як учасник. Створити нову може лише користувач без команди.'
+    return
+  }
   if (!team.name.trim()) {
     message.value = 'Вкажіть назву команди.'
     return
@@ -151,7 +274,7 @@ async function onCreateTeam() {
     team.leaderId = res.data?.leaderId ?? leaderId
     teamMembers.value = res.data?.members || []
     message.value = `Команду створено (ID: ${res.data?.id}).`
-    auth.refreshUserFromStorage()
+    await auth.hydrateUserFromSession()
     await loadCallEligibility()
   } catch (e) {
     message.value = apiErrorMessage(e, 'Не вдалося створити команду.')
@@ -169,16 +292,22 @@ async function onInviteMember() {
     message.value = 'Спочатку створіть або завантажте команду.'
     return
   }
-  if (!invitedUserId.value) {
-    message.value = 'Вкажіть ID користувача для запрошення.'
+  const raw = invitedUserRef.value.trim()
+  if (!raw) {
+    message.value = 'Вкажіть email або ID користувача для запрошення.'
+    return
+  }
+  const params = raw.includes('@') ? { email: raw } : { userId: Number(raw) }
+  if (!raw.includes('@') && (!Number.isFinite(params.userId) || params.userId < 1)) {
+    message.value = 'Некоректний ID. Вкажіть число або email учасника.'
     return
   }
   busy.value = true
   try {
-    await teamsApi.invite(Number(teamId.value), Number(invitedUserId.value))
-    invitedUserId.value = ''
+    await teamsApi.invite(Number(teamId.value), params)
+    invitedUserRef.value = ''
     await loadMyTeam()
-    message.value = 'Запрошення відправлено.'
+    message.value = 'Запрошення відправлено. Учасник побачить його в «Мої вхідні запрошення».'
   } catch (e) {
     message.value = e?.response?.data?.message || 'Не вдалося надіслати запрошення.'
   } finally {
@@ -204,6 +333,103 @@ async function onRespondInvite(invite, accepted) {
     busy.value = false
   }
 }
+
+function resetTeamForm() {
+  teamId.value = null
+  team.name = ''
+  team.leaderId = null
+  team.maxCapacity = 3
+  team.description = ''
+  teamMembers.value = []
+}
+
+function onRemoveMember(member) {
+  if (!canRemoveMember(member)) return
+  const wasPending = member.inviteStatus === 'PENDING'
+  confirmModal.title = wasPending ? 'Скасувати запрошення?' : 'Виключити з команди?'
+  confirmModal.message = wasPending
+    ? 'Користувач більше не зможе прийняти це запрошення.'
+    : 'Учасник зникне зі складу. У нього в кабінеті з’явиться повідомлення, що його виключили з команди.'
+  confirmModal.highlight = memberLinkLabel(member)
+  confirmModal.profileLink = member.userId ? memberProfileRoute(member.userId) : null
+  confirmModal.variant = wasPending ? 'warning' : 'danger'
+  confirmModal.confirmLabel = memberRemoveLabel(member)
+  confirmModal.action = 'remove-member'
+  confirmModal.payload = { member, wasPending }
+  confirmModal.open = true
+}
+
+function onDeleteTeam() {
+  if (!canManageTeam.value) {
+    message.value = 'Видалити команду може лише її лідер.'
+    return
+  }
+  if (!teamId.value) {
+    message.value = 'Немає команди для видалення.'
+    return
+  }
+  confirmModal.title = 'Видалити команду?'
+  confirmModal.message =
+    'Дію не можна скасувати: зникнуть склад і всі запрошення. Подані заявки на виклики в «Мої заявки» залишаться — видалиться лише запис команди в системі.'
+  confirmModal.highlight = team.name ? `«${team.name}»` : ''
+  confirmModal.profileLink = null
+  confirmModal.variant = 'danger'
+  confirmModal.confirmLabel = 'Видалити команду'
+  confirmModal.action = 'delete-team'
+  confirmModal.payload = null
+  confirmModal.open = true
+}
+
+function closeConfirmModal() {
+  confirmModal.open = false
+  confirmModal.action = null
+  confirmModal.payload = null
+}
+
+async function onConfirmModalAction() {
+  if (confirmLoading.value) return
+
+  if (confirmModal.action === 'remove-member') {
+    const { member, wasPending } = confirmModal.payload || {}
+    if (!member?.userId) return
+    confirmLoading.value = true
+    busy.value = true
+    try {
+      await teamsApi.removeMember(Number(teamId.value), Number(member.userId))
+      closeConfirmModal()
+      await loadMyTeam()
+      message.value = wasPending
+        ? 'Запрошення скасовано.'
+        : 'Учасника виключено з команди.'
+    } catch (e) {
+      message.value = apiErrorMessage(e, 'Не вдалося виконати дію.')
+    } finally {
+      confirmLoading.value = false
+      busy.value = false
+    }
+    return
+  }
+
+  if (confirmModal.action === 'delete-team') {
+    confirmLoading.value = true
+    busy.value = true
+    try {
+      await teamsApi.deleteTeam(Number(teamId.value))
+      closeConfirmModal()
+      resetTeamForm()
+      message.value = 'Команду видалено. Можете створити нову.'
+      await loadCallEligibility()
+      await loadMyInvites({ silent: true })
+    } catch (e) {
+      const serverMsg = e?.response?.data?.message
+      message.value =
+        typeof serverMsg === 'string' ? serverMsg : apiErrorMessage(e, 'Не вдалося видалити команду.')
+    } finally {
+      confirmLoading.value = false
+      busy.value = false
+    }
+  }
+}
 </script>
 
 <template>
@@ -212,6 +438,34 @@ async function onRespondInvite(invite, accepted) {
       <h2>Моя команда</h2>
       <p>Створення команди, запрошення учасників та керування вхідними інвайтами.</p>
     </header>
+
+    <div
+      v-if="removalNotice && !removalNoticeDismissed && !teamId"
+      class="removal-banner"
+      role="alert"
+    >
+      <strong>Вас виключили з команди</strong>
+      <p class="removal-banner__text">
+        Лідер команди «{{ removalNotice.teamName }}» прибрав вас із складу.
+        <span v-if="removalNotice.removedAt">
+          ({{ formatRemovedAt(removalNotice.removedAt) }})
+        </span>
+        Ви можете приєднатися до іншої команди за запрошенням або створити власну, якщо ще не
+        були лідером іншої команди.
+      </p>
+      <button type="button" class="removal-banner__btn" @click="dismissRemovalNotice">
+        Зрозуміло
+      </button>
+    </div>
+
+    <div v-if="isTeamMemberOnly" class="member-banner" role="status">
+      <strong>Ви — учасник команди</strong>
+      <span class="member-banner__text">
+        Змінювати назву, запрошувати людей, видаляти команду та подавати заявки на виклики може лише
+        <strong>лідер</strong> ({{ leaderEmail }}). Ви можете переглядати склад і
+        приймати вхідні запрошення в інші команди нижче.
+      </span>
+    </div>
 
     <div v-if="hasLeaderRoleBadge" class="leader-banner">
       <span class="leader-banner__icon" aria-hidden="true">⚑</span>
@@ -224,7 +478,7 @@ async function onRespondInvite(invite, accepted) {
     </div>
 
     <div
-      v-if="callEligibility && !callEligibility.suggestsReadyForCallFlow"
+      v-if="callEligibility && !callEligibility.suggestsReadyForCallFlow && !isTeamMemberOnly"
       class="eligibility-banner"
       role="alert"
     >
@@ -297,7 +551,7 @@ async function onRespondInvite(invite, accepted) {
     </article>
 
     <article class="card">
-      <h3>Створення команди</h3>
+      <h3>{{ teamId ? (canManageTeam ? 'Моя команда' : 'Моя команда (перегляд)') : 'Створення команди' }}</h3>
       <div class="grid two form-fields">
         <div class="form-field">
           <label class="label" for="team-name">Назва команди</label>
@@ -306,6 +560,8 @@ async function onRespondInvite(invite, accepted) {
             v-model="team.name"
             type="text"
             placeholder="Innovation Squad"
+            :readonly="teamFormReadonly"
+            :disabled="teamFormReadonly"
           />
         </div>
         <div class="form-field">
@@ -316,6 +572,8 @@ async function onRespondInvite(invite, accepted) {
             type="number"
             min="1"
             max="3"
+            :readonly="teamFormReadonly"
+            :disabled="teamFormReadonly"
           />
         </div>
       </div>
@@ -326,31 +584,106 @@ async function onRespondInvite(invite, accepted) {
           v-model="team.description"
           rows="4"
           placeholder="Коротко опишіть напрямок проєкту або компетенції команди"
+          :readonly="teamFormReadonly"
+          :disabled="teamFormReadonly"
         ></textarea>
       </div>
-      <button :disabled="busy" @click="onCreateTeam">Створити команду</button>
-      <p v-if="teamId" class="hint">Поточний ID команди: {{ teamId }}</p>
+      <button v-if="!teamId" type="button" :disabled="busy" @click="onCreateTeam">
+        Створити команду
+      </button>
+      <p v-if="teamId && canViewTeamId" class="hint">Поточний ID команди: {{ teamId }}</p>
+
+      <div v-if="teamId && canManageTeam" class="danger-zone">
+        <p class="danger-zone__text">
+          Видалення команди незворотне: зникнуть склад і запрошення. Подані заявки на виклики в кабінеті
+          залишаються — зникає лише запис команди в системі.
+        </p>
+        <button type="button" class="danger" :disabled="busy" @click="onDeleteTeam">
+          Видалити команду
+        </button>
+      </div>
     </article>
 
-    <article class="card">
-      <h3>Запросити учасника</h3>
-      <div class="row">
-        <input v-model="invitedUserId" type="number" min="1" placeholder="ID користувача" />
-        <button :disabled="busy || !canManageTeam" @click="onInviteMember">Запросити</button>
+    <article v-if="teamId" class="card">
+      <h3>{{ canManageTeam ? 'Запросити учасника' : 'Склад команди' }}</h3>
+      <div v-if="canManageTeam" class="row">
+        <input
+          v-model="invitedUserRef"
+          type="text"
+          placeholder="Email або ID користувача"
+          autocomplete="off"
+        />
+        <button :disabled="busy" @click="onInviteMember">Запросити</button>
       </div>
       <p class="hint">Підтверджено учасників: {{ acceptedCount }} / {{ team.maxCapacity }}</p>
-      <div v-for="member in teamMembers" :key="member.id" class="invite-row">
-        <span>Користувач #{{ member.userId }}</span>
-        <span class="badge">{{ member.inviteStatus }}</span>
-        <span class="hint">{{ member.role }}</span>
+      <p v-if="canManageTeam" class="hint hint--sub">
+        Після виключення того самого користувача можна запросити його знову — необмежену кількість разів.
+      </p>
+      <div v-if="teamMembers.length" class="member-table-wrap">
+        <table class="member-table" :class="{ 'member-table--actions': canManageTeam }">
+          <colgroup>
+            <col class="member-table__col-email">
+            <col class="member-table__col-status">
+            <col class="member-table__col-role">
+            <col v-if="canManageTeam" class="member-table__col-action">
+          </colgroup>
+          <thead>
+            <tr>
+              <th scope="col" class="member-table__th-email">Учасник</th>
+              <th scope="col" class="member-table__th-center">Статус</th>
+              <th scope="col" class="member-table__th-center">Роль</th>
+              <th v-if="canManageTeam" scope="col" class="member-table__th-center">Дія</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="member in teamMembers" :key="member.id">
+              <td class="member-table__email" data-label="Учасник">
+                <router-link
+                  v-if="member.userId"
+                  class="member-link"
+                  :to="memberProfileRoute(member.userId)"
+                  :title="'Профіль та CV — ' + memberLinkLabel(member)"
+                >
+                  {{ memberLinkLabel(member) }}
+                </router-link>
+                <span v-else class="member-link member-link--static">{{ memberLinkLabel(member) }}</span>
+              </td>
+              <td class="member-table__status" data-label="Статус">
+                <span class="badge">{{ member.inviteStatus }}</span>
+              </td>
+              <td class="member-table__role" data-label="Роль">{{ member.role }}</td>
+              <td v-if="canManageTeam" class="member-table__action" data-label="Дія">
+                <button
+                  v-if="canRemoveMember(member)"
+                  type="button"
+                  class="member-remove"
+                  :disabled="busy"
+                  :title="memberRemoveLabel(member)"
+                  @click="onRemoveMember(member)"
+                >
+                  {{ memberRemoveLabel(member) }}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </article>
 
     <article class="card">
-      <h3>Мої вхідні запрошення</h3>
+      <div class="card-title-row">
+        <h3>Мої вхідні запрошення</h3>
+        <button type="button" class="link-btn" :disabled="busy" @click="loadMyInvites()">
+          Оновити
+        </button>
+      </div>
+      <p class="hint">
+        Запрошення приходять на акаунт, під яким ви увійшли ({{ auth.user?.email || '—' }}).
+        Лідер може вказати ваш email замість ID.
+      </p>
       <div v-if="!pendingInvites.length" class="hint">Немає запрошень у статусі очікування.</div>
       <div v-for="invite in pendingInvites" :key="`${invite.teamId}-${invite.userId}-${invite.id}`" class="invite-row">
-        <span>Команда #{{ invite.teamId }}</span>
+        <span class="invite-team-name">{{ invite.teamName || `Команда #${invite.teamId}` }}</span>
         <span class="badge">{{ invite.inviteStatus }}</span>
         <div class="row actions">
           <button :disabled="busy" @click="onRespondInvite(invite, true)">Прийняти</button>
@@ -362,6 +695,19 @@ async function onRespondInvite(invite, accepted) {
     </article>
 
     <p v-if="message" class="message info">{{ message }}</p>
+
+    <AppConfirmModal
+      v-model="confirmModal.open"
+      :title="confirmModal.title"
+      :message="confirmModal.message"
+      :highlight="confirmModal.highlight"
+      :profile-link="confirmModal.profileLink"
+      :variant="confirmModal.variant"
+      :confirm-label="confirmModal.confirmLabel"
+      :loading="confirmLoading"
+      @confirm="onConfirmModalAction"
+      @cancel="closeConfirmModal"
+    />
   </section>
 </template>
 
@@ -375,6 +721,26 @@ async function onRespondInvite(invite, accepted) {
 .panel-header p {
   margin: 0.35rem 0 0;
   color: #64748b;
+}
+
+.member-banner {
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  background: linear-gradient(120deg, #f8fafc 0%, #e2e8f0 100%);
+  border: 1px solid rgba(100, 116, 139, 0.35);
+  font-size: 0.84rem;
+  color: #334155;
+  line-height: 1.45;
+}
+
+.member-banner strong {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: #1e293b;
+}
+
+.member-banner__text {
+  display: block;
 }
 
 .leader-banner {
@@ -563,6 +929,42 @@ async function onRespondInvite(invite, accepted) {
   margin: 0 0 0.8rem;
 }
 
+.card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.card-title-row h3 {
+  margin: 0;
+}
+
+.link-btn {
+  border: none;
+  background: transparent;
+  color: #4f46e5;
+  font-weight: 700;
+  font-size: 0.84rem;
+  cursor: pointer;
+  padding: 0.2rem 0.35rem;
+}
+
+.link-btn:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.link-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.invite-team-name {
+  font-weight: 600;
+  color: #1e293b;
+}
+
 .grid {
   display: grid;
   gap: 0.8rem;
@@ -639,6 +1041,114 @@ button:disabled {
   background: #dc2626;
 }
 
+.danger-zone {
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(220, 38, 38, 0.35);
+  background: #fef2f2;
+}
+
+.danger-zone__text {
+  margin: 0 0 0.65rem;
+  font-size: 0.84rem;
+  color: #991b1b;
+  line-height: 1.45;
+}
+
+.member-table-wrap {
+  margin-top: 0.55rem;
+  overflow-x: auto;
+}
+
+.member-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 0.45rem;
+  table-layout: fixed;
+}
+
+.member-table__col-email {
+  width: auto;
+}
+
+.member-table__col-status {
+  width: 7.25rem;
+}
+
+.member-table__col-role {
+  width: 5.25rem;
+}
+
+.member-table__col-action {
+  width: 6.75rem;
+}
+
+.member-table thead th {
+  padding: 0.45rem 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  background: rgba(248, 250, 252, 0.95);
+  border-radius: 8px;
+}
+
+.member-table__th-email {
+  text-align: left;
+}
+
+.member-table__th-center {
+  text-align: center;
+}
+
+.member-table tbody tr {
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.35);
+}
+
+.member-table tbody td {
+  padding: 0.6rem 0.75rem;
+  vertical-align: middle;
+}
+
+.member-table tbody td:first-child {
+  border-radius: 10px 0 0 10px;
+}
+
+.member-table tbody td:last-child {
+  border-radius: 0 10px 10px 0;
+}
+
+.member-table:not(.member-table--actions) tbody td:last-child {
+  border-radius: 0 10px 10px 0;
+}
+
+.member-table__email {
+  word-break: break-all;
+}
+
+.member-table__status {
+  text-align: center;
+}
+
+.member-table__status .badge {
+  display: inline-block;
+}
+
+.member-table__role {
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.member-table__action {
+  text-align: center;
+}
+
 .invite-row {
   margin-top: 0.55rem;
   display: flex;
@@ -648,6 +1158,79 @@ button:disabled {
   border: 1px solid rgba(148, 163, 184, 0.35);
   border-radius: 10px;
   padding: 0.55rem 0.65rem;
+}
+
+.member-link {
+  font-weight: 600;
+  color: #4f46e5;
+  text-decoration: none;
+  word-break: break-all;
+}
+
+.member-link:hover {
+  text-decoration: underline;
+}
+
+.member-link--static {
+  color: #334155;
+  font-weight: 600;
+}
+
+.member-remove {
+  border: none;
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid rgba(220, 38, 38, 0.35);
+}
+
+.member-remove:hover:not(:disabled) {
+  background: #fee2e2;
+}
+
+.member-remove:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.removal-banner {
+  padding: 0.9rem 1rem;
+  border-radius: 14px;
+  background: linear-gradient(120deg, #fef2f2 0%, #fff1f2 100%);
+  border: 1px solid rgba(220, 38, 38, 0.35);
+  font-size: 0.84rem;
+  color: #7f1d1d;
+  line-height: 1.45;
+}
+
+.removal-banner strong {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: #991b1b;
+  font-size: 0.95rem;
+}
+
+.removal-banner__text {
+  margin: 0 0 0.65rem;
+}
+
+.removal-banner__btn {
+  border: none;
+  border-radius: 999px;
+  padding: 0.45rem 0.9rem;
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+  background: #4f46e5;
+  color: #fff;
+}
+
+.removal-banner__btn:hover {
+  background: #4338ca;
 }
 
 .actions {
@@ -668,6 +1251,11 @@ button:disabled {
   font-size: 0.84rem;
 }
 
+.hint--sub {
+  margin-top: 0.25rem;
+  font-size: 0.8rem;
+}
+
 .message {
   margin: 0;
   border-radius: 10px;
@@ -682,6 +1270,37 @@ button:disabled {
 @media (max-width: 760px) {
   .two {
     grid-template-columns: 1fr;
+  }
+
+  .member-table {
+    table-layout: auto;
+  }
+
+  .member-table thead {
+    display: none;
+  }
+
+  .member-table tbody tr {
+    display: block;
+    margin-bottom: 0.5rem;
+    border-radius: 10px;
+  }
+
+  .member-table tbody td {
+    display: block;
+    text-align: left;
+    border-radius: 0;
+    padding: 0.35rem 0.75rem;
+  }
+
+  .member-table tbody td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    margin-bottom: 0.15rem;
   }
 }
 </style>

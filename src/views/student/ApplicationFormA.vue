@@ -107,10 +107,13 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { programsApi } from '@/api/programs'
 import { applicationsApi } from '@/api/applications'
+import { getCallApplicationEligibility } from '@/api/profileApi'
+import { useAuthStore } from '@/stores/auth'
 import { apiErrorMessage } from '@/utils/apiError'
 import DocumentUpload from '@/components/DocumentUpload.vue'
 
 const route = useRoute()
+const auth = useAuthStore()
 const callId = Number(route.params.callId)
 
 const callInfo = ref(null)
@@ -143,6 +146,16 @@ const canSubmit = computed(() =>
 
 onMounted(async () => {
     try {
+        const isSuperAdmin = (auth.user?.roles || []).includes('SUPER_ADMIN')
+        if (!isSuperAdmin) {
+            const eligibility = await getCallApplicationEligibility()
+            if (!eligibility?.teamLeader) {
+                error.value =
+                    'Подавати заявку на виклик може лише лідер команди. Зверніться до лідера вашої команди.'
+                return
+            }
+        }
+
         // Паралельно завантажуємо інфо про call і перевіряємо чи є вже заявка
         const [callRes, existingRes] = await Promise.allSettled([
             programsApi.getCall(callId),
