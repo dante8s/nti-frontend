@@ -43,12 +43,7 @@
     </section>
 
     <section v-if="canScoreAndDecide" class="panel panel--criteria">
-      <div class="criteria-head">
-        <h2>Критерії</h2>
-        <button type="button" class="btn-save-all" :disabled="busy || !criteria.length" @click="saveAllScores">
-          Зберегти всі
-        </button>
-      </div>
+      <h2>Критерії</h2>
       <p v-if="!criteria.length && !busy" class="hint">
         Для цього виклику немає критеріїв або виклик не знайдено. Перезавантажте сторінку після запуску
         бекенда (можливе автоматичне створення стандартного набору) або зверніться до адміністратора.
@@ -88,8 +83,8 @@
             </div>
           </div>
           <div class="criteria-actions">
-            <button type="button" class="btn-row-save" :disabled="busy" @click="saveScore(item.id)">
-              Зберегти пункт
+            <button type="button" class="btn-row-save" :disabled="savingId === item.id || busy" @click="saveScore(item.id)">
+              {{ savingId === item.id ? 'Збереження...' : 'Зберегти пункт' }}
             </button>
           </div>
         </li>
@@ -157,6 +152,7 @@ const average = ref(null)
 const complete = ref(null)
 const message = ref('')
 const busy = ref(false)
+const savingId = ref(null)   // id критерію що зараз зберігається
 const decisionComment = ref('')
 const loadedApplication = ref(null)
 const loadingApplication = ref(false)
@@ -288,13 +284,12 @@ async function saveScore(criteriaId) {
     message.value = 'Немає ID оцінювача.'
     return
   }
-  busy.value = true
   const valid = clampScore(scores[criteriaId])
   if (valid == null) {
     message.value = 'Вкажіть бал від 1 до 100.'
-    busy.value = false
     return
   }
+  savingId.value = criteriaId
   try {
     await evaluationApi.submitScore({
       applicationId: app,
@@ -307,37 +302,10 @@ async function saveScore(criteriaId) {
   } catch {
     message.value = 'Не вдалося зберегти оцінку.'
   } finally {
-    busy.value = false
+    savingId.value = null
   }
 }
 
-async function saveAllScores() {
-  if (!criteria.value.length) return
-  busy.value = true
-  try {
-    let saved = 0
-    for (const item of criteria.value) {
-      const valid = clampScore(scores[item.id])
-      if (valid == null) continue
-      const app = asPositiveInt(applicationId.value)
-      const evaluator = asPositiveInt(Number(evaluatorId.value))
-      await evaluationApi.submitScore({
-        applicationId: app,
-        evaluatorId: evaluator,
-        criteriaId: Number(item.id),
-        score: valid,
-        comment: String(comments[item.id] ?? '').trim() || null,
-      })
-      saved += 1
-    }
-    message.value = saved ? `Збережено оцінок: ${saved}.` : 'Немає жодного балу 1–100 для збереження.'
-    await refreshSummary()
-  } catch {
-    message.value = 'Не вдалося зберегти оцінки.'
-  } finally {
-    busy.value = false
-  }
-}
 
 async function refreshSummary() {
   const app = asPositiveInt(applicationId.value)

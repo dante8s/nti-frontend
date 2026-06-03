@@ -568,12 +568,10 @@ async function onConfirmModalAction() {
           <label class="label" for="team-max-capacity">Ліміт учасників</label>
           <input
             id="team-max-capacity"
-            v-model.number="team.maxCapacity"
-            type="number"
-            min="1"
-            max="3"
-            :readonly="teamFormReadonly"
-            :disabled="teamFormReadonly"
+            value="3"
+            type="text"
+            readonly
+            disabled
           />
         </div>
       </div>
@@ -610,7 +608,7 @@ async function onConfirmModalAction() {
         <input
           v-model="invitedUserRef"
           type="text"
-          placeholder="Email або ID користувача"
+          placeholder="Email користувача"
           autocomplete="off"
         />
         <button :disabled="busy" @click="onInviteMember">Запросити</button>
@@ -1301,6 +1299,15 @@ button:disabled {
     color: #64748b;
     text-transform: uppercase;
     margin-bottom: 0.15rem;
+  }
+
+  :deep(#team-max-capacity::-webkit-inner-spin-button),
+  :deep(#team-max-capacity::-webkit-outer-spin-button) {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  :deep(#team-max-capacity) {
+    -moz-appearance: textfield;
   }
 }
 </style>

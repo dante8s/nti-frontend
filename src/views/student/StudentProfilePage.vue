@@ -15,6 +15,7 @@ const loading = ref(false)
 const saving = ref(false)
 const uploading = ref(false)
 const deleting = ref(false)
+const cvFileInput = ref(null)
 const profileExists = ref(false)
 const message = ref('')
 const messageType = ref('info')
@@ -201,6 +202,8 @@ async function removeCv() {
   setMessage('')
   try {
     await deleteCv(ME)
+    selectedFile.value = null
+    if (cvFileInput.value) cvFileInput.value.value = ''
     const profile = await getProfile(ME)
     loadedProfile.value = profile
     setMessage('CV видалено.', 'success')
@@ -424,7 +427,7 @@ onMounted(loadProfile)
     <article class="card">
       <h3 class="title-sm">CV (PDF)</h3>
       <div class="row">
-        <input type="file" accept=".pdf,application/pdf" @change="onFilePicked" />
+        <input ref="cvFileInput" type="file" accept=".pdf,application/pdf" @change="onFilePicked" />
         <button class="btn" :disabled="uploading" @click="submitCv">
           {{ uploading ? 'Завантаження...' : 'Завантажити CV' }}
         </button>

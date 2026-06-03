@@ -158,6 +158,11 @@ onMounted(async () => {
                     'Подавати заявку на виклик може лише лідер команди. Зверніться до лідера вашої команди.'
                 return
             }
+            if (!eligibility?.teamFull) {
+                error.value =
+                    'Команда ще не укомплектована. Для подачі заявки потрібно максимально заповнити команду (3 учасники).'
+                return
+            }
         }
 
         const [callRes, existingRes] = await Promise.allSettled([
