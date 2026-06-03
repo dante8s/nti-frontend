@@ -102,14 +102,6 @@
         Якщо заявка «Подана», спочатку переведіть у «На розгляді». Далі — схвалення, відхилення або доопрацювання.
       </p>
       <template v-if="loadedApplication">
-        <label class="label-block">
-          <span>Коментар для студента</span>
-          <textarea
-            v-model="decisionComment"
-            rows="3"
-            placeholder="Обґрунтування, що змінити при доопрацюванні…"
-          />
-        </label>
         <div v-if="!commissionNextStatuses.length" class="hint muted">
           З цієї стадії зміна статусу недоступна.
         </div>
