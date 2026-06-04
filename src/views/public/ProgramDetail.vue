@@ -122,6 +122,14 @@
         <div v-else class="empty">
             {{ notFoundMessage }}
         </div>
+
+        <AppAlertModal
+            v-model="alertOpen"
+            :title="alertTitle"
+            :message="alertMessage"
+            :variant="alertVariant"
+            :show-teams-link="alertTeamsLink"
+        />
     </div>
 </template>
 
@@ -129,9 +137,11 @@
 import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { programsApi } from '@/api/programs'
+import { getCallApplicationEligibility } from '@/api/profileApi'
 import { useAuthStore } from '@/stores/auth'
 import { useOrganizationStore } from '@/stores/organization'
 import { apiErrorMessage } from '@/utils/apiError'
+import AppAlertModal from '@/components/AppAlertModal.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -150,23 +160,65 @@ const canManageRequirements = computed(() =>
     (auth.roles || []).some((role) => ['FIRM', 'ADMIN', 'SUPER_ADMIN'].includes(role)),
 )
 
+const alertOpen = ref(false)
+const alertTitle = ref('')
+const alertMessage = ref('')
+const alertVariant = ref('info')
+const alertTeamsLink = ref(false)
+
+function openAlert({ title, message, variant = 'info', teamsLink = false }) {
+    alertTitle.value = title
+    alertMessage.value = message
+    alertVariant.value = variant
+    alertTeamsLink.value = teamsLink
+    alertOpen.value = true
+}
+
 function showPresentedBy(p) {
     return p?.type === 'PROGRAM_B'
         && p.organizationId != null
         && p.organizationId !== ''
 }
 
-function handleApply(call) {
+async function handleApply(call) {
     if (!isLoggedIn.value) {
         router.push({ name: 'login' })
         return
     }
 
-    // Перевірити чи користувач має роль студента
-    if (!auth.user?.roles?.includes('STUDENT')) {
-        // Можна показати повідомлення або перенаправити на dashboard
-        alert('Тільки студенти можуть подавати заявки')
+    const roles = auth.roles?.length ? auth.roles : auth.user?.roles || []
+
+    if (!roles.includes('STUDENT')) {
+        openAlert({
+            title: 'Доступ обмежено',
+            message: 'Тільки студенти можуть подавати заявки на виклики.',
+            variant: 'warning',
+        })
         return
+    }
+
+    const isSuperAdmin = (auth.user?.roles || []).includes('SUPER_ADMIN')
+    if (!isSuperAdmin) {
+        try {
+            const eligibility = await getCallApplicationEligibility()
+            if (!eligibility?.teamLeader) {
+                openAlert({
+                    title: 'Лише лідер команди',
+                    message:
+                        'Подавати заявку на виклик може лише лідер команди. Якщо ви учасник — зверніться до лідера або перейдіть на сторінку «Моя команда».',
+                    variant: 'warning',
+                    teamsLink: true,
+                })
+                return
+            }
+        } catch {
+            openAlert({
+                title: 'Помилка перевірки',
+                message: 'Не вдалося перевірити права на подачу заявки. Спробуйте пізніше.',
+                variant: 'error',
+            })
+            return
+        }
     }
 
     const programKey = program.value.type === 'PROGRAM_A' ? 'a' : 'b'

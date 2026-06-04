@@ -107,9 +107,13 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { programsApi } from '@/api/programs'
 import { applicationsApi } from '@/api/applications'
+import { getCallApplicationEligibility } from '@/api/profileApi'
+import { useAuthStore } from '@/stores/auth'
+import { apiErrorMessage } from '@/utils/apiError'
 import DocumentUpload from '@/components/DocumentUpload.vue'
 
 const route = useRoute()
+const auth = useAuthStore()
 const callId = Number(route.params.callId)
 
 const callInfo = ref(null)
@@ -142,6 +146,21 @@ const canSubmit = computed(() =>
 
 onMounted(async () => {
     try {
+        const isSuperAdmin = (auth.user?.roles || []).includes('SUPER_ADMIN')
+        if (!isSuperAdmin) {
+            const eligibility = await getCallApplicationEligibility()
+            if (!eligibility?.teamLeader) {
+                error.value =
+                    'Подавати заявку на виклик може лише лідер команди. Зверніться до лідера вашої команди.'
+                return
+            }
+            if (!eligibility?.teamFull) {
+                error.value =
+                    'Команда ще не укомплектована. Для подачі заявки потрібно максимально заповнити команду (3 учасники).'
+                return
+            }
+        }
+
         // Паралельно завантажуємо інфо про call і перевіряємо чи є вже заявка
         const [callRes, existingRes] = await Promise.allSettled([
             programsApi.getCall(callId),
@@ -193,21 +212,26 @@ async function saveForm() {
             teamDescription: form.teamDescription,
         })
 
-        if (!application.value) {
-            // Нова заявка: спочатку create, потім update з formData
-            const res = await applicationsApi.createDraft(callId)
-            const created = res.data
-            const updated = await applicationsApi.updateDraft(created.id, formData)
-            application.value = updated.data
-        } else {
-            // Редагування: тільки оновлюємо formData
-            const updated = await applicationsApi.updateDraft(application.value.id, formData)
-            application.value = updated.data
+        let appId = application.value?.id
+        if (!appId) {
+            try {
+                const existing = await applicationsApi.getMyByCall(callId)
+                appId = existing.data?.id
+            } catch (lookupErr) {
+                if (lookupErr?.response?.status !== 404)
+                    throw lookupErr
+            }
         }
+        if (!appId) {
+            const created = await applicationsApi.createDraft(callId)
+            appId = created.data.id
+        }
+        const updated = await applicationsApi.updateDraft(appId, formData)
+        application.value = updated.data
 
         await checkReadyToSubmit()
     } catch (e) {
-        error.value = e.response?.data?.message || e.response?.data || 'Помилка при збереженні'
+        error.value = apiErrorMessage(e, 'Помилка при збереженні')
     } finally {
         loading.value = false
     }
@@ -230,7 +254,7 @@ async function submitApplication() {
         await applicationsApi.submit(application.value.id)
         submitted.value = true
     } catch (e) {
-        submitError.value = e.response?.data?.message || e.response?.data || 'Помилка при відправці'
+        submitError.value = apiErrorMessage(e, 'Помилка при відправці')
     } finally {
         submitting.value = false
     }
