@@ -16,8 +16,17 @@ const isAdmin = computed(() =>
   auth.roles?.some((r) => r === 'ADMIN' || r === 'SUPER_ADMIN'),
 )
 const isStudent = computed(() => auth.roles?.includes('STUDENT'))
+const showStudentNav = computed(() =>
+  isStudent.value || auth.roles?.includes('SUPER_ADMIN'),
+)
 const isOrgUser = computed(() => auth.roles?.some((r) => r === 'FIRM' || r === 'FIRM_USER'))
 const isMentor = computed(() => auth.roles?.includes('MENTOR'))
+const isCommissionMember = computed(() =>
+  auth.roles?.some((r) => r === 'EVALUATOR' || r === 'SUPER_EVALUATOR'),
+)
+const showReportingNav = computed(
+  () => isAdmin.value || isSuperAdmin.value,
+)
 
 const firmChecked = ref(false)
 const firmHasOrg = ref(false)
@@ -41,8 +50,12 @@ const adminNav = computed(() => {
 })
 
 const studentNav = computed(() => {
-  if (!isStudent.value) return []
-  return [{ to: '/app/my-applications', label: 'Мої заявки', icon: '▸' }]
+  if (!showStudentNav.value) return []
+  return [
+    { to: '/app/my-applications', label: 'Мої заявки', icon: '▸' },
+    { to: '/app/my-profile', label: 'Мій профіль', icon: '◉' },
+    { to: '/app/teams', label: 'Моя команда', icon: '◍' },
+  ]
 })
 
 const organizationNav = computed(() => {
@@ -56,6 +69,16 @@ const organizationNav = computed(() => {
 const mentorNav = computed(() => {
   if (!isMentor.value) return []
   return [{ to: '/app/mentor/my-mentorships', label: 'My Mentorships', icon: '◷' }]
+})
+
+const commissionNav = computed(() => {
+  if (!isCommissionMember.value && !isAdmin.value && !isSuperAdmin.value) return []
+  return [{ to: '/app/commission', label: 'Комісія', icon: '◌' }]
+})
+
+const reportingNav = computed(() => {
+  if (!showReportingNav.value) return []
+  return [{ to: '/app/reporting', label: 'Звітність', icon: '⬒' }]
 })
 
 
@@ -73,7 +96,10 @@ function isActive(path) {
   return route.path === path || route.path.startsWith(`${path}/`)
 }
 
-onMounted(checkFirmOrg)
+onMounted(async () => {
+  await auth.hydrateUserFromSession()
+  checkFirmOrg()
+})
 
 async function checkFirmOrg() {
   if (!isOrgUser.value) return
@@ -117,7 +143,7 @@ async function checkFirmOrg() {
         </RouterLink>
 
         <p v-if="studentNav.length" class="shell__group-label">
-          Студент
+          Студентський кабінет
         </p>
         <RouterLink
           v-for="item in studentNav"
@@ -151,6 +177,36 @@ async function checkFirmOrg() {
         </p>
         <RouterLink
           v-for="item in mentorNav"
+          :key="item.to"
+          :to="item.to"
+          class="shell__link"
+          :class="{ active: isActive(item.to) }"
+          @click="closeMobile"
+        >
+          <span class="shell__ico" aria-hidden="true">{{ item.icon }}</span>
+          {{ item.label }}
+        </RouterLink>
+
+        <p v-if="commissionNav.length" class="shell__group-label">
+          Комісія
+        </p>
+        <RouterLink
+          v-for="item in commissionNav"
+          :key="item.to"
+          :to="item.to"
+          class="shell__link"
+          :class="{ active: isActive(item.to) }"
+          @click="closeMobile"
+        >
+          <span class="shell__ico" aria-hidden="true">{{ item.icon }}</span>
+          {{ item.label }}
+        </RouterLink>
+
+        <p v-if="reportingNav.length" class="shell__group-label">
+          Звітність
+        </p>
+        <RouterLink
+          v-for="item in reportingNav"
           :key="item.to"
           :to="item.to"
           class="shell__link"

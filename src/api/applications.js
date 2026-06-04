@@ -8,6 +8,8 @@ export const applicationsApi = {
   getById: (id) =>
     api.get(`/api/applications/${id}`),
 
+  getOne: (id) => api.get(`/api/applications/${id}`),
+
   getMyByCall: (callId) =>
     api.get(`/api/applications/my/by-call/${callId}`),
 
@@ -25,7 +27,18 @@ export const applicationsApi = {
   getDocumentStatus: (id) =>
     api.get(`/api/applications/${id}/documents/status`),
 
-  // Прогрес завантаження як callback
+  fetchDocumentBlob: (applicationId, documentType, disposition = 'inline') =>
+    api.get(`/api/applications/${applicationId}/documents/${documentType}`, {
+      params: { disposition },
+      responseType: 'blob',
+    }),
+
+  downloadDocument: (applicationId, documentType) =>
+    api.get(`/api/applications/${applicationId}/documents/${documentType}`, {
+      params: { disposition: 'attachment' },
+      responseType: 'blob',
+    }),
+
   uploadDocument: (id, documentType, file, onProgress) => {
     const form = new FormData()
     form.append('file', file)
@@ -33,7 +46,6 @@ export const applicationsApi = {
       `/api/applications/${id}/documents/${documentType}`,
       form,
       {
-        headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: (e) => {
           if (onProgress && e.total) {
             onProgress(Math.round(
@@ -54,7 +66,7 @@ export const applicationsApi = {
       `/api/admin/applications/${id}/status`,
       { status, comment }
     ),
-    
+
   setProductOwner: (applicationId, userId) =>
     api.patch(`/api/applications/${applicationId}/product-owner`, null, { params: { userId } }),
 }
