@@ -19,7 +19,6 @@
       <p v-else-if="loadingApplication" class="muted">Завантаження заявки…</p>
       <p v-else class="muted">Заявку не знайдено.</p>
       <div class="row">
-        <button type="button" :disabled="busy" @click="loadCriteria">Критерії</button>
         <button type="button" :disabled="busy" @click="refreshSummary">Оновити підсумок</button>
       </div>
     </section>
@@ -44,6 +43,9 @@
 
     <section v-if="canScoreAndDecide" class="panel panel--criteria">
       <h2>Критерії</h2>
+      <p v-if="isDecisionFinal" class="hint hint--locked">
+        Рішення по заявці вже прийнято. Оцінки заблоковано для редагування.
+      </p>
       <p v-if="!criteria.length && !busy" class="hint">
         Для цього виклику немає критеріїв або виклик не знайдено. Перезавантажте сторінку після запуску
         бекенда (можливе автоматичне створення стандартного набору) або зверніться до адміністратора.
@@ -69,6 +71,7 @@
                 step="1"
                 class="score-input"
                 placeholder="1–100"
+                :disabled="isDecisionFinal"
               >
             </div>
             <div class="criteria-field criteria-field--comment">
@@ -79,11 +82,12 @@
                 rows="2"
                 class="comment-input"
                 placeholder="Примітка щодо цього критерію…"
+                :disabled="isDecisionFinal"
               />
             </div>
           </div>
           <div class="criteria-actions">
-            <button type="button" class="btn-row-save" :disabled="savingId === item.id || busy" @click="saveScore(item.id)">
+            <button type="button" class="btn-row-save" :disabled="savingId === item.id || busy || isDecisionFinal" @click="saveScore(item.id)">
               {{ savingId === item.id ? 'Збереження...' : 'Зберегти пункт' }}
             </button>
           </div>
@@ -142,6 +146,10 @@ import ApplicationDocumentsDownload from '@/components/ApplicationDocumentsDownl
 
 const route = useRoute()
 const { auth, isReadOnlyCommission, canScoreAndDecide } = useCommissionAuth()
+
+const isDecisionFinal = computed(() =>
+  ['APPROVED', 'REJECTED'].includes(loadedApplication.value?.status),
+)
 
 const applicationId = computed(() => Number(route.params.applicationId))
 
@@ -660,6 +668,15 @@ watch(applicationId, async () => {
   margin: 0;
   font-size: 0.82rem;
   color: #64748b;
+}
+
+.hint--locked {
+  color: #92400e;
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.5rem;
 }
 
 .muted {
