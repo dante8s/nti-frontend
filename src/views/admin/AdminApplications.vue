@@ -9,9 +9,23 @@
         v-model="search"
         type="search"
         class="search"
-        placeholder="Пошук за програмою, викликом, статусом…"
+        placeholder="Пошук за іменем або email заявника…"
         aria-label="Пошук"
       >
+      <select v-model="filterStatus" class="filter-select">
+        <option value="">Всі статуси</option>
+        <option value="DRAFT">Чернетка</option>
+        <option value="SUBMITTED">Подана</option>
+        <option value="IN_REVIEW">На розгляді</option>
+        <option value="NEEDS_REVISION">Потребує правок</option>
+        <option value="APPROVED">Схвалена</option>
+        <option value="REJECTED">Відхилена</option>
+      </select>
+      <select v-model="filterProgram" class="filter-select">
+        <option value="">Всі програми</option>
+        <option value="PROGRAM_A">Програма A</option>
+        <option value="PROGRAM_B">Програма B</option>
+      </select>
       <button type="button" class="btn-refresh" @click="load">
         Оновити
       </button>
@@ -253,6 +267,8 @@ const list = ref([])
 const loading = ref(true)
 const error = ref('')
 const search = ref('')
+const filterStatus = ref('')
+const filterProgram = ref('')
 const saving = ref(false)
 const router = useRouter()
 
@@ -284,17 +300,23 @@ const toast = reactive({
 
 const filtered = computed(() => {
   const q = search.value.trim().toLowerCase()
-  if (!q) return list.value
-  return list.value.filter((r) => {
-    const blob = [
-      r.id,
-      r.programName,
-      r.callTitle,
-      r.status,
-      r.programType,
-    ].join(' ').toLowerCase()
-    return blob.includes(q)
-  })
+  const st = filterStatus.value
+  const pr = filterProgram.value
+
+  return list.value
+    .filter((r) => {
+      if (st && r.status !== st) return false
+      if (pr && r.programType !== pr) return false
+      if (q) {
+        const blob = [r.applicantName, r.applicantEmail, r.id]
+          .join(' ')
+          .toLowerCase()
+        if (!blob.includes(q)) return false
+      }
+      return true
+    })
+    .slice()
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
 })
 
 onMounted(load)
@@ -474,6 +496,16 @@ function openProgramProposal(row) {
   border: 1px solid rgba(79, 70, 229, 0.2);
   font-size: 0.95rem;
   background: rgba(255, 255, 255, 0.95);
+}
+
+.filter-select {
+  padding: 0.65rem 0.9rem;
+  border-radius: 12px;
+  border: 1px solid rgba(79, 70, 229, 0.2);
+  font-size: 0.92rem;
+  background: rgba(255, 255, 255, 0.95);
+  color: #374151;
+  cursor: pointer;
 }
 
 .btn-refresh {

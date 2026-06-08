@@ -1,71 +1,86 @@
 <template>
     <div class="wrap">
         <div class="box">
-            <h1>Реєстрація в NTI</h1>
+            <h1>{{ t('auth.registerTitle') }}</h1>
 
             <div v-if="error" class="error">{{ error }}</div>
             <div v-if="success" class="success">{{ success }}</div>
 
             <form @submit.prevent="handleRegister">
                 <div class="field">
-                    <label>Ім'я та прізвище</label>
-                    <input v-model="form.name" type="text" placeholder="Іван Петренко" required />
+                    <label>{{ t('auth.fullName') }}</label>
+                    <input v-model="form.name" type="text" :placeholder="t('auth.namePlaceholder')" required />
                 </div>
 
                 <div class="field">
-                    <label>Email</label>
-                    <input v-model="form.email" type="email" placeholder="your@email.com" required />
+                    <label>{{ t('auth.email') }}</label>
+                    <input
+                        v-model="form.email"
+                        type="email"
+                        placeholder="meno.priezvisko@student.ukf.sk"
+                        required
+                        :class="{ 'input-error': emailDomainInvalid }"
+                        @blur="checkEmailDomain"
+                    />
+                    <span v-if="emailDomainInvalid" class="field-error">
+                        {{ t('auth.emailDomainError') }}
+                    </span>
+                    <span v-else class="field-hint">{{ t('auth.emailDomainHint') }}</span>
                 </div>
 
                 <div class="field">
-                    <label>Пароль</label>
-                    <input v-model="form.password" type="password" placeholder="Мінімум 6 символів" required />
+                    <label>{{ t('auth.password') }}</label>
+                    <input v-model="form.password" type="password" :placeholder="t('auth.passwordPlaceholder')" required />
                 </div>
 
                 <div class="field">
-                    <label>Я є</label>
+                    <label>{{ t('auth.iAm') }}</label>
                     <select v-model="form.role" required>
-                        <option value="">Оберіть тип акаунту</option>
-                        <option value="STUDENT">Студент</option>
-                        <option value="FIRM">Компанія / Партнер</option>
-                        <option value="MENTOR">Mentor</option>
+                        <option value="">{{ t('auth.chooseRole') }}</option>
+                        <option value="STUDENT">{{ t('auth.student') }}</option>
+                        <option value="FIRM">{{ t('auth.company') }}</option>
+                        <option value="MENTOR">{{ t('auth.mentor') }}</option>
                     </select>
                 </div>
 
                 <div class="field checkbox">
                     <input v-model="form.gdprConsent" type="checkbox" id="gdpr" />
                     <label for="gdpr">
-                        Я погоджуюсь на обробку персональних даних
+                        {{ t('auth.gdprConsent') }}
                     </label>
                 </div>
 
-                <!-- ✅ CAPTCHA -->
                 <div class="field">
                     <div id="recaptcha-register" class="g-recaptcha"
                         data-sitekey="6Lfl56gsAAAAAOBIsD-BT1Krdd9aGvTz7iWIZnDL"></div>
                     <span v-if="captchaError" class="error-text">
-                        Підтвердіть що ви не робот
+                        {{ t('auth.captchaErrorReg') }}
                     </span>
+                    <div v-if="captchaLoadError" class="error">
+                        {{ t('auth.captchaLoadError') }}
+                    </div>
                 </div>
 
                 <button type="submit" :disabled="loading || !form.gdprConsent">
-                    {{ loading ? 'Реєстрація...' : 'Зареєструватись' }}
+                    {{ loading ? t('auth.registering') : t('auth.registerBtn') }}
                 </button>
             </form>
 
             <p>
-                Вже є акаунт?
-                <router-link to="/login">Увійти</router-link>
+                {{ t('auth.haveAccount') }}
+                <router-link to="/login">{{ t('auth.signIn') }}</router-link>
             </p>
         </div>
     </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 
+const { t } = useI18n()
 const SITE_KEY = '6Lfl56gsAAAAAOBIsD-BT1Krdd9aGvTz7iWIZnDL'
 
 const router = useRouter()
@@ -84,11 +99,21 @@ const loading = ref(false)
 const error = ref('')
 const success = ref('')
 const captchaError = ref(false)
+const captchaLoadError = ref(false)
+const emailDomainInvalid = ref(false)
+
+let captchaInterval = null
+
+function checkEmailDomain() {
+    emailDomainInvalid.value =
+        form.email.length > 0 && !form.email.toLowerCase().endsWith('@student.ukf.sk')
+}
 
 onMounted(() => {
-    const tryRender = setInterval(() => {
+    captchaInterval = setInterval(() => {
         if (window.grecaptcha?.render) {
-            clearInterval(tryRender)
+            clearInterval(captchaInterval)
+            captchaInterval = null
             window.grecaptcha.render('recaptcha-register', {
                 sitekey: SITE_KEY,
                 callback: token => {
@@ -101,9 +126,27 @@ onMounted(() => {
             })
         }
     }, 100)
+
+    setTimeout(() => {
+        if (!form.captchaToken && !window.grecaptcha?.render) {
+            captchaLoadError.value = true
+            clearInterval(captchaInterval)
+            captchaInterval = null
+        }
+    }, 5000)
+})
+
+onUnmounted(() => {
+    if (captchaInterval) {
+        clearInterval(captchaInterval)
+        captchaInterval = null
+    }
 })
 
 async function handleRegister() {
+    checkEmailDomain()
+    if (emailDomainInvalid.value) return
+
     if (!form.captchaToken) {
         captchaError.value = true
         return
@@ -122,9 +165,9 @@ async function handleRegister() {
             roles: [form.role]
         }
         const message = await auth.register(payload)
-        success.value = message || 'Реєстрація пройшла успішно. Перевірте пошту.'
+        success.value = message || t('auth.registerSuccess')
     } catch (e) {
-        error.value = e.response?.data?.message || e.response?.data || 'Помилка реєстрації'
+        error.value = e.response?.data?.message || e.response?.data || t('auth.registerError')
     } finally {
         loading.value = false
     }
@@ -223,6 +266,36 @@ button:disabled {
     font-size: 0.875rem;
 }
 
+.error-text {
+    color: #dc2626;
+    font-size: 0.8rem;
+    margin-top: 4px;
+    display: block;
+}
+
+.field-error {
+    color: #dc2626;
+    font-size: 0.78rem;
+    margin-top: 4px;
+    display: block;
+}
+
+.field-hint {
+    color: #6b7280;
+    font-size: 0.78rem;
+    margin-top: 4px;
+    display: block;
+}
+
+.input-error {
+    border-color: #dc2626 !important;
+}
+
+.input-error:focus {
+    border-color: #dc2626 !important;
+    outline-color: #dc2626;
+}
+
 .success {
     background: #ecfdf5;
     color: #166534;
@@ -230,5 +303,15 @@ button:disabled {
     border-radius: 8px;
     margin-bottom: 1rem;
     font-size: 0.875rem;
+}
+
+p {
+    text-align: center;
+    margin-top: 1rem;
+    font-size: 0.875rem;
+}
+
+a {
+    color: #4f46e5;
 }
 </style>
