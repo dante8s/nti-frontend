@@ -27,6 +27,9 @@ function logout() {
         <router-link to="/programs/b" class="nav-link">Програма B</router-link>
         <router-link to="/organizations" class="nav-link">Organizations</router-link>
         <router-link to="/mentors" class="nav-link">Mentors</router-link>
+        <router-link to="/news" class="nav-link">Novinky</router-link>
+        <router-link to="/success-stories" class="nav-link">Úspešné projekty</router-link>
+        <router-link to="/about" class="nav-link">O NTI</router-link>
 
         <template v-if="!auth.isLoggedIn">
           <router-link to="/login" class="nav-link nav-login">Увійти</router-link>

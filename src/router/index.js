@@ -69,6 +69,30 @@ const router = createRouter({
       component: () => import('@/views/public/Mentors.vue'),
     },
     {
+      path: '/about',
+      name: 'about',
+      meta: { title: 'O NTI' },
+      component: () => import('@/views/public/About.vue'),
+    },
+    {
+      path: '/news',
+      name: 'news',
+      meta: { title: 'Novinky' },
+      component: () => import('@/views/public/NewsList.vue'),
+    },
+    {
+      path: '/news/:id',
+      name: 'article',
+      meta: { title: 'Článok' },
+      component: () => import('@/views/public/ArticleTemplate.vue'),
+    },
+    {
+      path: '/success-stories',
+      name: 'success-stories',
+      meta: { title: 'Úspešné projekty' },
+      component: () => import('@/views/public/SuccessStories.vue'),
+    },
+    {
       path: '/app',
       component: () => import('@/layouts/AppShell.vue'),
       meta: { requiresAuth: true },
@@ -106,7 +130,7 @@ const router = createRouter({
           name: 'application-details',
           meta: {
             title: 'Application details',
-            requiresAnyRole: ['STUDENT', 'MENTOR', 'ADMIN', 'SUPER_ADMIN', 'FIRM', 'FIRM_USER'],
+            requiresAnyRole: ['STUDENT', 'MENTOR', 'ADMIN', 'SUPER_ADMIN', 'FIRM'],
           },
           component: () => import('@/views/ApplicationDetails.vue'),
         },

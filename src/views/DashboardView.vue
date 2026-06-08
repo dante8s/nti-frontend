@@ -84,7 +84,7 @@ const roleLabels = {
   STUDENT: 'Студент',
   TEAM_LEADER: 'Лідер команди',
   FIRM: 'Компанія',
-  FIRM_USER: 'Представник фірми',
+  //FIRM_USER: 'Представник фірми',
   MENTOR: 'Ментор',
   EVALUATOR: 'Комісія (перегляд)',
   SUPER_EVALUATOR: 'Комісія — рішення',

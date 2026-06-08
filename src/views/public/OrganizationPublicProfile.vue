@@ -45,17 +45,17 @@ import { useRoute } from 'vue-router'
 import { organizationsApi } from '@/api/organizations'
 
 const route = useRoute()
-const list = ref([])
-const loading = ref(true)
-const error = ref('')
+const organization = ref(null); // Rename 'list' to 'organization'
+const loading = ref(true);
+const error = ref('');
 
 const orgId = computed(() => route.params.id)
 
-const organization = computed(() => {
-  const id = orgId.value
-  if (id == null || id === '') return null
-  return (list.value || []).find((o) => String(o?.id) === String(id)) || null
-})
+// const organization = computed(() => {
+//   const id = orgId.value
+//   if (id == null || id === '') return null
+//   return (list.value || []).find((o) => String(o?.id) === String(id)) || null
+// })
 
 onMounted(load)
 
@@ -64,18 +64,21 @@ watch(orgId, () => {
 })
 
 async function load() {
-  loading.value = true
-  error.value = ''
+  loading.value = true;
+  error.value = '';
   try {
-    const res = await organizationsApi.getPublicAll()
-    list.value = res.data || []
+    // Call your getOne API method
+    const res = await organizationsApi.getOne(orgId.value);
+    organization.value = res.data; // Store the object directly
   } catch (e) {
-    error.value = e?.response?.data?.message || e?.message || 'Failed to load organization.'
-    list.value = []
+    error.value = 'Organization not found.';
+    organization.value = null;
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
+
+// Replace 'list' with a single ref
 
 function normalizeWebsite(url) {
   if (!url) return '#'

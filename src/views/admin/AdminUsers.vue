@@ -231,7 +231,7 @@ const isInviting = ref(false)
 const inviteError = ref('')
 
 const allRoles = [
-    'STUDENT', 'FIRM', 'FIRM_USER',
+    'STUDENT', 'FIRM',
     'MENTOR', 'EVALUATOR', 'ADMIN', 'SUPER_ADMIN'
 ]
 
@@ -427,7 +427,7 @@ function roleLabel(role) {
     const labels = {
         STUDENT: 'Студент',
         FIRM: 'Компанія',
-        FIRM_USER: 'Представник фірми',
+        //FIRM_USER: 'Представник фірми',
         MENTOR: 'Ментор',
         EVALUATOR: 'Комісія',
         ADMIN: 'Адмін',

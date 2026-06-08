@@ -129,10 +129,13 @@ async function onMilestoneSaved(updated) {
 
 async function removeMilestone(milestone) {
   if (!milestone?.id) return
+  const ok = window.confirm('Delete this milestone permanently?')
+  if (!ok) return
   try {
     await milestoneStore.delete(milestone.id, milestone.applicationId)
+    await load()
   } catch (e) {
-    error.value = e.response?.data?.message || 'Failed to delete milestone.'
+    error.value = e.response?.data?.error || e.response?.data?.message || 'Failed to delete milestone.'
   }
 }
 

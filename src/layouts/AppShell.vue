@@ -19,7 +19,7 @@ const isStudent = computed(() => auth.roles?.includes('STUDENT'))
 const showStudentNav = computed(() =>
   isStudent.value || auth.roles?.includes('SUPER_ADMIN'),
 )
-const isOrgUser = computed(() => auth.roles?.some((r) => r === 'FIRM' || r === 'FIRM_USER'))
+const isOrgUser = computed(() => auth.roles?.some((r) => r === 'FIRM'))
 const isMentor = computed(() => auth.roles?.includes('MENTOR'))
 const isCommissionMember = computed(() =>
   auth.roles?.some((r) => r === 'EVALUATOR' || r === 'SUPER_EVALUATOR'),
@@ -30,6 +30,7 @@ const showReportingNav = computed(
 
 const firmChecked = ref(false)
 const firmHasOrg = ref(false)
+const firmIsOwner = ref(false)
 
 const adminNav = computed(() => {
   const items = []
@@ -60,10 +61,13 @@ const studentNav = computed(() => {
 
 const organizationNav = computed(() => {
   if (!isOrgUser.value || !firmChecked.value || !firmHasOrg.value) return []
-  return [
+  const items = [
     { to: '/app/org/profile', label: 'My Organization', icon: '◉' },
-    { to: '/app/programs/my', label: 'Program B Proposals', icon: '◈' },
   ]
+  if (firmIsOwner.value) {
+    items.push({ to: '/app/programs/my', label: 'Program B Proposals', icon: '◈' })
+  }
+  return items
 })
 
 const mentorNav = computed(() => {
@@ -103,10 +107,25 @@ onMounted(async () => {
 
 async function checkFirmOrg() {
   if (!isOrgUser.value) return
+  firmIsOwner.value = false
   try {
     const my = await orgStore.getMy()
-    firmHasOrg.value = Array.isArray(my) ? my.length > 0 : (my?.length > 0)
-  } catch {
+    const orgs = Array.isArray(my) ? my : []
+    firmHasOrg.value = orgs.length > 0
+    if (!firmHasOrg.value) return
+
+    const primaryOrg = orgs[0]
+    const members = await orgStore.getMembers(primaryOrg.id)
+    const myEmail = auth.user?.email?.toLowerCase()
+    const myUserId = auth.user?.id
+    const membership = (members || []).find((member) => {
+      if (myUserId != null && member?.userId != null) {
+        return Number(member.userId) === Number(myUserId)
+      }
+      if (!myEmail) return false
+      return String(member?.userEmail || '').toLowerCase() === myEmail
+    })
+firmIsOwner.value = membership?.role === 'OWNER'  } catch {
     // keep nav usable even if endpoint fails
   } finally {
     firmChecked.value = true
