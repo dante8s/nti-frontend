@@ -14,9 +14,13 @@
                 <span class="deadline">Дедлайн: {{ formatDate(callInfo.deadline) }}</span>
             </div>
 
+            <div v-if="isDeadlinePassed" class="deadline-banner">
+                Термін подачі заявок для цього виклику закінчився
+            </div>
+
             <div v-if="initialLoading" class="loading">Завантаження...</div>
 
-            <template v-else>
+            <template v-else-if="!isDeadlinePassed">
                 <!-- Крок 1 — форма (нова або редагування) -->
                 <div v-if="!application">
                     <div v-if="error" class="error">{{ error }}</div>
@@ -140,8 +144,14 @@ const savedFormData = computed(() => {
     try { return JSON.parse(application.value.formData) } catch { return null }
 })
 
+const isDeadlinePassed = computed(() =>
+    callInfo.value?.deadline && new Date() > new Date(callInfo.value.deadline),
+)
+
 const canSubmit = computed(() =>
-    docsStatus.value.length > 0 && docsStatus.value.every((d) => d.uploaded),
+    !isDeadlinePassed.value &&
+    docsStatus.value.length > 0 &&
+    docsStatus.value.every((d) => d.uploaded),
 )
 
 onMounted(async () => {
@@ -328,6 +338,18 @@ h1 {
     font-size: 0.8rem;
     color: #ef4444;
     font-weight: 500;
+}
+
+.deadline-banner {
+    background: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fca5a5;
+    border-radius: 10px;
+    padding: 0.85rem 1rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+    text-align: center;
 }
 
 .field {

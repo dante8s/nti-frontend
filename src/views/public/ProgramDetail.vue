@@ -111,9 +111,16 @@
                         </p>
                     </div>
                     <div class="call-actions">
-                        <button @click="handleApply(call)" class="btn-apply">
+                        <button
+                            v-if="!isDeadlinePassed(call)"
+                            @click="handleApply(call)"
+                            class="btn-apply"
+                        >
                             {{ isLoggedIn ? 'Подати заявку' : 'Зареєструватись щоб подати' }}
                         </button>
+                        <span v-else class="deadline-passed">
+                            Термін подачі закінчився
+                        </span>
                     </div>
                 </div>
             </div>
@@ -255,8 +262,6 @@ async function fetchData() {
         const isProgramB = typeMarker === 'B' || typeMarker === 'PROGRAM_B'
         const isProgramA = typeMarker === 'A' || typeMarker === 'PROGRAM_A'
 
-        console.log('Fetching program:', programId, 'Detected Type B:', isProgramB)
-
         const programRequest = isProgramB
           ? programsApi.fetchProgramB(programId)
           : isProgramA
@@ -274,7 +279,7 @@ async function fetchData() {
             return
         }
         program.value = progRes.data
-        calls.value = callsRes.data
+        calls.value = (callsRes.data || []).slice().sort((a, b) => b.id - a.id)
         if (program.value?.type === 'PROGRAM_B' && program.value?.id != null) {
             await loadRequirements(program.value.id)
         } else {
@@ -304,6 +309,10 @@ function formatDate(date) {
         month: 'long',
         year: 'numeric'
     })
+}
+
+function isDeadlinePassed(call) {
+    return call.deadline && new Date() > new Date(call.deadline)
 }
 
 async function loadRequirements(programId) {
@@ -571,6 +580,16 @@ async function downloadRequirement(fileType) {
     border-radius: 8px;
     text-decoration: none;
     font-size: 0.875rem;
+    white-space: nowrap;
+}
+
+.deadline-passed {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #9ca3af;
+    padding: 8px 16px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
     white-space: nowrap;
 }
 

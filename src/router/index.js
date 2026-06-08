@@ -182,6 +182,30 @@ const router = createRouter({
           component: () => import('@/views/admin/MentorshipsManagement.vue'),
         },
         {
+          path: 'admin/audit',
+          name: 'admin-audit',
+          meta: { title: 'Журнал аудиту', requiresSuperAdmin: true },
+          component: () => import('@/views/admin/AdminAuditLog.vue'),
+        },
+        {
+          path: 'admin/email-templates',
+          name: 'admin-email-templates',
+          meta: { title: 'Шаблони листів', requiresAdmin: true },
+          component: () => import('@/views/admin/AdminEmailTemplates.vue'),
+        },
+        {
+          path: 'admin/bulk-message',
+          name: 'admin-bulk-message',
+          meta: { title: 'Масова розсилка', requiresAdmin: true },
+          component: () => import('@/views/admin/BulkMessage.vue'),
+        },
+        {
+          path: 'privacy',
+          name: 'privacy-settings',
+          meta: { title: 'Налаштування приватності' },
+          component: () => import('@/views/PrivacySettings.vue'),
+        },
+        {
           path: 'org/register',
           name: 'org-register',
           meta: { title: 'Реєстрація організації', requiresRole: 'FIRM' },
