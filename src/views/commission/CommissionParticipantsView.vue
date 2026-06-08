@@ -44,19 +44,21 @@
           <span v-else-if="row.callId"> · виклик №{{ row.callId }}</span>
           <span v-if="row.programName"> · {{ row.programName }}</span>
         </p>
-        <ul class="members">
-          <li v-for="m in row.members" :key="m.userId">
-            <router-link
-              :to="{
-                name: 'member-profile',
-                params: { userId: m.userId },
-                query: { back: backToParticipants },
-              }"
-            >
-              {{ m.label }}
-            </router-link>
-          </li>
-        </ul>
+        <div class="members">
+          <router-link
+            v-for="m in row.members"
+            :key="m.userId"
+            class="member-chip"
+            :to="{
+              name: 'member-profile',
+              params: { userId: m.userId },
+              query: { back: backToParticipants },
+            }"
+          >
+            <span class="member-chip__icon">✉</span>
+            {{ m.label }}
+          </router-link>
+        </div>
       </article>
     </section>
   </div>
@@ -67,7 +69,6 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { programsApi } from '@/api/programs'
 import { evaluationApi } from '@/api/evaluation'
-import { teamsApi } from '@/api/teams'
 import { statusLabel } from '@/utils/applicationStatus'
 
 const route = useRoute()
@@ -77,7 +78,6 @@ const program = ref(null)
 const call = ref(null)
 const trackedCalls = ref([])
 const applications = ref([])
-const teamByApplicant = ref(new Map())
 
 const programLetter = computed(() => String(route.params.programType || 'a').toLowerCase())
 
@@ -102,23 +102,6 @@ function normalizeProgramType(letter) {
   return letter === 'b' ? 'B' : 'A'
 }
 
-/** Підпис у списку: email учасника (пріоритет), інакше ім’я або id. */
-function memberLinkLabel(member, applicantFallback) {
-  const uid = member?.userId ?? applicantFallback?.userId
-  const email = (
-    member?.memberEmail ||
-    member?.email ||
-    (uid != null ? emailByUserId.value.get(uid) : '') ||
-    applicantFallback?.email ||
-    ''
-  )
-    .trim()
-  if (email) return email
-  const name = (member?.memberDisplayName || applicantFallback?.name || '').trim()
-  if (name) return name
-  return uid != null ? `Учасник #${uid}` : '—'
-}
-
 /** Усі виклики всіх схвалених програм типу A/B (не лише перший виклик першої програми). */
 async function resolveAllCallsForProgram(letter) {
   const type = normalizeProgramType(letter)
@@ -138,64 +121,33 @@ async function resolveAllCallsForProgram(letter) {
   return entries
 }
 
-const emailByUserId = ref(new Map())
-
-async function loadTeamForApplicant(applicantId) {
-  if (!applicantId || teamByApplicant.value.has(applicantId)) return
-  try {
-    const { data } = await teamsApi.getTeamForUser(applicantId)
-    teamByApplicant.value.set(applicantId, data)
-    if (data?.members?.length) {
-      for (const m of data.members) {
-        const email = m.memberEmail?.trim()
-        if (email && m.userId) {
-          emailByUserId.value.set(m.userId, email)
-        }
-      }
-    }
-  } catch {
-    teamByApplicant.value.set(applicantId, null)
-  }
-}
-
 const rows = computed(() => {
   const out = []
   for (const app of applications.value) {
     const applicantId = app.applicantId
-    const team = applicantId ? teamByApplicant.value.get(applicantId) : null
-    let title = `Заявка №${app.id}`
     const members = []
-    if (team?.name) {
-      title = team.name
-    }
-    const applicantFallback = {
-      email: app.applicantEmail,
-      name: app.applicantName,
-      userId: applicantId,
-    }
-    if (team?.members?.length) {
-      for (const m of team.members) {
-        if (m.inviteStatus === 'ACCEPTED' || !m.inviteStatus) {
-          members.push({
-            userId: m.userId,
-            label: memberLinkLabel(m, applicantFallback),
-          })
-        }
+
+    if (app.teamMembers?.length) {
+      for (const m of app.teamMembers) {
+        members.push({
+          userId: m.userId,
+          label: m.email || `Учасник #${m.userId}`,
+        })
       }
-    }
-    if (!members.length && applicantId) {
+    } else if (applicantId) {
       members.push({
         userId: applicantId,
-        label: memberLinkLabel(null, applicantFallback),
+        label: app.applicantEmail || `Учасник #${applicantId}`,
       })
     }
+
     out.push({
       applicationId: app.id,
       callId: app.callId,
       status: app.status,
       programName: app.programName,
       callTitle: app.callTitle,
-      title,
+      title: app.teamName || `Заявка №${app.id}`,
       members,
     })
   }
@@ -209,8 +161,6 @@ async function load() {
   call.value = null
   trackedCalls.value = []
   applications.value = []
-  teamByApplicant.value = new Map()
-  emailByUserId.value = new Map()
 
   try {
     const entries = await resolveAllCallsForProgram(programLetter.value)
@@ -230,16 +180,10 @@ async function load() {
       for (const a of list) {
         if (!a?.status || a.status === 'DRAFT' || seen.has(a.id)) continue
         seen.add(a.id)
-        const applicantId = a.applicantId
-        const applicantEmail = a.applicantEmail?.trim()
-        if (applicantId && applicantEmail) {
-          emailByUserId.value.set(applicantId, applicantEmail)
-        }
         merged.push({
           ...a,
-          applicantId,
-          applicantEmail,
-          applicantName: a.applicantName,
+          applicantId: a.applicantId,
+          applicantEmail: a.applicantEmail?.trim(),
           callId: c.id,
           callTitle: c.title || `Виклик №${c.id}`,
           programName: a.programName || prog?.name,
@@ -247,9 +191,6 @@ async function load() {
       }
     }
     applications.value = merged
-
-    const ids = [...new Set(applications.value.map((a) => a.applicantId).filter(Boolean))]
-    await Promise.all(ids.map((id) => loadTeamForApplicant(id)))
   } catch (e) {
     error.value =
       e?.response?.data?.error || e?.response?.data?.message || 'Не вдалося завантажити список учасників.'
@@ -368,18 +309,34 @@ watch(programLetter, load)
 }
 
 .members {
-  margin: 0;
-  padding-left: 1.1rem;
-  color: #334155;
-  font-size: 0.9rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
 }
 
-.members a {
+.member-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  background: rgba(79, 70, 229, 0.07);
+  border: 1px solid rgba(79, 70, 229, 0.2);
+  border-radius: 999px;
   color: #4338ca;
+  font-size: 0.82rem;
+  font-weight: 500;
   text-decoration: none;
+  transition: background 0.15s, border-color 0.15s;
 }
 
-.members a:hover {
-  text-decoration: underline;
+.member-chip:hover {
+  background: rgba(79, 70, 229, 0.14);
+  border-color: rgba(79, 70, 229, 0.4);
+}
+
+.member-chip__icon {
+  font-size: 0.75rem;
+  opacity: 0.7;
 }
 </style>

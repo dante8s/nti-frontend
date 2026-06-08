@@ -200,10 +200,22 @@ function decisionClass(st) {
   return 'btn-decision--neutral'
 }
 
+const isSuperEvaluatorOnly = computed(() => {
+  const roles = auth.roles || []
+  return roles.includes('SUPER_EVALUATOR')
+    && !roles.includes('ADMIN')
+    && !roles.includes('SUPER_ADMIN')
+})
+
 const commissionNextStatuses = computed(() => {
   const st = loadedApplication.value?.status
   if (!st) return []
-  return adminAllowedNextStatuses(st)
+  const statuses = adminAllowedNextStatuses(st)
+  // SUPER_EVALUATOR не може напряму завершувати проект
+  if (isSuperEvaluatorOnly.value) {
+    return statuses.filter(s => s !== 'COMPLETED')
+  }
+  return statuses
 })
 
 async function loadApplication() {

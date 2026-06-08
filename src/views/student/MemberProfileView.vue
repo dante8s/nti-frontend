@@ -3,6 +3,12 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import { fetchProfilePhotoBlob, getProfile } from '@/api/profileApi'
+import { useAuthStore } from '@/stores/auth'
+
+const auth = useAuthStore()
+const isAdmin = computed(() =>
+  auth.roles?.some((r) => r === 'ADMIN' || r === 'SUPER_ADMIN'),
+)
 
 const route = useRoute()
 const router = useRouter()
@@ -159,7 +165,7 @@ const hasCv = computed(() => {
         <div class="member-head__main">
           <h1>Профіль учасника</h1>
           <p class="subtitle">
-            Ідентифікатор користувача: <strong>{{ userId }}</strong>
+            <template v-if="isAdmin">Ідентифікатор користувача: <strong>{{ userId }}</strong></template>
           </p>
         </div>
       </div>

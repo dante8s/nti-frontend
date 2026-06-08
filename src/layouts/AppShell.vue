@@ -36,6 +36,7 @@ const adminNav = computed(() => {
   if (isAdmin.value) {
     items.push(
       { to: '/app/admin/applications', label: 'Заявки', icon: '◆' },
+      { to: '/app/admin/completion-requests', label: 'Запити на завершення', icon: '⊘' },
       { to: '/app/admin/milestone-approvals', label: 'Milestone approvals', icon: '✓' },
       { to: '/app/admin/programs', label: 'Програми та виклики', icon: '◇' },
       { to: '/app/admin/program-review-queue', label: 'Program B Review Queue', icon: '◬' },
@@ -454,8 +455,11 @@ async function checkFirmOrg() {
 .shell__main {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .shell__top {
@@ -515,10 +519,12 @@ async function checkFirmOrg() {
 
 .shell__content {
   flex: 1;
+  min-height: 0;
   padding: 1.5rem clamp(1rem, 3vw, 2.5rem) 3rem;
   max-width: 1200px;
   width: 100%;
   margin: 0 auto;
+  overflow-y: auto;
 }
 
 @media (max-width: 960px) {

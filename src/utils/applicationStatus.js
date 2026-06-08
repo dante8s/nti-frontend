@@ -6,6 +6,8 @@ export const STATUS_LABELS_UK = {
   NEEDS_REVISION: 'Потрібні зміни',
   APPROVED: 'Схвалено',
   REJECTED: 'Відхилено',
+  COMPLETION_REQUESTED: 'Запит на завершення',
+  COMPLETED: 'Завершено',
 }
 
 export function statusLabel(status) {
@@ -18,5 +20,6 @@ export function adminAllowedNextStatuses(current) {
   if (current === 'IN_REVIEW') {
     return ['APPROVED', 'REJECTED', 'NEEDS_REVISION']
   }
+  if (current === 'APPROVED') return []
   return []
 }

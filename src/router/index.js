@@ -39,6 +39,11 @@ const router = createRouter({
       name: 'complete-org-invite',
       component: () => import('@/views/auth/CompleteOrgInvite.vue'),
     },
+    {
+      path: '/complete-team-invite',
+      name: 'complete-team-invite',
+      component: () => import('@/views/auth/CompleteTeamInvite.vue'),
+    },
 
     {
       path: '/programs/:type',
@@ -133,6 +138,12 @@ const router = createRouter({
           name: 'admin-applications',
           meta: { title: 'Заявки', requiresAdmin: true },
           component: () => import('@/views/admin/AdminApplications.vue'),
+        },
+        {
+          path: 'admin/completion-requests',
+          name: 'admin-completion-requests',
+          meta: { title: 'Запити на завершення', requiresAdmin: true },
+          component: () => import('@/views/admin/CompletionRequests.vue'),
         },
         {
           path: 'admin/milestone-approvals',
