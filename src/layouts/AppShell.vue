@@ -38,7 +38,8 @@ const firmHasOrg = ref(false)
 const adminNav = computed(() => {
   const items = []
   if (isAdmin.value) {
-    items.push(
+    items.push( 
+      { to: '/app/admin/completion-requests', label: 'Запити на завершення', icon: '⊘' },
       { to: '/app/admin/applications', label: t('nav.applications'), icon: '◆' },
       { to: '/app/admin/milestone-approvals', label: t('nav.milestoneApprovals'), icon: '✓' },
       { to: '/app/admin/programs', label: t('nav.programs'), icon: '◇' },
@@ -47,6 +48,7 @@ const adminNav = computed(() => {
       { to: '/app/admin/mentorships', label: t('nav.mentorships'), icon: '✦' },
       { to: '/app/admin/email-templates', label: t('nav.emailTemplates'), icon: '✉' },
       { to: '/app/admin/bulk-message', label: t('nav.bulkMessage'), icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg>' },
+
     )
   }
   if (isSuperAdmin.value) {
@@ -464,8 +466,11 @@ async function checkFirmOrg() {
 .shell__main {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .shell__top {
@@ -525,10 +530,12 @@ async function checkFirmOrg() {
 
 .shell__content {
   flex: 1;
+  min-height: 0;
   padding: 1.5rem clamp(1rem, 3vw, 2.5rem) 3rem;
   max-width: 1200px;
   width: 100%;
   margin: 0 auto;
+  overflow-y: auto;
 }
 
 @media (max-width: 960px) {

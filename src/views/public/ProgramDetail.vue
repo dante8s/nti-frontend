@@ -144,6 +144,7 @@
 import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { programsApi } from '@/api/programs'
+import { applicationsApi } from '@/api/applications'
 import { getCallApplicationEligibility } from '@/api/profileApi'
 import { useAuthStore } from '@/stores/auth'
 import { useOrganizationStore } from '@/stores/organization'
@@ -226,6 +227,24 @@ async function handleApply(call) {
             })
             return
         }
+    }
+
+    // Перевірка: чи є вже активний проект у команди
+    try {
+        const projectsRes = await applicationsApi.getMyProjects()
+        if (projectsRes.data?.current) {
+            const status = projectsRes.data.current.status
+            const label = status === 'COMPLETION_REQUESTED' ? 'очікує підтвердження завершення' : 'активний'
+            openAlert({
+                title: 'Команда вже має проект',
+                message: `Ваша команда вже має ${label} проект «${projectsRes.data.current.programName}». Завершіть поточний проект перш ніж подавати нову заявку.`,
+                variant: 'warning',
+                teamsLink: true,
+            })
+            return
+        }
+    } catch {
+        // якщо не вдалося перевірити — пропускаємо, бекенд все одно заблокує
     }
 
     const programKey = program.value.type === 'PROGRAM_A' ? 'a' : 'b'

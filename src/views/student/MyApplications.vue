@@ -445,6 +445,7 @@ async function deleteMilestone(appId, milestoneId) {
   max-width: 1100px;
   margin: 0 auto;
   padding: 2rem;
+  overflow: visible;
 }
 
 h1 {
@@ -459,11 +460,17 @@ h1 {
   align-items: start;
 }
 
-/* ── Список ── */
+/* ── Список (sticky лівий сайдбар) ── */
 .list {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  position: sticky;
+  top: 1rem;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #c7d2fe transparent;
 }
 
 .app-card {

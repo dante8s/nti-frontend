@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { teamsApi } from '@/api/teams'
+import { applicationsApi } from '@/api/applications'
 import { getCallApplicationEligibility } from '@/api/profileApi'
 import { useAuthStore } from '@/stores/auth'
 import { hasTeamLeaderRole } from '@/utils/roles'
@@ -37,6 +38,9 @@ const message = ref('')
 const busy = ref(false)
 const removalNotice = ref(null)
 const removalNoticeDismissed = ref(false)
+const myProjects = ref({ current: null, history: [] })
+const projectsLoading = ref(false)
+const completingProject = ref(false)
 
 const confirmModal = reactive({
   open: false,
@@ -73,6 +77,8 @@ const isTeamLeader = computed(
     myMembership.value?.role === 'LEADER',
 )
 const canManageTeam = computed(() => isTeamLeader.value || isSuperAdmin.value)
+/** Якщо є активний або очікуючий підтвердження проект — лідер не може видаляти команду/учасників */
+const hasActiveProject = computed(() => !!myProjects.value.current)
 const isTeamMemberOnly = computed(
   () => !!teamId.value && !isTeamLeader.value && !isSuperAdmin.value,
 )
@@ -115,6 +121,7 @@ function canRemoveMember(member) {
   if (!canManageTeam.value || !member?.userId) return false
   if (member.role === 'LEADER') return false
   if (Number(member.userId) === Number(auth.user?.id)) return false
+  if (hasActiveProject.value) return false
   return member.inviteStatus === 'ACCEPTED' || member.inviteStatus === 'PENDING'
 }
 
@@ -241,7 +248,39 @@ onMounted(async () => {
   await auth.hydrateUserFromSession()
   await loadMyTeam()
   await loadMyInvites({ silent: true })
+  await loadMyProjects()
 })
+
+async function loadMyProjects() {
+  projectsLoading.value = true
+  try {
+    const { data } = await applicationsApi.getMyProjects()
+    myProjects.value = data
+  } catch {
+    myProjects.value = { current: null, history: [] }
+  } finally {
+    projectsLoading.value = false
+  }
+}
+
+function onCompleteProject(applicationId) {
+  confirmModal.title = 'Надіслати запит на завершення?'
+  confirmModal.message = 'Запит на завершення буде надіслано адміністратору. Після підтвердження проект зміниться на «Завершено».'
+  confirmModal.highlight = myProjects.value.current?.programName || ''
+  confirmModal.profileLink = null
+  confirmModal.variant = 'warning'
+  confirmModal.confirmLabel = 'Так, надіслати запит'
+  confirmModal.action = 'complete-project'
+  confirmModal.payload = { applicationId }
+  confirmModal.open = true
+}
+
+function formatProjectDate(iso) {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleDateString('uk-UA', {
+    day: '2-digit', month: 'short', year: 'numeric',
+  })
+}
 
 async function onCreateTeam() {
   if (teamId.value && !canManageTeam.value) {
@@ -273,7 +312,9 @@ async function onCreateTeam() {
     teamId.value = res.data?.id
     team.leaderId = res.data?.leaderId ?? leaderId
     teamMembers.value = res.data?.members || []
-    message.value = `Команду створено (ID: ${res.data?.id}).`
+    message.value = isAdmin.value
+      ? `Команду створено (ID: ${res.data?.id}).`
+      : 'Команду створено.'
     await auth.hydrateUserFromSession()
     await loadCallEligibility()
   } catch (e) {
@@ -427,6 +468,25 @@ async function onConfirmModalAction() {
     } finally {
       confirmLoading.value = false
       busy.value = false
+    }
+    return
+  }
+
+  if (confirmModal.action === 'complete-project') {
+    const { applicationId } = confirmModal.payload || {}
+    if (!applicationId) return
+    confirmLoading.value = true
+    completingProject.value = true
+    try {
+      await applicationsApi.completeProject(applicationId)
+      closeConfirmModal()
+      await loadMyProjects()
+      message.value = 'Запит на завершення надіслано. Очікуйте підтвердження від адміністратора.'
+    } catch (e) {
+      message.value = apiErrorMessage(e, 'Не вдалося завершити проект.')
+    } finally {
+      confirmLoading.value = false
+      completingProject.value = false
     }
   }
 }
@@ -584,6 +644,7 @@ async function onConfirmModalAction() {
           placeholder="Коротко опишіть напрямок проєкту або компетенції команди"
           :readonly="teamFormReadonly"
           :disabled="teamFormReadonly"
+          style="resize: none"
         ></textarea>
       </div>
       <button v-if="!teamId" type="button" :disabled="busy" @click="onCreateTeam">
@@ -591,7 +652,7 @@ async function onConfirmModalAction() {
       </button>
       <p v-if="teamId && canViewTeamId" class="hint">Поточний ID команди: {{ teamId }}</p>
 
-      <div v-if="teamId && canManageTeam" class="danger-zone">
+      <div v-if="teamId && canManageTeam && !hasActiveProject" class="danger-zone">
         <p class="danger-zone__text">
           Видалення команди незворотне: зникнуть склад і запрошення. Подані заявки на виклики в кабінеті
           залишаються — зникає лише запис команди в системі.
@@ -600,11 +661,14 @@ async function onConfirmModalAction() {
           Видалити команду
         </button>
       </div>
+      <div v-if="teamId && canManageTeam && hasActiveProject" class="active-project-lock">
+        🔒 Команда має активний проект — видалення та зміни складу заблоковані.
+      </div>
     </article>
 
     <article v-if="teamId" class="card">
       <h3>{{ canManageTeam ? 'Запросити учасника' : 'Склад команди' }}</h3>
-      <div v-if="canManageTeam" class="row">
+      <div v-if="canManageTeam && !hasActiveProject" class="row">
         <input
           v-model="invitedUserRef"
           type="text"
@@ -612,6 +676,9 @@ async function onConfirmModalAction() {
           autocomplete="off"
         />
         <button :disabled="busy" @click="onInviteMember">Запросити</button>
+      </div>
+      <div v-if="canManageTeam && hasActiveProject" class="active-project-lock active-project-lock--inline">
+        🔒 Запрошення заблоковано — є активний проект.
       </div>
       <p class="hint">Підтверджено учасників: {{ acceptedCount }} / {{ team.maxCapacity }}</p>
       <p v-if="canManageTeam" class="hint hint--sub">
@@ -642,9 +709,13 @@ async function onConfirmModalAction() {
                   :to="memberProfileRoute(member.userId)"
                   :title="'Профіль та CV — ' + memberLinkLabel(member)"
                 >
+                  <span class="member-link__icon">✉</span>
                   {{ memberLinkLabel(member) }}
                 </router-link>
-                <span v-else class="member-link member-link--static">{{ memberLinkLabel(member) }}</span>
+                <span v-else class="member-link member-link--static">
+                  <span class="member-link__icon">✉</span>
+                  {{ memberLinkLabel(member) }}
+                </span>
               </td>
               <td class="member-table__status" data-label="Статус">
                 <span class="badge">{{ member.inviteStatus }}</span>
@@ -690,6 +761,95 @@ async function onConfirmModalAction() {
           </button>
         </div>
       </div>
+    </article>
+
+    <!-- Проекти -->
+    <article class="card">
+      <h3 class="card-title">Проекти</h3>
+
+      <div v-if="projectsLoading" class="hint">Завантаження…</div>
+      <template v-else>
+
+        <!-- Актуальний проект -->
+        <div class="project-section">
+          <h4 class="project-section__title">Поточний проект</h4>
+          <div v-if="myProjects.current" class="project-card project-card--active">
+            <div class="project-card__head">
+              <span class="project-card__program">{{ myProjects.current.programName }}</span>
+              <span v-if="myProjects.current.callTitle" class="project-card__call">{{ myProjects.current.callTitle }}</span>
+              <span
+                class="project-badge"
+                :class="myProjects.current.status === 'COMPLETION_REQUESTED' ? 'project-badge--pending' : 'project-badge--active'"
+              >
+                {{ myProjects.current.status === 'COMPLETION_REQUESTED' ? 'Чекає підтвердження' : 'Активний' }}
+              </span>
+            </div>
+            <div class="project-card__team">
+              Команда: <strong>{{ myProjects.current.teamName || '—' }}</strong>
+            </div>
+            <div class="project-card__dates">
+              Подано: {{ formatProjectDate(myProjects.current.createdAt) }}
+            </div>
+            <div v-if="myProjects.current.members?.length" class="project-card__members">
+              <span class="project-card__members-label">Учасники:</span>
+              <router-link
+                v-for="m in myProjects.current.members"
+                :key="m.userId"
+                :to="memberProfileRoute(m.userId)"
+                class="project-member-chip project-member-chip--link"
+                :class="{ 'project-member-chip--leader': m.role === 'LEADER' }"
+              >{{ m.email }}</router-link>
+            </div>
+            <button
+              v-if="canManageTeam && myProjects.current.status !== 'COMPLETION_REQUESTED'"
+              type="button"
+              class="btn btn-complete"
+              :disabled="completingProject"
+              @click="onCompleteProject(myProjects.current.applicationId)"
+            >
+              {{ completingProject ? 'Надсилання…' : 'Проект закінчено' }}
+            </button>
+            <p v-if="myProjects.current.status === 'COMPLETION_REQUESTED'" class="completion-pending-note">
+              ⏳ Запит на завершення надіслано — очікуйте підтвердження адміністратора.
+            </p>
+          </div>
+          <div v-else class="hint">Команда зараз не має активного проекту.</div>
+        </div>
+
+        <!-- Завершені проекти -->
+        <div v-if="myProjects.history?.length" class="project-section">
+          <h4 class="project-section__title">Завершені проекти</h4>
+          <div
+            v-for="proj in myProjects.history"
+            :key="proj.applicationId"
+            class="project-card"
+          >
+            <div class="project-card__head">
+              <span class="project-card__program">{{ proj.programName }}</span>
+              <span v-if="proj.callTitle" class="project-card__call">{{ proj.callTitle }}</span>
+              <span class="project-badge project-badge--done">Завершено</span>
+            </div>
+            <div class="project-card__team">
+              Команда: <strong>{{ proj.teamName || '—' }}</strong>
+            </div>
+            <div class="project-card__dates">
+              Подано: {{ formatProjectDate(proj.createdAt) }} ·
+              Завершено: {{ formatProjectDate(proj.updatedAt) }}
+            </div>
+            <div v-if="proj.members?.length" class="project-card__members">
+              <span class="project-card__members-label">Учасники:</span>
+              <router-link
+                v-for="m in proj.members"
+                :key="m.userId"
+                :to="memberProfileRoute(m.userId)"
+                class="project-member-chip project-member-chip--link"
+                :class="{ 'project-member-chip--leader': m.role === 'LEADER' }"
+              >{{ m.email }}</router-link>
+            </div>
+          </div>
+        </div>
+
+      </template>
     </article>
 
     <p v-if="message" class="message info">{{ message }}</p>
@@ -923,6 +1083,164 @@ async function onConfirmModalAction() {
   border: 1px solid rgba(79, 70, 229, 0.12);
 }
 
+.card-title {
+  margin: 0 0 0.9rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.project-section {
+  margin-bottom: 1.2rem;
+}
+
+.project-section__title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  margin: 0 0 0.6rem;
+}
+
+.project-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  margin-bottom: 0.65rem;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.project-card--active {
+  border-color: rgba(99, 102, 241, 0.35);
+  background: #f5f3ff;
+}
+
+.project-card__head {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.project-card__program {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 0.95rem;
+}
+
+.project-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.project-badge--active {
+  background: #ede9fe;
+  color: #4c1d95;
+}
+
+.project-badge--done {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.project-badge--pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.completion-pending-note {
+  margin-top: 0.4rem;
+  font-size: 0.82rem;
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid rgba(217, 119, 6, 0.3);
+  border-radius: 8px;
+  padding: 0.4rem 0.65rem;
+}
+
+.project-card__call {
+  font-size: 0.78rem;
+  color: #64748b;
+  background: rgba(99, 102, 241, 0.07);
+  border: 1px solid rgba(99, 102, 241, 0.18);
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  font-weight: 500;
+}
+
+.project-card__team {
+  font-size: 0.88rem;
+  color: #334155;
+}
+
+.project-card__dates {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.project-card__members {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.1rem;
+}
+
+.project-card__members-label {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.project-member-chip {
+  font-size: 0.78rem;
+  background: #e0e7ff;
+  color: #3730a3;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+}
+
+.project-member-chip--leader {
+  background: #c7d2fe;
+  font-weight: 600;
+}
+
+.project-member-chip--link {
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.project-member-chip--link:hover {
+  background: #a5b4fc;
+  color: #1e1b4b;
+}
+
+.btn-complete {
+  margin-top: 0.4rem;
+  align-self: flex-start;
+  background: #4f46e5;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-complete:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .card h3 {
   margin: 0 0 0.8rem;
 }
@@ -1005,6 +1323,7 @@ textarea {
   box-sizing: border-box;
   border-radius: 10px;
   border: 1px solid #cbd5e1;
+  resize: none;
   padding: 0.55rem 0.65rem;
   font: inherit;
   resize: vertical;
@@ -1036,7 +1355,23 @@ button:disabled {
 }
 
 .danger {
-  background: #dc2626;
+  background: #cb7a5c;
+}
+
+.active-project-lock {
+  margin-top: 1rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: 12px;
+  border: 1px solid rgba(217, 119, 6, 0.3);
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 0.84rem;
+  font-weight: 500;
+}
+
+.active-project-lock--inline {
+  margin-top: 0.4rem;
+  padding: 0.45rem 0.75rem;
 }
 
 .danger-zone {
@@ -1159,19 +1494,43 @@ button:disabled {
 }
 
 .member-link {
-  font-weight: 600;
-  color: #4f46e5;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  background: rgba(79, 70, 229, 0.07);
+  border: 1px solid rgba(79, 70, 229, 0.2);
+  border-radius: 999px;
+  color: #4338ca;
+  font-size: 0.82rem;
+  font-weight: 500;
   text-decoration: none;
+  transition: background 0.15s, border-color 0.15s;
   word-break: break-all;
 }
 
 .member-link:hover {
-  text-decoration: underline;
+  background: rgba(79, 70, 229, 0.14);
+  border-color: rgba(79, 70, 229, 0.4);
+  text-decoration: none;
 }
 
 .member-link--static {
-  color: #334155;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  background: rgba(100, 116, 139, 0.07);
+  border: 1px solid rgba(100, 116, 139, 0.2);
+  border-radius: 999px;
+  color: #475569;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.member-link__icon {
+  font-size: 0.78rem;
+  opacity: 0.7;
 }
 
 .member-remove {
@@ -1181,13 +1540,13 @@ button:disabled {
   font-size: 0.75rem;
   font-weight: 700;
   cursor: pointer;
-  background: #fef2f2;
-  color: #b91c1c;
-  border: 1px solid rgba(220, 38, 38, 0.35);
+  background: #f9ebe6;
+  color: #cb7a5c;
+  border: 1px solid rgba(203, 122, 92, 0.4);
 }
 
 .member-remove:hover:not(:disabled) {
-  background: #fee2e2;
+  background: #f3d5c9;
 }
 
 .member-remove:disabled {

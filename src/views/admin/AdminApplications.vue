@@ -342,6 +342,7 @@ function pillClass(status) {
     NEEDS_REVISION: 'pill--orange',
     APPROVED: 'pill--ok',
     REJECTED: 'pill--bad',
+    COMPLETED: 'pill--completed',
   }
   return map[status] || 'pill--muted'
 }
@@ -626,6 +627,11 @@ function openProgramProposal(row) {
 .pill--bad {
   background: #fee2e2;
   color: #991b1b;
+}
+
+.pill--completed {
+  background: #ede9fe;
+  color: #4c1d95;
 }
 
 .actions {

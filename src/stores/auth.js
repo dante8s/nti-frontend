@@ -104,6 +104,14 @@ export const useAuthStore = defineStore('auth', () => {
     })
   }
 
+  async function completeTeamMemberInvite(inviteToken, name, password) {
+    await authApi.completeTeamInvite({
+      inviteToken,
+      name,
+      password,
+    })
+  }
+
   function logout() {
     token.value = null
     user.value = null
@@ -125,5 +133,6 @@ export const useAuthStore = defineStore('auth', () => {
     resetPassword,
     completeInvite,
     completeOrgMemberInvite,
+    completeTeamMemberInvite,
   }
 })
