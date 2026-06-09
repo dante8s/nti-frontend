@@ -68,6 +68,7 @@
               </button>
             </td>
           </tr>
+          
           <!-- Розгорнутий рядок деталей -->
           <tr v-if="expanded != null" v-for="r in reports.filter(x => x.id === expanded)" :key="'detail-' + r.id">
             <td colspan="9" class="reports-table__detail">
