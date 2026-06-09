@@ -98,7 +98,10 @@ async function loadDocs() {
     try {
         const res = await applicationsApi
             .getDocumentStatus(props.applicationId)
-        docs.value = res.data
+        // Результатні документи показуються тільки в "Моя команда"
+        docs.value = (res.data || []).filter(
+            d => d.documentType !== 'RESULT_1' && d.documentType !== 'RESULT_2'
+        )
     } catch (e) {
         console.error('Помилка завантаження статусу:', e)
     } finally {

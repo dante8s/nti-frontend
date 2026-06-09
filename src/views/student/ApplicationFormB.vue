@@ -152,11 +152,14 @@ const isDeadlinePassed = computed(() =>
     callInfo.value?.deadline && new Date() > new Date(callInfo.value.deadline),
 )
 
-const canSubmit = computed(() =>
-    !isDeadlinePassed.value &&
-    docsStatus.value.length > 0 &&
-    docsStatus.value.every((d) => d.uploaded),
-)
+const canSubmit = computed(() => {
+    const required = docsStatus.value.filter(
+        d => d.documentType !== 'RESULT_1' && d.documentType !== 'RESULT_2'
+    )
+    return !isDeadlinePassed.value &&
+        required.length > 0 &&
+        required.every((d) => d.uploaded)
+})
 
 onMounted(async () => {
     try {

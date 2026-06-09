@@ -47,13 +47,10 @@
           {{ membersError }}
         </p>
         <div v-if="membersLoading" class="application-details__meta">
-          Loading organization members...
-        </div>
-        <div v-else-if="!applicationOrganizationId" class="application-details__meta">
-          Organization not found for this application.
+          Завантаження користувачів...
         </div>
         <div v-else-if="eligibleOrganizationMembers.length === 0" class="application-details__meta">
-          No eligible organization members found.
+          Немає доступних користувачів для призначення.
         </div>
         <div v-else class="application-details__product-owner-row">
           <select
@@ -62,19 +59,17 @@
             :disabled="assigningProductOwner"
             @change="onAssignProductOwner"
           >
-            <option value="">
-              Assign Product Owner
-            </option>
+            <option value="">Призначити Product Owner</option>
             <option
-  v-for="member in eligibleOrganizationMembers"
-  :key="member.id"
-  :value="String(member.userId ?? member.id)"
->
-  {{ memberDisplayName(member) }}
-</option>
+              v-for="member in eligibleOrganizationMembers"
+              :key="member.id ?? member.userId"
+              :value="String(member.userId ?? member.id)"
+            >
+              {{ memberDisplayName(member) }}
+            </option>
           </select>
           <span class="application-details__meta">
-            {{ assigningProductOwner ? 'Saving...' : 'Organization members' }}
+            {{ assigningProductOwner ? 'Збереження...' : (applicationOrganizationId ? 'Члени організації' : 'Всі користувачі') }}
           </span>
         </div>
 
@@ -441,6 +436,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { applicationsApi } from '@/api/applications'
+import { adminApi } from '@/api/admin'
 import { teamsApi } from '@/api/teams'
 import StatusBadge from '@/components/StatusBadge.vue'
 import MilestoneFormModal from '@/components/MilestoneFormModal.vue'
@@ -491,6 +487,7 @@ const productOwnerError = ref('')
 const loadedMembersOrgId = ref(null)
 const membersLoading = ref(false)
 const membersError = ref('')
+const allUsers = ref([])
 
 const tabs = computed(() => {
   const base = [
@@ -627,7 +624,11 @@ async function loadApplicationDetails() {
         teamLoading.value = false
       }
     }
-    if (applicationOrganizationId.value) await loadOrganizationMembers(applicationOrganizationId.value)
+    if (applicationOrganizationId.value) {
+      await loadOrganizationMembers(applicationOrganizationId.value)
+    } else if (canAssignProductOwner.value) {
+      await loadAllUsers()
+    }
     const [fetchedMilestones] = await Promise.all([
       milestoneStore.fetchByApplication(applicationIdNumber.value),
       mentorshipStore.getByApplication(applicationIdNumber.value),
@@ -641,6 +642,24 @@ async function loadApplicationDetails() {
     error.value = e.response?.data?.message || 'Failed to load application details.'
   } finally {
     loading.value = false
+  }
+}
+
+async function loadAllUsers() {
+  membersLoading.value = true
+  membersError.value = ''
+  try {
+    const res = await adminApi.getUsersForPO()
+    allUsers.value = (res.data || []).map(u => ({
+      userId: u.id,
+      id: u.id,
+      userName: u.name || u.email,
+      userEmail: u.email,
+    }))
+  } catch (e) {
+    membersError.value = 'Не вдалося завантажити список користувачів.'
+  } finally {
+    membersLoading.value = false
   }
 }
 
@@ -673,8 +692,10 @@ function memberDisplayName(member) {
 }
 
 const eligibleOrganizationMembers = computed(() => {
+  // Якщо немає організації — показуємо всіх юзерів
+  if (!applicationOrganizationId.value) return allUsers.value
+
   const raw = organizationMembers.value || []
-  // If backend returns user roles, keep only FIRM/FIRM_USER; otherwise fall back to full list.
   const withRoleInfo = raw.filter((m) => Array.isArray(m?.userRoles) || Array.isArray(m?.roles))
   if (!withRoleInfo.length) return raw
   return raw.filter((m) => {
