@@ -33,6 +33,7 @@ function logout() {
         <router-link to="/news" class="nav-link">Novinky</router-link>
         <router-link to="/success-stories" class="nav-link">Úspešné projekty</router-link>
         <router-link to="/about" class="nav-link">O NTI</router-link>
+        <router-link to="/faq" class="nav-link">FAQ</router-link>
 
         <template v-if="!auth.isLoggedIn">
           <router-link to="/login" class="nav-link nav-login">{{ t('auth.loginBtn') }}</router-link>

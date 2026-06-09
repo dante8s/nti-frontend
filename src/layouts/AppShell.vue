@@ -61,6 +61,16 @@ const adminNav = computed(() => {
   return items
 })
 
+const contentEditorNav = computed(() => {
+  if (!isAdmin.value) return []
+  return [
+    { to: '/app/admin/about-page', label: 'Stránka O NTI', icon: '◫' },
+    { to: '/app/admin/news', label: 'Správa noviniek', icon: '◰' },
+    { to: '/app/admin/success-stories', label: 'Úspešné príbehy', icon: '◆' },
+    { to: '/app/admin/faq', label: 'Správa FAQ', icon: '?' },
+  ]
+})
+
 const studentNav = computed(() => {
   if (!showStudentNav.value) return []
   return [
@@ -259,6 +269,21 @@ firmIsOwner.value = membership?.role === 'OWNER'  } catch {
         </p>
         <RouterLink
           v-for="item in adminNav"
+          :key="item.to"
+          :to="item.to"
+          class="shell__link"
+          :class="{ active: isActive(item.to) }"
+          @click="closeMobile"
+        >
+          <span class="shell__ico" aria-hidden="true" v-html="item.icon" />
+          {{ item.label }}
+        </RouterLink>
+
+        <p v-if="contentEditorNav.length" class="shell__group-label">
+          Content editor
+        </p>
+        <RouterLink
+          v-for="item in contentEditorNav"
           :key="item.to"
           :to="item.to"
           class="shell__link"

@@ -1,47 +1,65 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
-const articles = ref([
-  {
-    id: 1,
-    title: 'NTI otvára nový inkubačný program pre startupy',
-    date: '15. mája 2024',
-    excerpt: 'Nový inkubačný program ponúka študentom a mladým podnikateľom jedinečnú príležitosť rozvíjať svoje nápady s podporou skúsených mentorov.',
-    image: 'https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=800&h=400&fit=crop',
-    category: 'Programy'
-  },
-  {
-    id: 2,
-    title: 'Úspešný workshop o AI a strojovom učení',
-    date: '10. mája 2024',
-    excerpt: 'Viac ako 50 študentov sa zúčastnilo workshopu zameraného na praktické aplikácie umelej inteligencie v podnikaní.',
-    image: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=800&h=400&fit=crop',
-    category: 'Workshopy'
-  },
-  {
-    id: 3,
-    title: 'Partnerstvo s lokálnymi technologickými firmami',
-    date: '5. mája 2024',
-    excerpt: 'NTI uzavrelo strategické partnerstvá s piatimi vedúcimi technologickými spoločnosťami v regióne na podporu talentov.',
-    image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&h=400&fit=crop',
-    category: 'Partnerstvá'
-  },
-  {
-    id: 4,
-    title: 'Študentský startup získal investíciu',
-    date: '28. apríla 2024',
-    excerpt: 'Tím študentov z programu NTI úspešne získal počiatočnú investíciu na rozvoj svojho inovatívneho projektu.',
-    image: 'https://images.unsplash.com/photo-1553729459-efe14ef6055d?w=800&h=400&fit=crop',
-    category: 'Úspechy'
+const articles = ref([])
+const loading = ref(true)
+const error = ref('')
+
+const SK_MONTHS = [
+  'Január', 'Február', 'Marec', 'Apríl', 'Máj', 'Jún',
+  'Júl', 'August', 'September', 'Október', 'November', 'December',
+]
+
+function formatArticleDate(value) {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return String(value)
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${day}. ${SK_MONTHS[date.getMonth()]} ${date.getFullYear()}`
+}
+
+function normalizeArticle(raw) {
+  return {
+    id: raw.id,
+    title: raw.title ?? '',
+    excerpt: raw.excerpt ?? '',
+    content: raw.content ?? '',
+    image: raw.image ?? raw.imageUrl ?? null,
+    category: raw.category ?? '',
+    date: raw.date ?? formatArticleDate(raw.publishedAt),
   }
-])
+}
+
+async function fetchArticles() {
+  loading.value = true
+  error.value = ''
+
+  try {
+    const response = await fetch('/api/public/cms/articles?size=100')
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`)
+    }
+
+    const data = await response.json()
+    const list = Array.isArray(data) ? data : (data.content ?? [])
+    articles.value = list.map(normalizeArticle)
+  } catch (e) {
+    console.error('Nepodarilo sa načítať novinky', e)
+    error.value = 'Nepodarilo sa načítať články. Skúste to prosím neskôr.'
+    articles.value = []
+  } finally {
+    loading.value = false
+  }
+}
 
 function goToArticle(id) {
-  router.push({ name: 'article', params: { id } })
+  router.push(`/news/${id}`)
 }
+
+onMounted(fetchArticles)
 </script>
 
 <template>
@@ -55,7 +73,9 @@ function goToArticle(id) {
 
     <section class="section">
       <div class="container">
-        <div class="articles-grid">
+        <div v-if="loading" class="news-loading">Načítavam články...</div>
+        <div v-else-if="error" class="news-error">{{ error }}</div>
+        <div v-else class="articles-grid">
           <article
             v-for="article in articles"
             :key="article.id"
@@ -63,7 +83,7 @@ function goToArticle(id) {
             @click="goToArticle(article.id)"
           >
             <div class="article-image">
-              <img :src="article.image" :alt="article.title" />
+              <img :src="article.image || '/placeholder.jpg'" :alt="article.title" />
               <span class="article-category">{{ article.category }}</span>
             </div>
             <div class="article-content">
@@ -129,6 +149,20 @@ function goToArticle(id) {
   max-width: 1200px;
   margin: 0 auto;
   width: 100%;
+}
+
+.news-loading,
+.news-error {
+  text-align: center;
+  padding: 2rem;
+  color: #64748b;
+}
+
+.news-error {
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 0.75rem;
 }
 
 .articles-grid {

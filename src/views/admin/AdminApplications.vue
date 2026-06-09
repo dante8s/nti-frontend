@@ -384,6 +384,7 @@ function formatDt(iso) {
 }
 
 function openStatus(row) {
+  console.log("Aké ID posielam?", row.id, typeof row.id);
   console.log("DEBUG: Current Status:", row.status); // <--- Add this
   modal.row = row;
   modal.comment = '';

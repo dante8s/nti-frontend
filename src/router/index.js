@@ -80,6 +80,12 @@ const router = createRouter({
       component: () => import('@/views/public/About.vue'),
     },
     {
+      path: '/faq',
+      name: 'faq',
+      meta: { title: 'FAQ' },
+      component: () => import('@/views/public/FaqPage.vue'),
+    },
+    {
       path: '/news',
       name: 'news',
       meta: { title: 'Novinky' },
@@ -222,6 +228,30 @@ const router = createRouter({
           name: 'admin-bulk-message',
           meta: { title: 'Масова розсилка', requiresAdmin: true },
           component: () => import('@/views/admin/BulkMessage.vue'),
+        },
+        {
+          path: 'admin/about-page',
+          name: 'admin-about-page',
+          meta: { title: 'Stránka O NTI', requiresAdmin: true },
+          component: () => import('@/views/admin/AdminAboutPage.vue'),
+        },
+        {
+          path: 'admin/news',
+          name: 'admin-news',
+          meta: { title: 'Správa noviniek', requiresAdmin: true },
+          component: () => import('@/views/admin/AdminNewsPage.vue'),
+        },
+        {
+          path: 'admin/success-stories',
+          name: 'admin-success-stories',
+          meta: { title: 'Úspešné príbehy', requiresAdmin: true },
+          component: () => import('@/views/admin/AdminSuccessStories.vue'),
+        },
+        {
+          path: 'admin/faq',
+          name: 'admin-faq',
+          meta: { title: 'Správa FAQ', requiresAdmin: true },
+          component: () => import('@/views/admin/AdminFaqPage.vue'),
         },
         {
           path: 'privacy',

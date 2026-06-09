@@ -1,171 +1,292 @@
 <script setup>
-const pillars = [
-  {
-    title: 'Inkubácia',
-    description: 'Podpora startupov a inovatívnych projektov od nápadu až po trh.',
-    icon: '🚀'
-  },
-  {
-    title: 'Partnerstvá',
-    description: 'Spolupráca s priemyselnými partnermi a univerzitami.',
-    icon: '🤝'
-  },
-  {
-    title: 'Mentoring',
-    description: 'Individuálny mentoring skúsenými expertmi z praxe.',
-    icon: '🎯'
-  },
-  {
-    title: 'Retencia',
-    description: 'Zachovanie talentov v regióne a prevencia brain drain.',
-    icon: '🎓'
-  }
-]
+import { ref, computed, onMounted } from 'vue'
 
-const team = [
-  {
-    name: 'Dr. Ján Novák',
-    role: 'Program Director',
-    image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jan'
-  },
-  {
-    name: 'Mária Kováčová',
-    role: 'Head of Incubation',
-    image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Maria'
-  },
-  {
-    name: 'Peter Horváth',
-    role: 'Partnership Manager',
-    image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Peter'
-  },
-  {
-    name: 'Anna Szabóová',
-    role: 'Mentor Coordinator',
-    image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Anna'
+const sections = ref([])
+const isLoading = ref(true)
+const errorMessage = ref(null)
+
+const sortedSections = computed(() =>
+  [...sections.value].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+)
+
+const missionVisionCards = computed(() =>
+  sortedSections.value.filter(
+    (s) =>
+      s.sectionType === 'mission' ||
+      s.sectionType === 'vision' ||
+      (s.sectionType === 'mission-vision' && s.content)
+  )
+)
+
+const pillarsHeader = computed(() =>
+  sortedSections.value.find((s) => s.sectionType === 'pillars')
+)
+
+const pillarItems = computed(() => {
+  const items = sortedSections.value.filter(
+    (s) => s.sectionType === 'pillar-item' || s.sectionType === 'pillar'
+  )
+  if (items.length > 0) return items
+
+  const header = pillarsHeader.value
+  if (header?.content) {
+    return parsePillarContent(header.content)
   }
-]
+  return []
+})
+
+const teamHeader = computed(() =>
+  sortedSections.value.find((s) => s.sectionType === 'team')
+)
+
+const teamMembers = computed(() =>
+  sortedSections.value.filter((s) => s.sectionType === 'team-member')
+)
+
+function parsePillarContent(content) {
+  try {
+    const parsed = JSON.parse(content)
+    if (Array.isArray(parsed)) {
+      return parsed.map((item, index) => ({
+        id: item.id ?? `pillar-${index}`,
+        title: item.title ?? '',
+        content: item.description ?? item.content ?? '',
+        icon: item.icon ?? '',
+      }))
+    }
+  } catch {
+    // not JSON — fall through
+  }
+  return []
+}
+
+function heroStyle(section) {
+  if (!section.imageUrl) return undefined
+  return {
+    backgroundImage: `url(${section.imageUrl})`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+  }
+}
+
+function missionVisionCardClass(section) {
+  if (section.sectionType === 'vision') return 'vision-card'
+  if (section.sectionType === 'mission') return 'mission-card'
+  const title = (section.title || '').toLowerCase()
+  if (title.includes('vízia') || title.includes('vizia') || title.includes('vision')) {
+    return 'vision-card'
+  }
+  return 'mission-card'
+}
+
+function contentParagraphs(content) {
+  if (!content) return []
+  return content.split(/\n\n+/).filter((p) => p.trim())
+}
+
+const missionVisionHeader = computed(() =>
+  sortedSections.value.find((s) => s.sectionType === 'mission-vision' && !s.content)
+)
+
+function isMissionVisionGroupStart(section) {
+  if (section.sectionType === 'mission-vision' && !section.content) return true
+  if (missionVisionHeader.value) return false
+  return missionVisionCards.value[0]?.id === section.id
+}
+
+function isPillarsGroupStart(section) {
+  if (section.sectionType === 'pillars') return true
+  if (pillarsHeader.value) return false
+  if (section.sectionType === 'pillar-item' || section.sectionType === 'pillar') {
+    return pillarItems.value[0]?.id === section.id
+  }
+  return false
+}
+
+function isTeamGroupStart(section) {
+  if (section.sectionType === 'team') return true
+  if (teamHeader.value) return false
+  if (section.sectionType === 'team-member') {
+    return teamMembers.value[0]?.id === section.id
+  }
+  return false
+}
+
+function shouldRender(section) {
+  const type = section.sectionType
+  if (type === 'pillar-item' || type === 'pillar') return isPillarsGroupStart(section)
+  if (type === 'team-member') return isTeamGroupStart(section)
+  if (type === 'mission' || type === 'vision') return isMissionVisionGroupStart(section)
+  if (type === 'mission-vision' && section.content) return isMissionVisionGroupStart(section)
+  return true
+}
+
+// Find this function in your <script setup>:
+async function fetchSections() {
+  isLoading.value = true
+  try {
+    // CHANGE THIS LINE to point directly to your backend:
+    const response = await fetch('http://localhost:8080/api/public/cms/pages/about')
+
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    sections.value = await response.json()
+  } catch (error) {
+    console.error('Nepodarilo sa načítať obsah stránky O NTI', error)
+    sections.value = []
+  } finally {
+    isLoading.value = false
+  }
+}
+
+onMounted(fetchSections)
 </script>
 
 <template>
-  <div class="about-page">
-    <!-- Hero Section -->
-    <section class="hero">
-      <div class="hero-content">
-        <h1>O NTI</h1>
-        <p class="hero-subtitle">Nitra Technology Institute</p>
-      </div>
-    </section>
+  <div v-if="isLoading" class="about-page about-loading">
+    Načítavanie...
+  </div>
 
-    <!-- Mission & Vision -->
-    <section class="section mission-vision">
-      <div class="container">
-        <div class="mission-vision-grid">
-          <div class="mission-card">
-            <div class="card-icon">🎯</div>
-            <h2>Misia</h2>
-            <p>
-              NTI má za cieľ podporovať technologický talent v regióne Nitra,
-              prevenciou brain drain a vytváraním ekosystému pre startupy.
-              Poskytujeme študentom a mladým profesionálom príležitosti rozvíjať
-              svoje nápady a realizovať ich v praxi.
-            </p>
-          </div>
-          <div class="vision-card">
-            <div class="card-icon">🌟</div>
-            <h2>Vízia</h2>
-            <p>
-              Stať sa vedúcim technologickým inkubátorom na Slovensku, ktorý
-              spája akademickú sféru s priemyslom. Chceme vytvoriť prosperujúcu
-              komunitu inovátorov, ktorí budú formovať budúcnosť regiónu
-              a prispievať k jeho ekonomickému rozvoju.
-            </p>
-          </div>
+  <div v-else class="about-page">
+    <template v-for="section in sortedSections" :key="section.id">
+      <!-- Hero -->
+      <section
+        v-if="section.sectionType === 'hero'"
+        class="hero"
+        :class="{ 'hero--with-image': section.imageUrl }"
+        :style="heroStyle(section)"
+      >
+        <div class="hero-content">
+          <h1>{{ section.title }}</h1>
+          <p v-if="section.subtitle" class="hero-subtitle">{{ section.subtitle }}</p>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- 4 Pillars -->
-    <section class="section pillars">
-      <div class="container">
-        <h2 class="section-title">4 Piliere NTI</h2>
-        <div class="pillars-grid">
-          <div v-for="pillar in pillars" :key="pillar.title" class="pillar-card">
-            <div class="pillar-icon">{{ pillar.icon }}</div>
-            <h3>{{ pillar.title }}</h3>
-            <p>{{ pillar.description }}</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Ecosystem & Faculty -->
-    <section class="section ecosystem">
-      <div class="container">
-        <div class="ecosystem-content">
-          <div class="ecosystem-text">
-            <h2 class="section-title">Ekosystém a Fakulta</h2>
-            <p>
-              NTI úzko spolupracuje s Fakultou prírodných vied Univerzity Konštantína
-              Filozofa v Nitre. Toto partnerstvo nám umožňuje využívať akademické
-              zdroje, výskumné kapacity a odborné know-how.
-            </p>
-            <p>
-              Naším cieľom je vytvoriť most medzi univerzitou a priemyslom,
-              kde študenti môžu aplikovať teoretické znalosti v reálnych projektoch
-              a firmy môžu pristupovať k najnovším výskumným trendom a talentom.
-            </p>
-            <div class="ecosystem-stats">
-              <div class="stat">
-                <div class="stat-number">50+</div>
-                <div class="stat-label">Partnerov</div>
-              </div>
-              <div class="stat">
-                <div class="stat-number">200+</div>
-                <div class="stat-label">Študentov</div>
-              </div>
-              <div class="stat">
-                <div class="stat-number">30+</div>
-                <div class="stat-label">Startupov</div>
-              </div>
-            </div>
-          </div>
-          <div class="ecosystem-visual">
-            <div class="connection-diagram">
-              <div class="node university">
-                <div class="node-icon">🎓</div>
-                <span>Univerzita</span>
-              </div>
-              <div class="connector"></div>
-              <div class="node nti">
-                <div class="node-icon">💡</div>
-                <span>NTI</span>
-              </div>
-              <div class="connector"></div>
-              <div class="node industry">
-                <div class="node-icon">🏢</div>
-                <span>Priemysel</span>
-              </div>
+      <!-- Mission & Vision -->
+      <section
+        v-else-if="section.sectionType === 'mission-vision' && !section.content && shouldRender(section)"
+        class="section mission-vision"
+      >
+        <div class="container">
+          <h2 v-if="section.title" class="section-title">{{ section.title }}</h2>
+          <div class="mission-vision-grid">
+            <div
+              v-for="card in missionVisionCards"
+              :key="card.id"
+              :class="missionVisionCardClass(card)"
+            >
+              <div v-if="card.icon" class="card-icon">{{ card.icon }}</div>
+              <h2>{{ card.title }}</h2>
+              <p>{{ card.content }}</p>
             </div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- Team -->
-    <section class="section team">
-      <div class="container">
-        <h2 class="section-title">Náš Tím</h2>
-        <div class="team-grid">
-          <div v-for="member in team" :key="member.name" class="team-card">
-            <div class="team-image">
-              <img :src="member.image" :alt="member.name" />
+      <section
+        v-else-if="(section.sectionType === 'mission' || section.sectionType === 'vision' || (section.sectionType === 'mission-vision' && section.content)) && shouldRender(section)"
+        class="section mission-vision"
+      >
+        <div class="container">
+          <div class="mission-vision-grid">
+            <div
+              v-for="card in missionVisionCards"
+              :key="card.id"
+              :class="missionVisionCardClass(card)"
+            >
+              <div v-if="card.icon" class="card-icon">{{ card.icon }}</div>
+              <h2>{{ card.title }}</h2>
+              <p>{{ card.content }}</p>
             </div>
-            <h3>{{ member.name }}</h3>
-            <p class="team-role">{{ member.role }}</p>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
+
+      <!-- Pillars -->
+      <section
+        v-else-if="(section.sectionType === 'pillars' || section.sectionType === 'pillar-item' || section.sectionType === 'pillar') && shouldRender(section)"
+        class="section pillars"
+      >
+        <div class="container">
+          <h2 class="section-title">{{ pillarsHeader?.title || section.title || '4 Piliere NTI' }}</h2>
+          <div class="pillars-grid">
+            <div v-for="pillar in pillarItems" :key="pillar.id" class="pillar-card">
+              <div v-if="pillar.icon" class="pillar-icon">{{ pillar.icon }}</div>
+              <h3>{{ pillar.title }}</h3>
+              <p>{{ pillar.content }}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Ecosystem & Faculty -->
+      <section v-else-if="section.sectionType === 'ecosystem'" class="section ecosystem">
+        <div class="container">
+          <div class="ecosystem-content">
+            <div class="ecosystem-text">
+              <h2 class="section-title">{{ section.title }}</h2>
+              <p v-for="(paragraph, index) in contentParagraphs(section.content)" :key="index">
+                {{ paragraph }}
+              </p>
+              <div class="ecosystem-stats">
+                <div class="stat">
+                  <div class="stat-number">50+</div>
+                  <div class="stat-label">Partnerov</div>
+                </div>
+                <div class="stat">
+                  <div class="stat-number">200+</div>
+                  <div class="stat-label">Študentov</div>
+                </div>
+                <div class="stat">
+                  <div class="stat-number">30+</div>
+                  <div class="stat-label">Startupov</div>
+                </div>
+              </div>
+            </div>
+            <div class="ecosystem-visual">
+              <div class="connection-diagram">
+                <div class="node university">
+                  <div class="node-icon">🎓</div>
+                  <span>Univerzita</span>
+                </div>
+                <div class="connector"></div>
+                <div class="node nti">
+                  <div class="node-icon">💡</div>
+                  <span>NTI</span>
+                </div>
+                <div class="connector"></div>
+                <div class="node industry">
+                  <div class="node-icon">🏢</div>
+                  <span>Priemysel</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Team -->
+      <section
+        v-else-if="(section.sectionType === 'team' || section.sectionType === 'team-member') && shouldRender(section)"
+        class="section team"
+      >
+        <div class="container">
+          <h2 class="section-title">{{ teamHeader?.title || section.title || 'Náš Tím' }}</h2>
+          <div class="team-grid">
+            <div v-for="member in teamMembers" :key="member.id" class="team-card">
+              <div class="team-image">
+                <img
+                  v-if="member.imageUrl"
+                  :src="member.imageUrl"
+                  :alt="member.title"
+                />
+              </div>
+              <h3>{{ member.title }}</h3>
+              <p v-if="member.subtitle" class="team-role">{{ member.subtitle }}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </template>
   </div>
 </template>
 
@@ -175,6 +296,14 @@ const team = [
   background: #f8fafc; /* Premium slate base background instead of heavy indigo tint */
 }
 
+.about-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  font-size: 1.125rem;
+}
+
 /* Hero Section transformed to a clean typography header variant */
 .hero {
   background: transparent;
@@ -182,6 +311,28 @@ const team = [
   padding: 4rem 2rem;
   text-align: center;
   color: #0f172a;
+}
+
+.hero--with-image {
+  position: relative;
+  color: #fff;
+}
+
+.hero--with-image::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.hero--with-image .hero-content {
+  position: relative;
+  z-index: 1;
+}
+
+.hero--with-image .hero-content h1,
+.hero--with-image .hero-subtitle {
+  color: #fff;
 }
 
 .hero-content h1 {

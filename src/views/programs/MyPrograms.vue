@@ -391,8 +391,15 @@ async function toggleCallApplications(callId) {
 }
 
 function openApplicationDetails(applicationId) {
-  if (!applicationId) return
-  router.push({ name: 'application-details', params: { id: String(applicationId) } })
+  // Nájdeme celý objekt prihlášky, aby sme videli všetky jeho vlastnosti
+  const allApps = Object.values(applicationsByCall.value).flat();
+  const currentApp = allApps.find(a => a.id === applicationId);
+
+  console.log("=== DETAIL PRIHLÁŠKY ===");
+  console.log("Čo všetko máme v objekte app?:", currentApp);
+
+  if (!applicationId) return;
+  router.push({ name: 'application-details', params: { id: String(applicationId) } });
 }
 
 function openCreateForm() {

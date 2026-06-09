@@ -1,54 +1,159 @@
 <script setup>
-const successProjects = [
-  {
-    title: 'AgriTech Solutions',
-    description: 'Smart IoT senzory pre optimalizáciu poľnohospodárstva',
-    image: 'https://images.unsplash.com/photo-1574943320219-553eb213f72d?w=600&h=400&fit=crop',
-    investment: '50 000 €',
-    status: 'Aktívny'
-  },
-  {
-    title: 'EduLearn Platform',
-    description: 'Online platforma pre interaktívne vzdelávanie',
-    image: 'https://images.unsplash.com/photo-1501504905252-473c47e087f8?w=600&h=400&fit=crop',
-    investment: '35 000 €',
-    status: 'Rozvoj'
-  },
-  {
-    title: 'HealthTrack App',
-    description: 'Mobilná aplikácia pre monitorovanie zdravia',
-    image: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=600&h=400&fit=crop',
-    investment: '40 000 €',
-    status: 'Pilot'
-  }
+import { ref, onMounted } from 'vue'
+
+const API = {
+  projects: '/api/public/cms/projects',
+  testimonials: '/api/public/cms/testimonials',
+  statsPage: '/api/public/cms/pages/success-stories',
+}
+
+const CMS_FALLBACK = {
+  projects: '/api/public/cms/projects',
+  testimonials: '/api/public/cms/testimonials',
+  statsPage: '/api/public/cms/pages/success-stories',
+}
+
+const DEFAULT_STATS = [
+  { id: 1, number: '30+', label: 'Úspešných projektov' },
+  { id: 2, number: '500K €', label: 'Získané investície' },
+  { id: 3, number: '150+', label: 'Absolventov programov' },
+  { id: 4, number: '95%', label: 'Spokojnosť účastníkov' },
 ]
 
-const testimonials = [
-  {
-    name: 'Martin Kováč',
-    role: 'Zakladateľ, AgriTech Solutions',
-    quote: 'NTI mi dal nielen mentoring a financie, ale hlavne sebauveru a sieť kontaktov, ktorá je kľúčová v podnikaní. Bez ich podpory by sme nikdy nedostali takúto investíciu.',
-    image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Martin'
-  },
-  {
-    name: 'Zuzana Horváthová',
-    role: 'Študentka, Program A',
-    quote: 'Program NTI mi otvoril oči v tom, čo všetko je možné. Mentori mi pomohli premeniť môj nápad na reálny projekt, ktorý teraz má potenciál zmeniť vzdelávanie.',
-    image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Zuzana'
-  },
-  {
-    name: 'Peter Szabó',
-    role: 'CEO, TechSolutions s.r.o.',
-    quote: 'Spolupráca s NTI nám umožnila prístup k talentovaným študentom a inovatívnym projektom. Je to win-win situácia pre obe strany.',
-    image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Peter2'
-  },
-  {
-    name: 'Anna Nováková',
-    role: 'Mentorka, NTI',
-    quote: 'Vidieť, ako študenti rastú a rozvíjajú svoje nápady, je neuveriteľne motivujúce. NTI vytvára prostredie, kde inovácia môže rozkvitnúť.',
-    image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Anna2'
+const PLACEHOLDER_PROJECT = '/placeholder-project.jpg'
+const PLACEHOLDER_AVATAR = '/placeholder-avatar.svg'
+
+const successProjects = ref([])
+const testimonials = ref([])
+const stats = ref([])
+const loading = ref(true)
+const error = ref('')
+
+function resolveImage(url, fallback) {
+  return url && String(url).trim() ? url : fallback
+}
+
+function normalizeProject(raw) {
+  return {
+    id: raw.id,
+    title: raw.title ?? '',
+    description: raw.description ?? '',
+    image: resolveImage(raw.image ?? raw.imageUrl, PLACEHOLDER_PROJECT),
+    investment: raw.investment ?? raw.fundingAmount ?? '',
+    status: raw.status ?? raw.statusLabel ?? '',
   }
-]
+}
+
+function normalizeTestimonial(raw) {
+  return {
+    id: raw.id,
+    name: raw.name ?? raw.authorName ?? '',
+    role: raw.role ?? raw.authorRole ?? '',
+    quote: raw.quote ?? '',
+    image: resolveImage(raw.image ?? raw.avatarUrl, PLACEHOLDER_AVATAR),
+  }
+}
+
+function normalizeStat(raw, index = 0) {
+  return {
+    id: raw.id ?? index + 1,
+    number: raw.number ?? raw.title ?? '',
+    label: raw.label ?? raw.subtitle ?? raw.content ?? '',
+  }
+}
+
+async function fetchJson(url) {
+  const response = await fetch(url)
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`)
+  }
+  return response.json()
+}
+
+async function fetchWithFallback(primaryUrl, fallbackUrl) {
+  try {
+    return await fetchJson(primaryUrl)
+  } catch {
+    return fetchJson(fallbackUrl)
+  }
+}
+
+async function fetchProjects() {
+  const data = await fetchWithFallback(API.projects, CMS_FALLBACK.projects)
+  const list = Array.isArray(data) ? data : []
+  return list.map(normalizeProject)
+}
+
+async function fetchTestimonials() {
+  const data = await fetchWithFallback(API.testimonials, CMS_FALLBACK.testimonials)
+  const list = Array.isArray(data) ? data : []
+  return list.map(normalizeTestimonial)
+}
+
+async function fetchStats() {
+  try {
+    const data = await fetchJson(API.stats)
+    const list = Array.isArray(data) ? data : []
+    if (list.length) return list.map(normalizeStat)
+  } catch {
+    // primary stats endpoint unavailable — try CMS page sections
+  }
+
+  try {
+    const sections = await fetchJson(CMS_FALLBACK.statsPage)
+    const fromSections = (Array.isArray(sections) ? sections : [])
+      .filter((s) => s.sectionType === 'stat')
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+      .map(normalizeStat)
+
+    if (fromSections.length) return fromSections
+  } catch {
+    // no CMS stats configured
+  }
+
+  return DEFAULT_STATS
+}
+
+function formatLoadError(cause) {
+  if (cause instanceof TypeError) {
+    return 'Nepodarilo sa pripojiť k serveru. Skontrolujte sieťové pripojenie a skúste to znova.'
+  }
+  if (cause?.message?.startsWith('HTTP')) {
+    return `Nepodarilo sa načítať obsah stránky (${cause.message}).`
+  }
+  return 'Nepodarilo sa načítať príbehy úspechu. Skúste to prosím neskôr.'
+}
+
+async function loadPageData() {
+  loading.value = true
+  error.value = ''
+
+  try {
+    const [projects, quotes, statItems] = await Promise.all([
+      fetchProjects(),
+      fetchTestimonials(),
+      fetchStats(),
+    ])
+
+    successProjects.value = projects
+    testimonials.value = quotes
+    stats.value = statItems
+  } catch (e) {
+    console.error('Chyba pri načítaní Success Stories', e)
+    error.value = formatLoadError(e)
+    successProjects.value = []
+    testimonials.value = []
+    stats.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+function statusClass(status) {
+  return status ? String(status).toLowerCase() : ''
+}
+
+onMounted(loadPageData)
 </script>
 
 <template>
@@ -60,19 +165,28 @@ const testimonials = [
       </div>
     </section>
 
-    <!-- Success Projects Section -->
     <section class="section projects">
       <div class="container">
         <h2 class="section-title">Naše úspešné projekty</h2>
-        <div class="projects-grid">
-          <div v-for="project in successProjects" :key="project.title" class="project-card">
+
+        <div v-if="loading" class="state-loading">Načítavam príbehy úspechu...</div>
+        <div v-else-if="error" class="state-error">{{ error }}</div>
+
+        <div v-else class="projects-grid">
+          <div v-for="project in successProjects" :key="project.id" class="project-card">
             <div class="project-image">
               <img :src="project.image" :alt="project.title" />
             </div>
             <div class="project-content">
               <div class="project-meta">
-                <span class="project-investment">{{ project.investment }}</span>
-                <span class="project-status" :class="project.status.toLowerCase()">{{ project.status }}</span>
+                <span v-if="project.investment" class="project-investment">{{ project.investment }}</span>
+                <span
+                  v-if="project.status"
+                  class="project-status"
+                  :class="statusClass(project.status)"
+                >
+                  {{ project.status }}
+                </span>
               </div>
               <h3>{{ project.title }}</h3>
               <p>{{ project.description }}</p>
@@ -82,12 +196,11 @@ const testimonials = [
       </div>
     </section>
 
-    <!-- Testimonials Section -->
     <section class="section testimonials">
       <div class="container">
         <h2 class="section-title">Čo hovoria o nás</h2>
-        <div class="testimonials-grid">
-          <div v-for="testimonial in testimonials" :key="testimonial.name" class="testimonial-card">
+        <div v-if="!loading && !error" class="testimonials-grid">
+          <div v-for="testimonial in testimonials" :key="testimonial.id" class="testimonial-card">
             <div class="quote-icon">"</div>
             <p class="quote">{{ testimonial.quote }}</p>
             <div class="author">
@@ -104,25 +217,12 @@ const testimonials = [
       </div>
     </section>
 
-    <!-- Stats Section -->
     <section class="section stats">
       <div class="container">
-        <div class="stats-grid">
-          <div class="stat-item">
-            <div class="stat-number">30+</div>
-            <div class="stat-label">Úspešných projektov</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-number">500K €</div>
-            <div class="stat-label">Získané investície</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-number">150+</div>
-            <div class="stat-label">Absolventov programov</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-number">95%</div>
-            <div class="stat-label">Spokojnosť účastníkov</div>
+        <div v-if="!loading && !error" class="stats-grid">
+          <div v-for="stat in stats" :key="stat.id" class="stat-item">
+            <div class="stat-number">{{ stat.number }}</div>
+            <div class="stat-label">{{ stat.label }}</div>
           </div>
         </div>
       </div>
@@ -159,6 +259,25 @@ const testimonials = [
   font-size: 1.25rem;
   color: #475569;
   line-height: 1.6;
+}
+
+.state-loading,
+.state-error {
+  text-align: center;
+  padding: 2rem 1rem;
+  border-radius: 0.875rem;
+}
+
+.state-loading {
+  color: #64748b;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+}
+
+.state-error {
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
 }
 
 /* Layout structural rules and container scaling */
@@ -198,7 +317,6 @@ const testimonials = [
   border: 1px solid rgba(79, 70, 229, 0.1);
   box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
   overflow: hidden;
-  /* Keeping original hover transition duration properties */
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -233,7 +351,6 @@ const testimonials = [
   gap: 0.5rem;
 }
 
-/* Specific Pill-token transformations matching custom pill layout designs */
 .project-investment {
   display: inline-block;
   padding: 0.2rem 0.65rem;
@@ -345,7 +462,6 @@ const testimonials = [
   font-size: 0.82rem;
 }
 
-/* Core Platform Performance Metrics dashboard block rules */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -373,7 +489,6 @@ const testimonials = [
   text-transform: uppercase;
 }
 
-/* Fluid interface viewport adjustments */
 @media (max-width: 768px) {
   .hero {
     padding: 2.5rem 1rem 1rem;

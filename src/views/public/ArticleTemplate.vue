@@ -1,130 +1,79 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
 const router = useRouter()
 
-const articles = ref([
-  {
-    id: 1,
-    title: 'NTI otvára nový inkubačný program pre startupy',
-    date: '15. mája 2024',
-    category: 'Programy',
-    image: 'https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=1200&h=600&fit=crop',
-    content: `
-      <p>Nitra Technology Institute (NTI) s hrdosťou oznamuje spustenie nového inkubačného programu zameraného na podporu startupov a inovatívnych projektov v regióne. Program je navrhnutý tak, aby poskytol študentom a mladým podnikateľom komplexnú podporu od počiatočnej fázy až po komercializáciu ich nápadov.</p>
+const article = ref(null)
+const loading = ref(true)
+const error = ref('')
 
-      <h2>Kľúčové prvky programu</h2>
-      <p>Inkubačný program zahŕňa niekoľko kľúčových komponentov:</p>
-      <ul>
-        <li><strong>Mentoring:</strong> Každý tím priradíme skúseného mentora z praxe, ktorý mu pomôže navigovať výzvy podnikania.</li>
-        <li><strong>Vzdelávanie:</strong> Pravidelné workshopy a školenia zamerané na podnikateľské zručnosti, marketing, financie a technológie.</li>
-        <li><strong>Financovanie:</strong> Prístup k počiatočnému financovaniu a možnosť získať investície od našich partnerov.</li>
-        <li><strong>Networking:</strong> Príležitosti na stretnutie s potenciálnymi investormi, partnermi a ostatnými zakladateľmi.</li>
-      </ul>
+const SK_MONTHS = [
+  'Január', 'Február', 'Marec', 'Apríl', 'Máj', 'Jún',
+  'Júl', 'August', 'September', 'Október', 'November', 'December',
+]
 
-      <h2>Kto sa môže zapojiť?</h2>
-      <p>Program je otvorený pre študentov Univerzity Konštantína Filozofa v Nitre, absolventov do 3 rokov po ukončení štúdia, a mladých podnikateľov do 30 rokov z regiónu. Hľadáme tímy s inovatívnymi nápadmi v oblastiach ako sú technológie, zdravotníctvo, vzdelávanie a udržateľnosť.</p>
+function formatArticleDate(value) {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return String(value)
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${day}. ${SK_MONTHS[date.getMonth()]} ${date.getFullYear()}`
+}
 
-      <h2>Ako sa prihlásiť?</h2>
-      <p>Prihlášky sú otvorené do 30. júna 2024. Zaujímaví uchádzači budú pozvaní na osobný pohovor, kde predstavia svoj projekt a víziu. Vybrané tímy začnú program v septembri 2024.</p>
-
-      <p>Nezmeškajte túto jedinečnú príležitosť rozvíjať svoj nápad s podporou NTI. Viac informácií nájdete na našej webovej stránke alebo nás kontaktujte priamo.</p>
-    `
-  },
-  {
-    id: 2,
-    title: 'Úspešný workshop o AI a strojovom učení',
-    date: '10. mája 2024',
-    category: 'Workshopy',
-    image: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=1200&h=600&fit=crop',
-    content: `
-      <p>Viac ako 50 študentov sa zúčastnilo nášho workshopu zameraného na praktické aplikácie umelej inteligencie a strojového učenia v podnikaní. Workshop, ktorý sa konal 8. mája 2024 v priestoroch Fakulty prírodných vied, priniesol účastníkom cenné poznatky a praktické skúsenosti.</p>
-
-      <h2>Čo účastníci naučili</h2>
-      <p>Workshop bol rozdelený na teoretickú a praktickú časť. Účastníci sa naučili:</p>
-      <ul>
-        <li>Základy umelej inteligencie a strojového učenia</li>
-        <li>Aplikácie AI v rôznych odvetviach podnikania</li>
-        <li>Prácu s populárnymi nástrojmi a frameworkmi</li>
-        <li>Návrh a implementáciu jednoduchých ML modelov</li>
-        <li>Ethické aspekty používania AI v praxi</li>
-      </ul>
-
-      <h2>Ohlas účastníkov</h2>
-      <p>"Workshop mi otvoril oči v tom, ako môžu byť AI technológie použité v reálnom podnikaní. Veľmi oceňujem praktický prístup lektorov a možnosť vyskúšať si všetko naživo," povedal jeden z účastníkov, študent informatiky.</p>
-
-      <p>Plánujeme pokračovať v sérii workshopov zameraných na moderné technológie. Sledujte naše novinky, aby ste nezmeškali nadchádzajúce udalosti.</p>
-    `
-  },
-  {
-    id: 3,
-    title: 'Partnerstvá s lokálnymi technologickými firmami',
-    date: '5. mája 2024',
-    category: 'Partnerstvá',
-    image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=1200&h=600&fit=crop',
-    content: `
-      <p>NTI s hrdosťou oznamuje uzavretie strategických partnerstiev s piatimi vedúcimi technologickými spoločnosťami v regióne. Tieto partnerstvá sú kľúčovým krokom v našej misii vytvoriť silný technologický ekosystém v Nitre.</p>
-
-      <h2>Noví partneri</h2>
-      <p>Medzi našich nových partnerov patria:</p>
-      <ul>
-        <li><strong>TechSolutions s.r.o.</strong> - Softvérová spoločnosť zameraná na enterprise riešenia</li>
-        <li><strong>DataFlow a.s.</strong> - Spoločnosť špecializujúca sa na dáta a analytiku</li>
-        <li><strong>InnoLab s.r.o.</strong> - Inkubátor pre technologické startupy</li>
-        <li><strong>CloudTech a.s.</strong> - Poskytovateľ cloudových služieb</li>
-        <li><strong>SmartDev s.r.o.</strong> - Vývojová spoločnosť zameraná na IoT</li>
-      </ul>
-
-      <h2>Výhody pre študentov</h2>
-      <p>Díky týmto partnerstvám budú študenti NTI mať prístup k:</p>
-      <ul>
-        <li>Praktickým stážam a pracovným príležitostiam</li>
-        <li>Mentoringu od skúsených profesionálov z priemyslu</li>
-        <li>Real-world projektom a case studies</li>
-        <li>Networkingovým udalostiam s priemyselnými expertmi</li>
-      </ul>
-
-      <p>Tieto partnerstvá posilnia náš ekosystém a poskytnú študentom jedinečné príležitosti na profesionálny rast.</p>
-    `
-  },
-  {
-    id: 4,
-    title: 'Študentský startup získal investíciu',
-    date: '28. apríla 2024',
-    category: 'Úspechy',
-    image: 'https://images.unsplash.com/photo-1553729459-efe14ef6055d?w=1200&h=600&fit=crop',
-    content: `
-      <p>Tím študentov z programu NTI úspešne získal počiatočnú investíciu 50 000 eur na rozvoj svojho inovatívneho projektu. Projekt, zameraný na smart riešenia pre poľnohospodárstvo, zaujal investorov svojím potenciálom a realizovateľnosťou.</p>
-
-      <h2>O projekte</h2>
-      <p>Startup AgriTech Solutions vyvíja IoT senzory a softvérovú platformu pre optimalizáciu poľnohospodárskej výroby. Ich riešenie pomáha farmárom monitorovať pôdu, počasie a rastliny v reálnom čase, čo vedie k vyššej úrodnosti a nižším nákladom.</p>
-
-      <h2>Cesta k úspechu</h2>
-      <p>Tím začal svoju cestu v inkubačnom programe NTI, kde získal mentoring, vzdelávanie a prístup k sieťam kontaktov. Po šiestich mesiacoch intenzívneho vývoja a testovania predstavili svoj prototyp investorom, ktorý bol okamžite prijatý.</p>
-
-      <h2>Budúcnosť projektu</h2>
-      <p>S získanou investíciou plánuje tím rozšíriť svoj tím, spustiť pilotný projekt s 20 farmami a pripraviť sa na komerčný launch. Ich cieľom je stať sa vedúcim poskytovateľom smart poľnohospodárskych riešení na Slovensku.</p>
-
-      <p>Tento úspech je dôkazom, že NTI program funguje a pomáha študentom realizovať ich sny. Gratulujeme tímu AgriTech Solutions!</p>
-    `
+function normalizeArticle(raw) {
+  return {
+    id: raw.id,
+    title: raw.title ?? '',
+    excerpt: raw.excerpt ?? '',
+    content: raw.content ?? '',
+    image: raw.image ?? raw.imageUrl ?? null,
+    category: raw.category ?? '',
+    date: raw.date ?? formatArticleDate(raw.publishedAt),
   }
-])
+}
 
-const article = computed(() => {
-  const id = parseInt(route.params.id)
-  return articles.value.find(a => a.id === id) || articles.value[0]
-})
+async function fetchArticle() {
+  const id = route.params.id
+  if (!id) {
+    error.value = 'Článok sa nenašiel.'
+    loading.value = false
+    return
+  }
+
+  loading.value = true
+  error.value = ''
+  article.value = null
+
+  try {
+    const response = await fetch(`/api/public/cms/articles/${id}`)
+    if (!response.ok) {
+      throw new Error(response.status === 404 ? 'not_found' : `HTTP ${response.status}`)
+    }
+
+    article.value = normalizeArticle(await response.json())
+  } catch (e) {
+    console.error('Nepodarilo sa načítať článok', e)
+    error.value = e.message === 'not_found'
+      ? 'Článok sa nenašiel.'
+      : 'Nepodarilo sa načítať článok. Skúste to prosím neskôr.'
+  } finally {
+    loading.value = false
+  }
+}
 
 function goBack() {
-  router.push({ name: 'news' })
+  router.push('/news')
 }
+
+onMounted(fetchArticle)
+watch(() => route.params.id, fetchArticle)
 </script>
 
 <template>
-  <div class="article-page">
-    <section class="hero" :style="{ backgroundImage: `url(${article.image})` }">
+  <div class="article-page" v-if="article">
+    <section class="hero" :style="{ backgroundImage: `url(${article.image || '/placeholder.jpg'})` }">
       <div class="hero-overlay">
         <div class="container">
           <button class="back-button" @click="goBack">← Späť na novinky</button>
@@ -143,9 +92,25 @@ function goBack() {
       </div>
     </section>
   </div>
+  <div v-else-if="loading" class="article-loading">Načítavam článok...</div>
+  <div v-else class="article-error">{{ error || 'Článok sa nenašiel.' }}</div>
 </template>
 
 <style scoped>
+.article-loading,
+.article-error {
+  min-height: 50vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  color: #64748b;
+}
+
+.article-error {
+  color: #b91c1c;
+}
+
 /* Main wrapper matching the premium layout guidelines */
 .article-page {
   min-height: 100vh;
