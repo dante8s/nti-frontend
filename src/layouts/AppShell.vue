@@ -4,6 +4,7 @@ import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useOrganizationStore } from '@/stores/organization'
+import { applicationsApi } from '@/api/applications'
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 import NotificationBell from '@/components/NotificationBell.vue'
 
@@ -39,8 +40,8 @@ const firmIsOwner = ref(false)
 const adminNav = computed(() => {
   const items = []
   if (isAdmin.value) {
-    items.push(
-      { to: '/app/admin/completion-requests', label: 'Запити на завершення', icon: '⊘' },
+    items.push( 
+      { to: '/app/admin/completion-requests', label: t('nav.completionRequests'), icon: '⊘' },
       { to: '/app/admin/applications', label: t('nav.applications'), icon: '◆' },
       { to: '/app/admin/milestone-approvals', label: t('nav.milestoneApprovals'), icon: '✓' },
       { to: '/app/admin/programs', label: t('nav.programs'), icon: '◇' },
@@ -48,6 +49,7 @@ const adminNav = computed(() => {
       { to: '/app/admin/organizations', label: t('nav.organizations'), icon: '◈' },
       { to: '/app/admin/mentorships', label: t('nav.mentorships'), icon: '✦' },
       { to: '/app/admin/email-templates', label: t('nav.emailTemplates'), icon: '✉' },
+      { to: '/app/admin/project-reports', label: 'Звіти проектів', icon: '📊' },
       { to: '/app/admin/bulk-message', label: t('nav.bulkMessage'), icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg>' },
 
     )
@@ -115,6 +117,23 @@ const reportingNav = computed(() => {
   return [{ to: '/app/reporting', label: t('nav.reportingLabel'), icon: '⬒' }]
 })
 
+const hasPORequests = ref(false)
+const isOrgMember = computed(() =>
+  auth.roles?.some((r) => r === 'FIRM' || r === 'FIRM_USER')
+)
+
+const poNav = computed(() => {
+  if (!isOrgMember.value && !hasPORequests.value) return []
+  return [{
+    to: '/app/product-owner/completion-requests',
+    label: 'Запити на завершення',
+    icon: '✦',
+    badge: hasPORequests.value
+  }]
+})
+
+
+
 function logout() {
   auth.logout()
   router.push('/')
@@ -131,7 +150,17 @@ function isActive(path) {
 onMounted(async () => {
   await auth.hydrateUserFromSession()
   checkFirmOrg()
+  checkPORequests()
 })
+
+async function checkPORequests() {
+  try {
+    const res = await applicationsApi.getPOCompletionRequests()
+    hasPORequests.value = (res.data?.length ?? 0) > 0
+  } catch {
+    hasPORequests.value = false
+  }
+}
 
 async function checkFirmOrg() {
   if (!isOrgUser.value) return
@@ -293,6 +322,21 @@ firmIsOwner.value = membership?.role === 'OWNER'  } catch {
           <span class="shell__ico" aria-hidden="true" v-html="item.icon" />
           {{ item.label }}
         </RouterLink>
+        <template v-if="poNav.length">
+          <p class="shell__group-label">Product Owner</p>
+          <RouterLink
+            v-for="item in poNav"
+            :key="item.to"
+            :to="item.to"
+            class="shell__link"
+            :class="{ active: isActive(item.to) }"
+            @click="closeMobile"
+          >
+            <span class="shell__ico" aria-hidden="true">{{ item.icon }}</span>
+            {{ item.label }}
+            <span v-if="item.badge" class="shell__badge">!</span>
+          </RouterLink>
+        </template>
 
         <p class="shell__group-label">
           {{ t('nav.publicPrograms') }}
@@ -425,6 +469,17 @@ firmIsOwner.value = membership?.role === 'OWNER'  } catch {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: #94a3b8;
+}
+
+.shell__badge {
+  margin-left: auto;
+  background: #ef4444;
+  color: white;
+  font-size: 0.6rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 1px 5px;
+  line-height: 1.4;
 }
 
 .shell__link {

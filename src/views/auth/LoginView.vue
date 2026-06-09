@@ -120,6 +120,8 @@ async function handleLogin() {
         router.push('/app/dashboard')
     } catch (e) {
         error.value = e.response?.data?.message || e.response?.data || t('auth.loginError')
+        window.grecaptcha?.reset()
+        captchaToken.value = ''
     } finally {
         loading.value = false
     }

@@ -24,6 +24,8 @@ const TYPE_LABELS = {
   DEADLINE_REMINDER:           'Нагадування дедлайну',
   PROJECT_CLOSED:              'Проєкт завершено',
   BULK_MESSAGE:                'Масова розсилка',
+  COMPLETION_REJECTED:         'Відхилення завершення проекту',
+  TEAM_INVITE_UNREGISTERED:    'Запрошення до команди (новий)',
 }
 
 onMounted(async () => {
