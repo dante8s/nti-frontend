@@ -233,7 +233,10 @@ async function loadDocs() {
   downloadMessage.value = ''
   try {
     const res = await applicationsApi.getDocumentStatus(props.applicationId)
-    docs.value = Array.isArray(res.data) ? res.data : []
+    // Результатні документи показуються окремо — не в секції матеріалів заявки
+    docs.value = (Array.isArray(res.data) ? res.data : []).filter(
+      d => d.documentType !== 'RESULT_1' && d.documentType !== 'RESULT_2'
+    )
   } catch (e) {
     error.value = e.response?.data?.message || 'Не вдалося завантажити перелік документів.'
     docs.value = []

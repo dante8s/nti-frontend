@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useOrganizationStore } from '@/stores/organization'
+import { applicationsApi } from '@/api/applications'
 
 const auth = useAuthStore()
 const orgStore = useOrganizationStore()
@@ -41,7 +42,8 @@ const adminNav = computed(() => {
       { to: '/app/admin/programs', label: 'Програми та виклики', icon: '◇' },
       { to: '/app/admin/program-review-queue', label: 'Program B Review Queue', icon: '◬' },
       { to: '/app/admin/organizations', label: 'Організації', icon: '◈' },
-      { to: '/app/admin/mentorships', label: 'Mentorships', icon: '✦'}
+      { to: '/app/admin/mentorships', label: 'Mentorships', icon: '✦'},
+      { to: '/app/admin/project-reports', label: 'Звіти проектів', icon: '📊' }
     )
   }
   if (isSuperAdmin.value) {
@@ -82,6 +84,21 @@ const reportingNav = computed(() => {
   return [{ to: '/app/reporting', label: 'Звітність', icon: '⬒' }]
 })
 
+const hasPORequests = ref(false)
+const isOrgMember = computed(() =>
+  auth.roles?.some((r) => r === 'FIRM' || r === 'FIRM_USER')
+)
+
+const poNav = computed(() => {
+  if (!isOrgMember.value && !hasPORequests.value) return []
+  return [{
+    to: '/app/product-owner/completion-requests',
+    label: 'Запити на завершення',
+    icon: '✦',
+    badge: hasPORequests.value
+  }]
+})
+
 
 
 function logout() {
@@ -100,7 +117,17 @@ function isActive(path) {
 onMounted(async () => {
   await auth.hydrateUserFromSession()
   checkFirmOrg()
+  checkPORequests()
 })
+
+async function checkPORequests() {
+  try {
+    const res = await applicationsApi.getPOCompletionRequests()
+    hasPORequests.value = (res.data?.length ?? 0) > 0
+  } catch {
+    hasPORequests.value = false
+  }
+}
 
 async function checkFirmOrg() {
   if (!isOrgUser.value) return
@@ -232,6 +259,22 @@ async function checkFirmOrg() {
           <span class="shell__ico" aria-hidden="true">{{ item.icon }}</span>
           {{ item.label }}
         </RouterLink>
+
+        <template v-if="poNav.length">
+          <p class="shell__group-label">Product Owner</p>
+          <RouterLink
+            v-for="item in poNav"
+            :key="item.to"
+            :to="item.to"
+            class="shell__link"
+            :class="{ active: isActive(item.to) }"
+            @click="closeMobile"
+          >
+            <span class="shell__ico" aria-hidden="true">{{ item.icon }}</span>
+            {{ item.label }}
+            <span v-if="item.badge" class="shell__badge">!</span>
+          </RouterLink>
+        </template>
 
         <p class="shell__group-label">
           Програми
@@ -375,6 +418,17 @@ async function checkFirmOrg() {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: #94a3b8;
+}
+
+.shell__badge {
+  margin-left: auto;
+  background: #ef4444;
+  color: white;
+  font-size: 0.6rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 1px 5px;
+  line-height: 1.4;
 }
 
 .shell__link {

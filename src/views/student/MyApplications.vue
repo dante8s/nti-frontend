@@ -111,6 +111,14 @@
           @change="refreshSelected"
         />
 
+        <!-- Результатні документи (тільки для APPROVED) -->
+        <ResultDocumentUpload
+          v-if="selected.status === 'APPROVED'"
+          :key="'result-' + selected.id"
+          :application-id="selected.id"
+          @change="onResultDocsChange"
+        />
+
         <!-- Кнопка відправити -->
         <div
           v-if="canSubmitApplication"
@@ -126,6 +134,25 @@
                   : '📤 Відправити заявку'
             }}
           </button>
+        </div>
+
+        <!-- Кнопка завершити проект -->
+        <div
+          v-if="selected.status === 'APPROVED'"
+          class="submit-section"
+        >
+          <div v-if="completeError" class="submit-error">{{ completeError }}</div>
+          <button
+            class="btn-complete"
+            :disabled="completing || !resultDocsReady"
+            :title="!resultDocsReady ? 'Завантажте обидва результатних документи' : ''"
+            @click="completeProject"
+          >
+            {{ completing ? 'Надсилання...' : '✅ Завершити проект' }}
+          </button>
+          <p v-if="!resultDocsReady" class="complete-hint">
+            Щоб завершити проект, завантажте обидва результатних документи вище
+          </p>
         </div>
 
         <!-- Таймлайн -->
@@ -231,6 +258,7 @@ import { apiErrorMessage } from '@/utils/apiError'
 import MilestoneDetailsPanel from '@/components/MilestoneDetailsPanel.vue'
 import ConsultationsPanel from '@/components/ConsultationsPanel.vue'
 import DocumentUpload from '@/components/DocumentUpload.vue'
+import ResultDocumentUpload from '@/components/ResultDocumentUpload.vue'
 import StatusTimeline from '@/components/StatusTimeline.vue'
 
 const applications = ref([])
@@ -247,6 +275,9 @@ const error = ref('')
 const router = useRouter()
 const submitting = ref(false)
 const submitError = ref('')
+const completing = ref(false)
+const completeError = ref('')
+const resultDocsReady = ref(false)
 const timelineRef = ref(null)
 
 const mentorshipStore = useMentorshipStore()
@@ -312,6 +343,8 @@ function selectApplication(app) {
   if (app?.id == null) return
   selectedId.value = Number(app.id)
   submitError.value = ''
+  completeError.value = ''
+  resultDocsReady.value = false
 }
 
 async function refreshSelected() {
@@ -349,6 +382,28 @@ function statusClass(s) {
   return s?.toLowerCase().replace(/_/g, '-') || ''
 }
 
+function onResultDocsChange(ready) {
+  resultDocsReady.value = ready
+}
+
+async function completeProject() {
+  const id = selectedId.value
+  if (id == null) return
+  completeError.value = ''
+  completing.value = true
+  try {
+    const res = await applicationsApi.completeProject(id)
+    const idx = applications.value.findIndex((a) => sameApplicationId(a.id, id))
+    if (idx !== -1) applications.value[idx] = res.data
+    selectedId.value = Number(res.data.id)
+    if (timelineRef.value) timelineRef.value.reload()
+  } catch (e) {
+    completeError.value = e.response?.data || e.response?.data?.message || 'Помилка при завершенні проекту'
+  } finally {
+    completing.value = false
+  }
+}
+
 function statusLabel(status) {
   return {
     DRAFT: 'Чернетка',
@@ -356,7 +411,10 @@ function statusLabel(status) {
     IN_REVIEW: 'На розгляді',
     NEEDS_REVISION: 'Потрібна правка',
     APPROVED: 'Схвалена',
-    REJECTED: 'Відхилена'
+    REJECTED: 'Відхилена',
+    COMPLETION_REQUESTED: 'Очікує підтвердження',
+    COMPLETION_PO_APPROVED: 'Підтверджено PO',
+    COMPLETED: 'Завершено'
   }[status] || status
 }
 
@@ -667,6 +725,30 @@ h1 {
 .btn-submit:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.btn-complete {
+  width: 100%;
+  padding: 10px;
+  background: #059669;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  margin-top: 0.5rem;
+}
+
+.btn-complete:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.complete-hint {
+  font-size: 0.78rem;
+  color: #6b7280;
+  margin-top: 6px;
+  text-align: center;
 }
 
 /* ── Mentorship ── */

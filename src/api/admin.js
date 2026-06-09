@@ -28,4 +28,12 @@ export const adminApi = {
 
   // Запросити ментора
   inviteMentor: (email) => api.post('/api/auth/admin/invite-mentor', { email }),
+
+  // Всі юзери для призначення Product Owner (ADMIN або SUPER_ADMIN)
+  getUsersForPO: () => api.get('/api/admin/users/for-po-assignment'),
+
+  // Звіти завершених проектів
+  getReports: () => api.get('/api/admin/reports'),
+  exportReportCsv: (id) => api.get(`/api/admin/reports/${id}/export`, { responseType: 'blob' }),
+  exportAllReportsCsv: () => api.get('/api/admin/reports/export', { responseType: 'blob' }),
 }

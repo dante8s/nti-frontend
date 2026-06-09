@@ -91,5 +91,15 @@ export const applicationsApi = {
 
   rejectCompletion: (id) =>
     api.patch(`/api/admin/applications/${id}/reject-completion`),
+
+  // Product Owner — запити на завершення Program B
+  getPOCompletionRequests: () =>
+    api.get('/api/product-owner/applications/completion-requests'),
+
+  approveCompletionPO: (id) =>
+    api.patch(`/api/product-owner/applications/${id}/approve-completion`),
+
+  rejectCompletionPO: (id) =>
+    api.patch(`/api/product-owner/applications/${id}/reject-completion`),
 }
 

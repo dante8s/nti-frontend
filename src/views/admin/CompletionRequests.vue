@@ -1,7 +1,8 @@
 <template>
   <div class="page">
     <p class="lead">
-      Заявки в яких лідер команди надіслав запит на завершення проекту. Підтвердіть або відхиліть кожен запит.
+      Програма A: заявки зі статусом "Очікує підтвердження". Програма B: заявки підтверджені Product Owner.
+      Підтвердіть або відхиліть кожен запит.
     </p>
 
     <div class="toolbar">
@@ -22,7 +23,12 @@
               <span class="request-card__call">{{ app.callTitle }}</span>
             </div>
           </div>
-          <span class="request-card__badge">Запит на завершення</span>
+          <span
+            class="request-card__badge"
+            :class="app.status === 'COMPLETION_PO_APPROVED' ? 'request-card__badge--po' : ''"
+          >
+            {{ app.status === 'COMPLETION_PO_APPROVED' ? 'Підтверджено PO' : 'Запит на завершення' }}
+          </span>
         </div>
 
         <!-- Учасники команди -->
@@ -248,6 +254,12 @@ async function reject(app) {
   font-size: 0.78rem;
   font-weight: 600;
   white-space: nowrap;
+}
+
+.request-card__badge--po {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #065f46;
 }
 
 .request-card__team {

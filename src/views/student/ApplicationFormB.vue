@@ -144,9 +144,12 @@ const savedFormData = computed(() => {
     try { return JSON.parse(application.value.formData) } catch { return null }
 })
 
-const canSubmit = computed(() =>
-    docsStatus.value.length > 0 && docsStatus.value.every((d) => d.uploaded),
-)
+const canSubmit = computed(() => {
+    const required = docsStatus.value.filter(
+        d => d.documentType !== 'RESULT_1' && d.documentType !== 'RESULT_2'
+    )
+    return required.length > 0 && required.every((d) => d.uploaded)
+})
 
 onMounted(async () => {
     try {
