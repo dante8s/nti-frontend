@@ -1,9 +1,13 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useOrganizationStore } from '@/stores/organization'
+import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
+import NotificationBell from '@/components/NotificationBell.vue'
 
+const { t } = useI18n()
 const auth = useAuthStore()
 const orgStore = useOrganizationStore()
 const route = useRoute()
@@ -36,16 +40,23 @@ const adminNav = computed(() => {
   const items = []
   if (isAdmin.value) {
     items.push(
-      { to: '/app/admin/applications', label: 'Заявки', icon: '◆' },
-      { to: '/app/admin/milestone-approvals', label: 'Milestone approvals', icon: '✓' },
-      { to: '/app/admin/programs', label: 'Програми та виклики', icon: '◇' },
-      { to: '/app/admin/program-review-queue', label: 'Program B Review Queue', icon: '◬' },
-      { to: '/app/admin/organizations', label: 'Організації', icon: '◈' },
-      { to: '/app/admin/mentorships', label: 'Mentorships', icon: '✦'}
+      { to: '/app/admin/completion-requests', label: 'Запити на завершення', icon: '⊘' },
+      { to: '/app/admin/applications', label: t('nav.applications'), icon: '◆' },
+      { to: '/app/admin/milestone-approvals', label: t('nav.milestoneApprovals'), icon: '✓' },
+      { to: '/app/admin/programs', label: t('nav.programs'), icon: '◇' },
+      { to: '/app/admin/program-review-queue', label: t('nav.programBReview'), icon: '◬' },
+      { to: '/app/admin/organizations', label: t('nav.organizations'), icon: '◈' },
+      { to: '/app/admin/mentorships', label: t('nav.mentorships'), icon: '✦' },
+      { to: '/app/admin/email-templates', label: t('nav.emailTemplates'), icon: '✉' },
+      { to: '/app/admin/bulk-message', label: t('nav.bulkMessage'), icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg>' },
+
     )
   }
   if (isSuperAdmin.value) {
-    items.push({ to: '/app/admin/users', label: 'Користувачі', icon: '◎' })
+    items.push(
+      { to: '/app/admin/users', label: t('nav.users'), icon: '◎' },
+      { to: '/app/admin/audit', label: t('nav.auditLog'), icon: '◑' },
+    )
   }
   return items
 })
@@ -53,39 +64,46 @@ const adminNav = computed(() => {
 const studentNav = computed(() => {
   if (!showStudentNav.value) return []
   return [
-    { to: '/app/my-applications', label: 'Мої заявки', icon: '▸' },
-    { to: '/app/my-profile', label: 'Мій профіль', icon: '◉' },
-    { to: '/app/teams', label: 'Моя команда', icon: '◍' },
+    { to: '/app/my-applications', label: t('nav.myApplications'), icon: '▸' },
+    { to: '/app/my-profile', label: t('nav.myProfile'), icon: '◉' },
+    { to: '/app/teams', label: t('nav.myTeam'), icon: '◍' },
   ]
 })
 
 const organizationNav = computed(() => {
   if (!isOrgUser.value || !firmChecked.value || !firmHasOrg.value) return []
+
+  // 1. Initialize the base array with items all organization users can see
   const items = [
-    { to: '/app/org/profile', label: 'My Organization', icon: '◉' },
+    { to: '/app/org/profile', label: t('nav.myOrganization'), icon: '◉' },
   ]
+
+  // 2. Conditionally add the proposals link only if they are the owner
   if (firmIsOwner.value) {
-    items.push({ to: '/app/programs/my', label: 'Program B Proposals', icon: '◈' })
+    items.push({
+      to: '/app/programs/my',
+      label: t('nav.programBProposals'),
+      icon: '◈'
+    })
   }
+
   return items
 })
 
 const mentorNav = computed(() => {
   if (!isMentor.value) return []
-  return [{ to: '/app/mentor/my-mentorships', label: 'My Mentorships', icon: '◷' }]
+  return [{ to: '/app/mentor/my-mentorships', label: t('nav.myMentorships'), icon: '◷' }]
 })
 
 const commissionNav = computed(() => {
   if (!isCommissionMember.value && !isAdmin.value && !isSuperAdmin.value) return []
-  return [{ to: '/app/commission', label: 'Комісія', icon: '◌' }]
+  return [{ to: '/app/commission', label: t('nav.commissionLabel'), icon: '◌' }]
 })
 
 const reportingNav = computed(() => {
   if (!showReportingNav.value) return []
-  return [{ to: '/app/reporting', label: 'Звітність', icon: '⬒' }]
+  return [{ to: '/app/reporting', label: t('nav.reportingLabel'), icon: '⬒' }]
 })
-
-
 
 function logout() {
   auth.logout()
@@ -145,12 +163,12 @@ firmIsOwner.value = membership?.role === 'OWNER'  } catch {
     <aside class="shell__aside" :data-open="mobileOpen">
       <div class="shell__brand">
         <RouterLink to="/" class="shell__logo" @click="closeMobile">
-          NTI Nitra
+          {{ t('nav.brand') }}
         </RouterLink>
-        <p class="shell__tag">Особистий кабінет</p>
+        <p class="shell__tag">{{ t('nav.tag') }}</p>
       </div>
 
-      <nav class="shell__nav" aria-label="Головна навігація">
+      <nav class="shell__nav" :aria-label="t('nav.dashboard')">
         <RouterLink
           to="/app/dashboard"
           class="shell__link"
@@ -158,11 +176,11 @@ firmIsOwner.value = membership?.role === 'OWNER'  } catch {
           @click="closeMobile"
         >
           <span class="shell__ico" aria-hidden="true">⌂</span>
-          Дашборд
+          {{ t('nav.dashboard') }}
         </RouterLink>
 
         <p v-if="studentNav.length" class="shell__group-label">
-          Студентський кабінет
+          {{ t('nav.student') }}
         </p>
         <RouterLink
           v-for="item in studentNav"
@@ -172,12 +190,12 @@ firmIsOwner.value = membership?.role === 'OWNER'  } catch {
           :class="{ active: isActive(item.to) }"
           @click="closeMobile"
         >
-          <span class="shell__ico" aria-hidden="true">{{ item.icon }}</span>
+          <span class="shell__ico" aria-hidden="true" v-html="item.icon" />
           {{ item.label }}
         </RouterLink>
 
         <p v-if="organizationNav.length" class="shell__group-label">
-          Organization
+          {{ t('nav.organization') }}
         </p>
         <RouterLink
           v-for="item in organizationNav"
@@ -187,12 +205,12 @@ firmIsOwner.value = membership?.role === 'OWNER'  } catch {
           :class="{ active: isActive(item.to) }"
           @click="closeMobile"
         >
-          <span class="shell__ico" aria-hidden="true">{{ item.icon }}</span>
+          <span class="shell__ico" aria-hidden="true" v-html="item.icon" />
           {{ item.label }}
         </RouterLink>
 
         <p v-if="mentorNav.length" class="shell__group-label">
-          Mentor
+          {{ t('nav.mentor') }}
         </p>
         <RouterLink
           v-for="item in mentorNav"
@@ -202,12 +220,12 @@ firmIsOwner.value = membership?.role === 'OWNER'  } catch {
           :class="{ active: isActive(item.to) }"
           @click="closeMobile"
         >
-          <span class="shell__ico" aria-hidden="true">{{ item.icon }}</span>
+          <span class="shell__ico" aria-hidden="true" v-html="item.icon" />
           {{ item.label }}
         </RouterLink>
 
         <p v-if="commissionNav.length" class="shell__group-label">
-          Комісія
+          {{ t('nav.commission') }}
         </p>
         <RouterLink
           v-for="item in commissionNav"
@@ -217,12 +235,12 @@ firmIsOwner.value = membership?.role === 'OWNER'  } catch {
           :class="{ active: isActive(item.to) }"
           @click="closeMobile"
         >
-          <span class="shell__ico" aria-hidden="true">{{ item.icon }}</span>
+          <span class="shell__ico" aria-hidden="true" v-html="item.icon" />
           {{ item.label }}
         </RouterLink>
 
         <p v-if="reportingNav.length" class="shell__group-label">
-          Звітність
+          {{ t('nav.reporting') }}
         </p>
         <RouterLink
           v-for="item in reportingNav"
@@ -232,12 +250,12 @@ firmIsOwner.value = membership?.role === 'OWNER'  } catch {
           :class="{ active: isActive(item.to) }"
           @click="closeMobile"
         >
-          <span class="shell__ico" aria-hidden="true">{{ item.icon }}</span>
+          <span class="shell__ico" aria-hidden="true" v-html="item.icon" />
           {{ item.label }}
         </RouterLink>
 
         <p v-if="adminNav.length" class="shell__group-label">
-          Адміністрування
+          {{ t('nav.admin') }}
         </p>
         <RouterLink
           v-for="item in adminNav"
@@ -247,60 +265,47 @@ firmIsOwner.value = membership?.role === 'OWNER'  } catch {
           :class="{ active: isActive(item.to) }"
           @click="closeMobile"
         >
-          <span class="shell__ico" aria-hidden="true">{{ item.icon }}</span>
+          <span class="shell__ico" aria-hidden="true" v-html="item.icon" />
           {{ item.label }}
         </RouterLink>
 
         <p class="shell__group-label">
-          Програми
+          {{ t('nav.publicPrograms') }}
         </p>
-        <RouterLink
-          to="/programs/a"
-          class="shell__link shell__link--ghost"
-          @click="closeMobile"
-        >
+        <RouterLink to="/programs/a" class="shell__link shell__link--ghost" @click="closeMobile">
           <span class="shell__ico" aria-hidden="true">A</span>
-          Каталог програми A
+          {{ t('nav.catalogA') }}
         </RouterLink>
-        <RouterLink
-          to="/programs/b"
-          class="shell__link shell__link--ghost"
-          @click="closeMobile"
-        >
+        <RouterLink to="/programs/b" class="shell__link shell__link--ghost" @click="closeMobile">
           <span class="shell__ico" aria-hidden="true">B</span>
-          Каталог програми B
+          {{ t('nav.catalogB') }}
         </RouterLink>
 
         <p class="shell__group-label">
-          Organizations
+          {{ t('nav.publicOrganizations') }}
         </p>
-        <RouterLink
-          to="/organizations"
-          class="shell__link shell__link--ghost"
-          @click="closeMobile"
-        >
+        <RouterLink to="/organizations" class="shell__link shell__link--ghost" @click="closeMobile">
           <span class="shell__ico" aria-hidden="true">O</span>
-          Organizations
+          {{ t('nav.publicOrganizations') }}
         </RouterLink>
 
         <p class="shell__group-label">
-          Mentors
+          {{ t('nav.publicMentors') }}
         </p>
-        <RouterLink
-          to="/mentors"
-          class="shell__link shell__link--ghost"
-          @click="closeMobile"
-        >
+        <RouterLink to="/mentors" class="shell__link shell__link--ghost" @click="closeMobile">
           <span class="shell__ico" aria-hidden="true">M</span>
-          Mentors
+          {{ t('nav.publicMentors') }}
         </RouterLink>
       </nav>
 
       <div class="shell__user">
-        <div class="shell__user-name">{{ auth.user?.name || 'Користувач' }}</div>
+        <div class="shell__user-name">{{ auth.user?.name || t('nav.user') }}</div>
         <div class="shell__user-email">{{ auth.user?.email }}</div>
+        <RouterLink to="/app/privacy" class="shell__privacy-link" @click="closeMobile">
+          {{ t('nav.privacySettings') }}
+        </RouterLink>
         <button type="button" class="shell__logout" @click="logout">
-          Вийти
+          {{ t('nav.logout') }}
         </button>
       </div>
     </aside>
@@ -310,7 +315,7 @@ firmIsOwner.value = membership?.role === 'OWNER'  } catch {
         <button
           type="button"
           class="shell__burger"
-          aria-label="Відкрити меню"
+          :aria-label="t('nav.openMenu')"
           @click="mobileOpen = !mobileOpen"
         >
           <span />
@@ -318,10 +323,12 @@ firmIsOwner.value = membership?.role === 'OWNER'  } catch {
           <span />
         </button>
         <h1 class="shell__title">
-          {{ route.meta.title || 'Кабінет' }}
+          {{ route.meta.title || t('nav.dashboard') }}
         </h1>
+        <NotificationBell />
+        <LanguageSwitcher />
         <RouterLink to="/" class="shell__site-link">
-          На головну сайту
+          {{ t('nav.toSite') }}
         </RouterLink>
       </header>
       <main class="shell__content">
@@ -470,11 +477,28 @@ firmIsOwner.value = membership?.role === 'OWNER'  } catch {
   background: #f8fafc;
 }
 
+.shell__privacy-link {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.78rem;
+  color: #64748b;
+  text-decoration: none;
+  text-align: center;
+}
+
+.shell__privacy-link:hover {
+  color: #4f46e5;
+  text-decoration: underline;
+}
+
 .shell__main {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .shell__top {
@@ -534,10 +558,12 @@ firmIsOwner.value = membership?.role === 'OWNER'  } catch {
 
 .shell__content {
   flex: 1;
+  min-height: 0;
   padding: 1.5rem clamp(1rem, 3vw, 2.5rem) 3rem;
   max-width: 1200px;
   width: 100%;
   margin: 0 auto;
+  overflow-y: auto;
 }
 
 @media (max-width: 960px) {

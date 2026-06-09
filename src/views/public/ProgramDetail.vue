@@ -111,9 +111,16 @@
                         </p>
                     </div>
                     <div class="call-actions">
-                        <button @click="handleApply(call)" class="btn-apply">
+                        <button
+                            v-if="!isDeadlinePassed(call)"
+                            @click="handleApply(call)"
+                            class="btn-apply"
+                        >
                             {{ isLoggedIn ? 'Подати заявку' : 'Зареєструватись щоб подати' }}
                         </button>
+                        <span v-else class="deadline-passed">
+                            Термін подачі закінчився
+                        </span>
                     </div>
                 </div>
             </div>
@@ -137,6 +144,7 @@
 import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { programsApi } from '@/api/programs'
+import { applicationsApi } from '@/api/applications'
 import { getCallApplicationEligibility } from '@/api/profileApi'
 import { useAuthStore } from '@/stores/auth'
 import { useOrganizationStore } from '@/stores/organization'
@@ -221,6 +229,24 @@ async function handleApply(call) {
         }
     }
 
+    // Перевірка: чи є вже активний проект у команди
+    try {
+        const projectsRes = await applicationsApi.getMyProjects()
+        if (projectsRes.data?.current) {
+            const status = projectsRes.data.current.status
+            const label = status === 'COMPLETION_REQUESTED' ? 'очікує підтвердження завершення' : 'активний'
+            openAlert({
+                title: 'Команда вже має проект',
+                message: `Ваша команда вже має ${label} проект «${projectsRes.data.current.programName}». Завершіть поточний проект перш ніж подавати нову заявку.`,
+                variant: 'warning',
+                teamsLink: true,
+            })
+            return
+        }
+    } catch {
+        // якщо не вдалося перевірити — пропускаємо, бекенд все одно заблокує
+    }
+
     const programKey = program.value.type === 'PROGRAM_A' ? 'a' : 'b'
     router.push({ name: `apply-${programKey}`, params: { callId: call.id } })
 }
@@ -235,8 +261,6 @@ async function fetchData() {
 
         const isProgramB = typeMarker === 'B' || typeMarker === 'PROGRAM_B'
         const isProgramA = typeMarker === 'A' || typeMarker === 'PROGRAM_A'
-
-        console.log('Fetching program:', programId, 'Detected Type B:', isProgramB)
 
         const programRequest = isProgramB
           ? programsApi.fetchProgramB(programId)
@@ -255,7 +279,7 @@ async function fetchData() {
             return
         }
         program.value = progRes.data
-        calls.value = callsRes.data
+        calls.value = (callsRes.data || []).slice().sort((a, b) => b.id - a.id)
         if (program.value?.type === 'PROGRAM_B' && program.value?.id != null) {
             await loadRequirements(program.value.id)
         } else {
@@ -285,6 +309,10 @@ function formatDate(date) {
         month: 'long',
         year: 'numeric'
     })
+}
+
+function isDeadlinePassed(call) {
+    return call.deadline && new Date() > new Date(call.deadline)
 }
 
 async function loadRequirements(programId) {
@@ -552,6 +580,16 @@ async function downloadRequirement(fileType) {
     border-radius: 8px;
     text-decoration: none;
     font-size: 0.875rem;
+    white-space: nowrap;
+}
+
+.deadline-passed {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #9ca3af;
+    padding: 8px 16px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
     white-space: nowrap;
 }
 

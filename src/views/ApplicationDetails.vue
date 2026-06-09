@@ -295,6 +295,48 @@
         </div>
       </section>
 
+      <section v-else-if="activeTab === 'team' && isAdmin" class="application-details__panel">
+        <div class="application-details__section-head">
+          <h2 class="application-details__section-title">Команда заявника</h2>
+        </div>
+        <div v-if="teamLoading" class="application-details__meta">Завантаження...</div>
+        <div v-else-if="teamError" class="application-details__meta">{{ teamError }}</div>
+        <div v-else-if="!teamData" class="application-details__empty">Команду не знайдено</div>
+        <div v-else>
+          <p class="application-details__meta" style="margin-bottom:0.8rem">
+            <strong>{{ teamData.name }}</strong> · ID: {{ teamData.id }} · Місць: {{ teamData.members?.length ?? 0 }} / {{ teamData.maxCapacity }}
+          </p>
+          <table class="application-details__team-table">
+            <thead>
+              <tr>
+                <th>Ім'я</th>
+                <th>Email</th>
+                <th>Роль</th>
+                <th>Статус</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="m in teamData.members" :key="m.id">
+                <td>{{ m.memberDisplayName || '—' }}</td>
+                <td>
+                  <router-link
+                    v-if="m.userId"
+                    :to="{ name: 'member-profile', params: { userId: m.userId } }"
+                    class="application-details__email-chip"
+                  >
+                    <span class="application-details__email-chip-icon">✉</span>
+                    {{ m.memberEmail || '—' }}
+                  </router-link>
+                  <span v-else class="application-details__meta">{{ m.memberEmail || '—' }}</span>
+                </td>
+                <td>{{ m.role }}</td>
+                <td>{{ m.inviteStatus }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       <section v-else class="application-details__panel">
         <div class="application-details__section-head">
           <h2 class="application-details__section-title">Consultation Notes</h2>
@@ -417,6 +459,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { applicationsApi } from '@/api/applications'
+import { teamsApi } from '@/api/teams'
 import StatusBadge from '@/components/StatusBadge.vue'
 import MilestoneFormModal from '@/components/MilestoneFormModal.vue'
 import ConsultationsPanel from '@/components/ConsultationsPanel.vue'
@@ -474,12 +517,20 @@ const loadedMembersOrgId = ref(null)
 const membersLoading = ref(false)
 const membersError = ref('')
 
-const tabs = [
-  { key: 'overview', label: 'Overview' },
-  { key: 'milestone', label: 'Milestone' },
-  { key: 'mentorship', label: 'Mentorship' },
-  { key: 'notes', label: 'Consultation Notes' },
-]
+const tabs = computed(() => {
+  const base = [
+    { key: 'overview', label: 'Overview' },
+    { key: 'milestone', label: 'Milestone' },
+    { key: 'mentorship', label: 'Mentorship' },
+    { key: 'notes', label: 'Consultation Notes' },
+  ]
+  if (isAdmin.value) base.push({ key: 'team', label: 'Команда' })
+  return base
+})
+
+const teamData = ref(null)
+const teamLoading = ref(false)
+const teamError = ref('')
 
 const roles = computed(() => authStore.roles || [])
 const isAdmin = computed(() => roles.value.some((r) => r === 'ADMIN' || r === 'SUPER_ADMIN'))
@@ -496,23 +547,16 @@ const isProgramBApplication = computed(() =>
 /** Same navigation shape as AdminPrograms.openProgramDetails — program from nested call.program or flattened application fields */
 const programProposalRoute = computed(() => {
   const app = application.value
-  console.log('Computed Triggered. Application Value:', app)
 
   if (!app) return null
 
-  // Based on your console log, let's try these specific fields:
-  // 1. Check for programId, then fallback to program.id, then call.programId
-  // If your API doesn't provide programId, we might need to use callId or similar
   const pId = app.programId ||
               app.program?.id ||
               app.call?.programId ||
               app.call?.program?.id ||
-              app.callId; // Adding callId as a desperate fallback
+              app.callId
 
-  // 2. Resolve Type
-  const rawType = app.programType || (app.program?.type) || '';
-
-  console.log('ID check:', { pId, rawType });
+  const rawType = app.programType || (app.program?.type) || ''
 
   if (!pId) return null
 
@@ -618,6 +662,19 @@ async function loadApplicationDetails() {
   try {
     const appResponse = await applicationsApi.getOne(applicationIdNumber.value)
     application.value = appResponse.data
+    if (isAdmin.value && application.value?.applicantId) {
+      teamLoading.value = true
+      teamError.value = ''
+      try {
+        const teamRes = await teamsApi.getTeamForUser(application.value.applicantId)
+        teamData.value = teamRes.data
+      } catch {
+        teamError.value = 'Команду не знайдено або заявник не має команди'
+        teamData.value = null
+      } finally {
+        teamLoading.value = false
+      }
+    }
     if (applicationOrganizationId.value) await loadOrganizationMembers(applicationOrganizationId.value)
     const [fetchedMilestones] = await Promise.all([
       milestoneStore.fetchByApplication(applicationIdNumber.value),
@@ -1399,5 +1456,55 @@ async function deleteNote(note) {
   flex-direction: column;
   gap: 0.35rem;
   margin-bottom: 0.6rem;
+}
+
+.application-details__team-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.application-details__team-table th,
+.application-details__team-table td {
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid rgba(79, 70, 229, 0.1);
+}
+
+.application-details__team-table th {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  background: rgba(99, 102, 241, 0.04);
+}
+
+.application-details__team-table tbody tr:hover {
+  background: rgba(99, 102, 241, 0.03);
+}
+
+.application-details__email-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  background: rgba(79, 70, 229, 0.07);
+  border: 1px solid rgba(79, 70, 229, 0.2);
+  border-radius: 999px;
+  color: #4338ca;
+  font-size: 0.82rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.application-details__email-chip:hover {
+  background: rgba(79, 70, 229, 0.14);
+  border-color: rgba(79, 70, 229, 0.4);
+}
+
+.application-details__email-chip-icon {
+  font-size: 0.78rem;
+  opacity: 0.7;
 }
 </style>

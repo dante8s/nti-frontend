@@ -322,9 +322,22 @@ onMounted(loadProfile)
             ref="photoInputRef"
             type="file"
             accept="image/*"
+            class="cv-input-hidden"
             :disabled="!profileExists"
             @change="onPhotoPicked"
           >
+          <div class="row cv-row">
+            <button
+              type="button"
+              class="btn ghost cv-browse-btn"
+              :disabled="!profileExists"
+              @click="photoInputRef.click()"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Обрати фото
+            </button>
+            <span class="cv-filename">{{ selectedPhotoFile ? selectedPhotoFile.name : 'Файл не обрано' }}</span>
+          </div>
           <button
             type="button"
             class="btn"
@@ -426,13 +439,18 @@ onMounted(loadProfile)
 
     <article class="card">
       <h3 class="title-sm">CV (PDF)</h3>
-      <div class="row">
-        <input ref="cvFileInput" type="file" accept=".pdf,application/pdf" @change="onFilePicked" />
+      <div class="row cv-row">
+        <input ref="cvFileInput" type="file" accept=".pdf,application/pdf" class="cv-input-hidden" @change="onFilePicked" />
+        <button class="btn ghost cv-browse-btn" @click="cvFileInput.click()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Обрати файл
+        </button>
+        <span class="cv-filename">{{ selectedFile ? selectedFile.name : 'Файл не обрано' }}</span>
+      </div>
+      <div class="row cv-actions-row">
         <button class="btn" :disabled="uploading" @click="submitCv">
           {{ uploading ? 'Завантаження...' : 'Завантажити CV' }}
         </button>
-      </div>
-      <div class="row">
         <button class="btn danger" :disabled="deleting" @click="removeCv">
           {{ deleting ? 'Видалення...' : 'Видалити CV' }}
         </button>
@@ -507,10 +525,7 @@ onMounted(loadProfile)
   min-width: 0;
 }
 
-.photo-actions input[type='file'] {
-  width: auto;
-  max-width: 100%;
-}
+
 
 .photo-hint {
   margin: 0.85rem 0 0;
@@ -576,6 +591,11 @@ onMounted(loadProfile)
   color: #64748b;
 }
 
+
+textarea {
+  resize: none;
+}
+
 input,
 textarea {
   width: 100%;
@@ -626,6 +646,40 @@ textarea:focus {
   cursor: pointer;
 }
 
+.cv-input-hidden {
+  display: none;
+}
+
+.cv-browse-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border: 1.5px solid #c7d2fe;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.cv-browse-btn:hover {
+  background: #e0e7ff;
+  border-color: #6366f1;
+}
+
+.cv-filename {
+  font-size: 0.85rem;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+.cv-row {
+  margin-bottom: 0.5rem;
+}
+
+.cv-actions-row {
+  gap: 0.65rem;
+}
+
 .btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
@@ -637,7 +691,7 @@ textarea:focus {
 }
 
 .btn.danger {
-  background: #dc2626;
+  background: #cb7a5c;
 }
 
 .link {

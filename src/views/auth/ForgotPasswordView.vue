@@ -2,47 +2,34 @@
     <div class="wrap">
         <div class="box">
 
-            <!-- Після відправки -->
             <div v-if="sent" class="success">
-                <h2>Лист надіслано</h2>
-                <p>
-                    Якщо акаунт з адресою
-                    <strong>{{ email }}</strong> існує —
-                    ми надіслали інструкції для скидання пароля.
-                </p>
-                <p>Перевірте поштову скриньку.</p>
+                <h2>{{ t('auth.emailSentTitle') }}</h2>
+                <p>{{ t('auth.emailSentText', { email }) }}</p>
+                <p>{{ t('auth.checkInbox') }}</p>
                 <router-link to="/login">
-                    Повернутись на логін
+                    {{ t('auth.backToLogin') }}
                 </router-link>
             </div>
 
-            <!-- Форма -->
             <template v-else>
-                <h1>Забули пароль?</h1>
-                <p class="hint">
-                    Введіть email і ми надішлемо посилання
-                    для скидання пароля.
-                </p>
+                <h1>{{ t('auth.forgotTitle') }}</h1>
+                <p class="hint">{{ t('auth.forgotHint') }}</p>
 
                 <div v-if="error" class="error">{{ error }}</div>
 
                 <form @submit.prevent="handleSubmit">
                     <div class="field">
-                        <label>Email</label>
+                        <label>{{ t('auth.email') }}</label>
                         <input v-model="email" type="email" placeholder="your@email.com" required />
                     </div>
                     <button type="submit" :disabled="loading">
-                        {{
-                            loading
-                                ? 'Надсилаємо...'
-                                : 'Надіслати посилання'
-                        }}
+                        {{ loading ? t('auth.sending') : t('auth.sendLink') }}
                     </button>
                 </form>
 
                 <p>
                     <router-link to="/login">
-                        Повернутись на логін
+                        {{ t('auth.backToLogin') }}
                     </router-link>
                 </p>
             </template>
@@ -53,8 +40,10 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 
+const { t } = useI18n()
 const auth = useAuthStore()
 
 const email = ref('')
@@ -69,8 +58,6 @@ async function handleSubmit() {
         await auth.forgotPassword(email.value)
         sent.value = true
     } catch (e) {
-        // Навіть якщо email не існує — показуємо успіх
-        // щоб не видавати чи існує акаунт
         sent.value = true
     } finally {
         loading.value = false

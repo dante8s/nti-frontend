@@ -2,48 +2,39 @@
     <div class="wrap">
         <div class="box">
 
-            <!-- Успішно змінено -->
             <div v-if="success" class="success">
-                <h2>Пароль змінено!</h2>
-                <p>Тепер можете увійти з новим паролем.</p>
+                <h2>{{ t('auth.passwordChanged') }}</h2>
+                <p>{{ t('auth.passwordChangedText') }}</p>
                 <router-link to="/login">
-                    Увійти
+                    {{ t('auth.signIn') }}
                 </router-link>
             </div>
 
-            <!-- Токен відсутній -->
             <div v-else-if="!token" class="error-page">
-                <h2>Невірне посилання</h2>
-                <p>
-                    Посилання недійсне або прострочене.
-                    Запросіть скидання знову.
-                </p>
+                <h2>{{ t('auth.invalidLink') }}</h2>
+                <p>{{ t('auth.invalidLinkText') }}</p>
                 <router-link to="/forgot-password">
-                    Запросити знову
+                    {{ t('auth.requestAgain') }}
                 </router-link>
             </div>
 
-            <!-- Форма нового пароля -->
             <template v-else>
-                <h1>Новий пароль</h1>
-                <p class="hint">Введіть новий пароль для акаунту.</p>
+                <h1>{{ t('auth.resetTitle') }}</h1>
+                <p class="hint">{{ t('auth.resetHint') }}</p>
 
                 <div v-if="error" class="error">{{ error }}</div>
 
                 <form @submit.prevent="handleSubmit">
                     <div class="field">
-                        <label>Новий пароль</label>
-                        <input v-model="newPassword" type="password" placeholder="Мінімум 6 символів" required
-                            minlength="6" />
+                        <label>{{ t('auth.newPassword') }}</label>
+                        <input v-model="newPassword" type="password" :placeholder="t('auth.passwordPlaceholder')" required minlength="6" />
                     </div>
                     <div class="field">
-                        <label>Повторіть пароль</label>
-                        <input v-model="confirmPassword" type="password" placeholder="Повторіть пароль" required />
+                        <label>{{ t('auth.confirmPassword') }}</label>
+                        <input v-model="confirmPassword" type="password" :placeholder="t('auth.confirmPassword')" required />
                     </div>
                     <button type="submit" :disabled="loading">
-                        {{
-                            loading ? 'Збереження...' : 'Зберегти пароль'
-                        }}
+                        {{ loading ? t('auth.saving') : t('auth.savePassword') }}
                     </button>
                 </form>
             </template>
@@ -55,13 +46,14 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 
-// Беремо токен з URL: /reset-password?token=UUID
 const token = ref('')
 const newPassword = ref('')
 const confirmPassword = ref('')
@@ -76,28 +68,22 @@ onMounted(() => {
 async function handleSubmit() {
     error.value = ''
 
-    // Перевірка що паролі співпадають
     if (newPassword.value !== confirmPassword.value) {
-        error.value = 'Паролі не співпадають'
+        error.value = t('auth.passwordMismatch')
         return
     }
 
     if (newPassword.value.length < 6) {
-        error.value = 'Пароль мінімум 6 символів'
+        error.value = t('auth.passwordTooShort')
         return
     }
 
     loading.value = true
     try {
-        await auth.resetPassword(
-            token.value,
-            newPassword.value
-        )
+        await auth.resetPassword(token.value, newPassword.value)
         success.value = true
     } catch (e) {
-        error.value =
-            e.response?.data ||
-            'Посилання недійсне або прострочене'
+        error.value = e.response?.data || t('auth.resetError')
     } finally {
         loading.value = false
     }

@@ -69,5 +69,27 @@ export const applicationsApi = {
 
   setProductOwner: (applicationId, userId) =>
     api.patch(`/api/applications/${applicationId}/product-owner`, null, { params: { userId } }),
+
+  // Завершити проект — лідер
+  completeProject: (id) =>
+    api.patch(`/api/applications/${id}/complete`),
+
+  // Завершити проект — адмін
+  completeProjectAdmin: (id) =>
+    api.patch(`/api/admin/applications/${id}/complete`),
+
+  // Історія проектів поточного користувача
+  getMyProjects: () =>
+    api.get('/api/applications/my/projects'),
+
+  // Запити на завершення — для адміна
+  getCompletionRequests: () =>
+    api.get('/api/admin/applications/completion-requests'),
+
+  approveCompletion: (id) =>
+    api.patch(`/api/admin/applications/${id}/approve-completion`),
+
+  rejectCompletion: (id) =>
+    api.patch(`/api/admin/applications/${id}/reject-completion`),
 }
 

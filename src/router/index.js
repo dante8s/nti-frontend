@@ -39,6 +39,11 @@ const router = createRouter({
       name: 'complete-org-invite',
       component: () => import('@/views/auth/CompleteOrgInvite.vue'),
     },
+    {
+      path: '/complete-team-invite',
+      name: 'complete-team-invite',
+      component: () => import('@/views/auth/CompleteTeamInvite.vue'),
+    },
 
     {
       path: '/programs/:type',
@@ -159,6 +164,12 @@ const router = createRouter({
           component: () => import('@/views/admin/AdminApplications.vue'),
         },
         {
+          path: 'admin/completion-requests',
+          name: 'admin-completion-requests',
+          meta: { title: 'Запити на завершення', requiresAdmin: true },
+          component: () => import('@/views/admin/CompletionRequests.vue'),
+        },
+        {
           path: 'admin/milestone-approvals',
           name: 'admin-milestone-approvals',
           meta: { title: 'Milestone approvals', requiresAdmin: true },
@@ -193,6 +204,30 @@ const router = createRouter({
           name: 'admin-mentorships',
           meta: { title: 'Mentorships', requiresAdmin: true },
           component: () => import('@/views/admin/MentorshipsManagement.vue'),
+        },
+        {
+          path: 'admin/audit',
+          name: 'admin-audit',
+          meta: { title: 'Журнал аудиту', requiresSuperAdmin: true },
+          component: () => import('@/views/admin/AdminAuditLog.vue'),
+        },
+        {
+          path: 'admin/email-templates',
+          name: 'admin-email-templates',
+          meta: { title: 'Шаблони листів', requiresAdmin: true },
+          component: () => import('@/views/admin/AdminEmailTemplates.vue'),
+        },
+        {
+          path: 'admin/bulk-message',
+          name: 'admin-bulk-message',
+          meta: { title: 'Масова розсилка', requiresAdmin: true },
+          component: () => import('@/views/admin/BulkMessage.vue'),
+        },
+        {
+          path: 'privacy',
+          name: 'privacy-settings',
+          meta: { title: 'Налаштування приватності' },
+          component: () => import('@/views/PrivacySettings.vue'),
         },
         {
           path: 'org/register',

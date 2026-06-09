@@ -415,6 +415,8 @@ async function load() {
   try {
     const res = await applicationsApi.getMy()
     const list = normalizeApplicationsList(res.data)
+        .slice()
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     applications.value = list
     if (!list.length) {
       selectedId.value = null
@@ -615,6 +617,7 @@ async function approveMilestone(milestone) {
   max-width: 1100px;
   margin: 0 auto;
   padding: 2rem;
+  overflow: visible;
 }
 
 h1 {
@@ -629,11 +632,17 @@ h1 {
   align-items: start;
 }
 
-/* ── Список ── */
+/* ── Список (sticky лівий сайдбар) ── */
 .list {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  position: sticky;
+  top: 1rem;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #c7d2fe transparent;
 }
 
 .app-card {

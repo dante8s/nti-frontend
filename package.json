@@ -17,6 +17,7 @@
     "axios": "^1.13.6",
     "pinia": "^3.0.4",
     "vue": "^3.5.29",
+    "vue-i18n": "^11.4.4",
     "vue-recaptcha-v3": "^2.0.1",
     "vue-router": "^5.0.3",
     "vue3-recaptcha-v2": "^2.1.0"
