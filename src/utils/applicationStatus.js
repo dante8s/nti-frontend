@@ -1,28 +1,37 @@
 /** Відповідає переходам ApplicationService.ALLOWED (бекенд). */
 export const STATUS_LABELS_UK = {
-  DRAFT: 'Чернетка',
-  SUBMITTED: 'Подано',
-  IN_REVIEW: 'На розгляді',
-  NEEDS_REVISION: 'Потрібні зміни',
-  APPROVED: 'Схвалено',
-  REJECTED: 'Відхилено',
+  DRAFT:                'Чернетка',
+  SUBMITTED:            'Подано',
+  FORMALLY_VERIFIED:    'Формально перевірено',
+  IN_REVIEW:            'На розгляді',
+  NEEDS_REVISION:       'Потрібні зміни',
+  APPROVED:             'Схвалено',
+  REJECTED:             'Відхилено',
+  ONBOARDING:           'Онбординг',
+  ACTIVE:               'Активний',
+  SUSPENDED:            'Призупинено',
   COMPLETION_REQUESTED: 'Запит на завершення',
-  COMPLETED: 'Завершено',
+  COMPLETED:            'Завершено',
+  ARCHIVED:             'Архівовано',
 }
 
 export function statusLabel(status) {
   return STATUS_LABELS_UK[status] || status
 }
 
-/** Наступні статуси для зміни адміном (відповідає переходам на бекенді). */
+/** Наступні статуси для зміни адміном (точно відповідає ALLOWED на бекенді). */
 export function adminAllowedNextStatuses(current) {
-  if (current === 'SUBMITTED') return ['IN_REVIEW']
-if (current === 'IN_REVIEW') {
-    return ['APPROVED', 'REJECTED', 'NEEDS_REVISION']
+  const ALLOWED = {
+    DRAFT:                ['SUBMITTED'],
+    SUBMITTED:            ['FORMALLY_VERIFIED'],
+    FORMALLY_VERIFIED:    ['IN_REVIEW'],
+    IN_REVIEW:            ['APPROVED', 'REJECTED', 'NEEDS_REVISION'],
+    NEEDS_REVISION:       ['SUBMITTED'],
+    APPROVED:             ['ONBOARDING', 'COMPLETION_REQUESTED'],
+    ONBOARDING:           ['ACTIVE'],
+    ACTIVE:               ['SUSPENDED', 'ARCHIVED'],
+    SUSPENDED:            ['ACTIVE', 'ARCHIVED'],
+    COMPLETION_REQUESTED: ['COMPLETED', 'APPROVED'],
+  }
+  return ALLOWED[current] ?? []
 }
-if (current === 'NEEDS_REVISION') return ['SUBMITTED']
-if (current === 'APPROVED') return []
-  return []
-}
-
-
