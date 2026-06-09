@@ -25,6 +25,7 @@ export default {
     mentorships: 'Менторство',
     emailTemplates: 'Шаблони листів',
     bulkMessage: 'Масова розсилка',
+    completionRequests: 'Запити на завершення',
     privacySettings: 'Налаштування приватності',
     users: 'Користувачі',
     auditLog: 'Журнал аудиту',

@@ -168,6 +168,8 @@ async function handleRegister() {
         success.value = message || t('auth.registerSuccess')
     } catch (e) {
         error.value = e.response?.data?.message || e.response?.data || t('auth.registerError')
+        window.grecaptcha?.reset()
+        form.captchaToken = ''
     } finally {
         loading.value = false
     }

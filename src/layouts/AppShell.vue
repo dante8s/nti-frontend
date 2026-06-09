@@ -39,7 +39,7 @@ const adminNav = computed(() => {
   const items = []
   if (isAdmin.value) {
     items.push( 
-      { to: '/app/admin/completion-requests', label: 'Запити на завершення', icon: '⊘' },
+      { to: '/app/admin/completion-requests', label: t('nav.completionRequests'), icon: '⊘' },
       { to: '/app/admin/applications', label: t('nav.applications'), icon: '◆' },
       { to: '/app/admin/milestone-approvals', label: t('nav.milestoneApprovals'), icon: '✓' },
       { to: '/app/admin/programs', label: t('nav.programs'), icon: '◇' },

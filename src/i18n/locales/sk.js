@@ -26,6 +26,7 @@ export default {
     privacySettings: 'Nastavenia súkromia',
     emailTemplates:'E-mailové šablóny',
     bulkMessage: 'Hromadná správa',
+    completionRequests: 'Žiadosti o ukončenie',
     users: 'Používatelia',
     auditLog: 'Audit log',
     publicPrograms: 'Programy',
