@@ -14,3 +14,11 @@ export function hasStudentPortalAccess(roles) {
 export function hasTeamLeaderRole(roles) {
   return roleList(roles).includes('TEAM_LEADER')
 }
+
+export function isGlobalAdmin(roles) {
+  return roleList(roles).some((r) => r === 'ADMIN' || r === 'SUPER_ADMIN')
+}
+
+export function isSuperAdmin(roles) {
+  return roleList(roles).includes('SUPER_ADMIN')
+}

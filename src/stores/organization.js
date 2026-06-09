@@ -98,6 +98,21 @@ export const useOrganizationStore = defineStore('organization', () => {
     return response.data
   }
 
+  async function isEmailAlreadyOrgMember(email) {
+    const normalized = String(email || '').trim().toLowerCase()
+    if (!normalized) return false
+
+    const orgs = (await organizationsApi.getAll()).data || []
+    for (const org of orgs) {
+      if (!org?.id) continue
+      const orgMembers = (await organizationsApi.getMembers(org.id)).data || []
+      if (orgMembers.some((m) => String(m?.userEmail || '').toLowerCase() === normalized)) {
+        return true
+      }
+    }
+    return false
+  }
+
   async function transferOwnership(id, memberId) {
     const response = await organizationsApi.transferOwnership(id, memberId)
     const updated = response.data
@@ -202,6 +217,7 @@ export const useOrganizationStore = defineStore('organization', () => {
     fetchMembers,
     addMember,
     inviteMember,
+    isEmailAlreadyOrgMember,
     transferOwnership,
     removeMember,
     changeStatus,

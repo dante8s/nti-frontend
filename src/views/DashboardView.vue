@@ -84,7 +84,7 @@ const roleLabels = {
   STUDENT: 'Студент',
   TEAM_LEADER: 'Лідер команди',
   FIRM: 'Компанія',
-  FIRM_USER: 'Представник фірми',
+  //FIRM_USER: 'Представник фірми',
   MENTOR: 'Ментор',
   EVALUATOR: 'Комісія (перегляд)',
   SUPER_EVALUATOR: 'Комісія — рішення',
@@ -155,6 +155,12 @@ const cards = computed(() => {
         title: 'Організації',
         desc: 'Каталог організацій-партнерів',
         icon: '◈',
+      },
+      {
+        to: '/app/admin/bulk-message',
+        title: 'Масова розсилка',
+        desc: 'Надіслати повідомлення групі користувачів за фільтром',
+        icon: '✉',
       },
     )
   }

@@ -43,7 +43,12 @@ import { programsApi } from '@/api/programs'
 const route = useRoute()
 const programs = ref([])
 const loading = ref(true)
-const approvedPrograms = computed(() => programs.value.filter((program) => program?.status === 'APPROVED'))
+const approvedPrograms = computed(() =>
+    programs.value
+        .filter((p) => p?.status === 'APPROVED')
+        .slice()
+        .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)),
+)
 
 const type = computed(() => route.params.type?.toUpperCase() || 'A')
 const programLabel = computed(() => type.value === 'A' ? 'Програма A' : 'Програма B')

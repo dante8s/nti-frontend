@@ -39,6 +39,7 @@
                 {{ comment.createdByName || 'User' }} • {{ formatDateTime(comment.createdAt) }}
               </span>
               <button
+                v-if="!readOnly"
                 type="button"
                 class="milestone-details__danger-text"
                 title="Delete comment"
@@ -51,7 +52,7 @@
           </article>
         </div>
 
-        <div v-if="authStore.isLoggedIn" class="milestone-details__composer">
+        <div v-if="authStore.isLoggedIn && !readOnly" class="milestone-details__composer">
           <textarea
             v-model.trim="commentDraft"
             rows="3"
@@ -97,7 +98,7 @@
                   Download
                 </button>
                 <button
-                  v-if="canDeleteAttachment(attachment)"
+                  v-if="!readOnly && canDeleteAttachment(attachment)"
                   type="button"
                   class="milestone-details__danger-text"
                   @click="removeAttachment(attachment.id)"
@@ -113,7 +114,7 @@
           </article>
         </div>
 
-        <div v-if="canUploadAttachments" class="milestone-details__upload">
+        <div v-if="!readOnly && canUploadAttachments" class="milestone-details__upload">
           <p class="milestone-details__meta">{{ attachments.length }}/10 attachments used.</p>
           <div class="milestone-details__file-row">
             <label class="milestone-details__file-btn">
@@ -133,6 +134,9 @@
           <p v-if="isAttachmentLimitReached" class="milestone-details__error">
             Attachment limit reached (max 10).
           </p>
+          <p v-if="attachmentUploadError" class="milestone-details__error">
+            {{ attachmentUploadError }}
+          </p>
         </div>
       </div>
     </div>
@@ -144,11 +148,16 @@ import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useMilestoneStore } from '@/stores/milestone'
 import { useAuthStore } from '@/stores/auth'
+import { apiErrorMessage } from '@/utils/apiError'
 
 const props = defineProps({
   milestoneId: {
     type: [Number, String],
     required: true,
+  },
+  readOnly: {
+    type: Boolean,
+    default: false,
   },
 })
 
@@ -168,6 +177,7 @@ const activeTab = ref('comments')
 const commentDraft = ref('')
 const commentSaving = ref(false)
 const attachmentSaving = ref(false)
+const attachmentUploadError = ref('')
 const selectedFile = ref(null)
 
 const roles = computed(() => authStore.roles || [])
@@ -223,14 +233,18 @@ function canDeleteAttachment(attachment) {
 
 function onFilePicked(event) {
   selectedFile.value = event.target?.files?.[0] || null
+  attachmentUploadError.value = ''
 }
 
 async function uploadSelectedFile() {
   if (!selectedFile.value || isAttachmentLimitReached.value) return
   attachmentSaving.value = true
+  attachmentUploadError.value = ''
   try {
     await milestoneStore.addAttachment(props.milestoneId, selectedFile.value)
     selectedFile.value = null
+  } catch (error) {
+    attachmentUploadError.value = apiErrorMessage(error, 'Failed to upload attachment.')
   } finally {
     attachmentSaving.value = false
   }

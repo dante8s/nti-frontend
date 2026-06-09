@@ -8,6 +8,8 @@ export const mentorshipsApi = {
 
   getOne: (id) => api.get(`/api/mentorships/${id}`),
 
+  delete: (id) => api.delete(`/api/mentorships/${id}`),
+
   changeStatus: (id, status) =>
     api.patch(`/api/mentorships/${id}/status`, null, { params: { status } }),
 

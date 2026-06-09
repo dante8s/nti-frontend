@@ -7,7 +7,13 @@
           Створюйте, редагуйте та відстежуйте статус ваших пропозицій Program B.
         </p>
       </div>
-      <button type="button" class="btn-primary" @click="openCreateForm">
+      <button
+        type="button"
+        class="btn-primary"
+        :disabled="!canCreateProposals"
+        :title="!canCreateProposals ? proposalBlockedHint : ''"
+        @click="openCreateForm"
+      >
         + Нова пропозиція
       </button>
     </div>
@@ -37,8 +43,17 @@
           {{ formError }}
         </p>
 
+        <p v-if="!form.editMode && !canCreateProposals" class="helper-text">
+          {{ proposalBlockedHint }}
+        </p>
+
         <div class="form-actions">
-          <button type="submit" class="btn-primary" :disabled="storeLoading">
+          <button
+            type="submit"
+            class="btn-primary"
+            :disabled="storeLoading || (!form.editMode && !canCreateProposals)"
+            :title="!form.editMode && !canCreateProposals ? proposalBlockedHint : ''"
+          >
             {{ form.editMode ? 'Оновити' : 'Створити' }}
           </button>
           <button v-if="form.editMode" type="button" class="btn-ghost" :disabled="storeLoading" @click="resetForm">
@@ -264,6 +279,10 @@ import { useProgramStore } from '@/stores/program'
 import { useOrganizationStore } from '@/stores/organization'
 import { useAuthStore } from '@/stores/auth'
 import { apiErrorMessage } from '@/utils/apiError'
+import {
+  PROPOSAL_ORG_NOT_APPROVED_HINT,
+  isOrganizationApproved,
+} from '@/utils/organizationMembership'
 import ProgramStatusBadge from '@/components/ProgramStatusBadge.vue'
 
 const programStore = useProgramStore()
@@ -282,6 +301,7 @@ const loadError = ref('')
 const formError = ref('')
 const feedbackMessage = ref('')
 const feedbackType = ref('success')
+const organization = ref(null)
 const requirementsByProgram = ref({})
 const requirementsLoadingByProgram = ref({})
 const expandedProgramIds = ref({})
@@ -309,12 +329,26 @@ const canManageRequirements = computed(() =>
   (authStore.roles || []).some((role) => ['FIRM', 'ADMIN', 'SUPER_ADMIN'].includes(role)),
 )
 
+const canCreateProposals = computed(() => isOrganizationApproved(organization.value?.status))
+
+const proposalBlockedHint = PROPOSAL_ORG_NOT_APPROVED_HINT
+
 onMounted(loadPrograms)
+
+async function loadOrganization() {
+  try {
+    const my = await orgStore.getMy()
+    organization.value = Array.isArray(my) && my.length > 0 ? my[0] : null
+  } catch {
+    organization.value = null
+  }
+}
 
 async function loadPrograms() {
   loading.value = true
   loadError.value = ''
   try {
+    await loadOrganization()
     await programStore.fetchMyPrograms()
     const programRows = myPrograms.value || []
     await Promise.all(programRows.map((program) => loadProgramRequirements(program.id)))
@@ -357,11 +391,22 @@ async function toggleCallApplications(callId) {
 }
 
 function openApplicationDetails(applicationId) {
-  if (!applicationId) return
-  router.push({ name: 'application-details', params: { id: String(applicationId) } })
+  // Nájdeme celý objekt prihlášky, aby sme videli všetky jeho vlastnosti
+  const allApps = Object.values(applicationsByCall.value).flat();
+  const currentApp = allApps.find(a => a.id === applicationId);
+
+  console.log("=== DETAIL PRIHLÁŠKY ===");
+  console.log("Čo všetko máme v objekte app?:", currentApp);
+
+  if (!applicationId) return;
+  router.push({ name: 'application-details', params: { id: String(applicationId) } });
 }
 
 function openCreateForm() {
+  if (!canCreateProposals.value) {
+    setFeedback(proposalBlockedHint, 'error')
+    return
+  }
   resetForm()
 }
 
@@ -404,6 +449,10 @@ function validateForm() {
 
 async function saveProgram() {
   if (!validateForm()) return
+  if (!form.editMode && !canCreateProposals.value) {
+    formError.value = proposalBlockedHint
+    return
+  }
   const payload = {
     name: form.name.trim(),
     description: form.description.trim(),
@@ -863,6 +912,13 @@ function formatDate(value) {
 .state--error,
 .error-text {
   color: #b91c1c;
+}
+
+.helper-text {
+  margin: 0;
+  color: #92400e;
+  font-size: 0.84rem;
+  line-height: 1.5;
 }
 
 .notice {

@@ -61,7 +61,7 @@
           <button
             type="submit"
             class="btn-primary"
-            :disabled="saving || !form.name.trim() || !form.ico.trim()"
+            :disabled="saving || hasExistingOrganization || !form.name.trim() || !form.ico.trim()"
           >
             {{ saving ? 'Creating…' : 'Create organization' }}
           </button>
@@ -75,6 +75,10 @@
 import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useOrganizationStore } from '@/stores/organization'
+import {
+  ORG_MEMBERSHIP_CONFLICT_MESSAGE,
+  userHasOrganizationMembership,
+} from '@/utils/organizationMembership'
 
 const router = useRouter()
 const orgStore = useOrganizationStore()
@@ -82,6 +86,7 @@ const orgStore = useOrganizationStore()
 const loading = ref(true)
 const saving = ref(false)
 const error = ref('')
+const hasExistingOrganization = ref(false)
 
 const form = reactive({
   name: '',
@@ -98,11 +103,12 @@ onMounted(init)
 async function init() {
   loading.value = true
   error.value = ''
+  hasExistingOrganization.value = false
   try {
     const my = await orgStore.getMy()
-    if (Array.isArray(my) && my.length > 0) {
-      router.replace({ name: 'org-profile' })
-      return
+    if (userHasOrganizationMembership(my)) {
+      hasExistingOrganization.value = true
+      error.value = ORG_MEMBERSHIP_CONFLICT_MESSAGE
     }
   } catch {
     // ignore and allow user to try registering anyway
@@ -119,6 +125,12 @@ async function submit() {
   saving.value = true
   error.value = ''
   try {
+    const my = await orgStore.getMy()
+    if (userHasOrganizationMembership(my)) {
+      hasExistingOrganization.value = true
+      error.value = ORG_MEMBERSHIP_CONFLICT_MESSAGE
+      return
+    }
     const payload = {
       name: form.name?.trim(),
       ico: form.ico?.trim(),

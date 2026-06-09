@@ -9,9 +9,23 @@
         v-model="search"
         type="search"
         class="search"
-        placeholder="Пошук за програмою, викликом, статусом…"
+        placeholder="Пошук за іменем або email заявника…"
         aria-label="Пошук"
       >
+      <select v-model="filterStatus" class="filter-select">
+        <option value="">Всі статуси</option>
+        <option value="DRAFT">Чернетка</option>
+        <option value="SUBMITTED">Подана</option>
+        <option value="IN_REVIEW">На розгляді</option>
+        <option value="NEEDS_REVISION">Потребує правок</option>
+        <option value="APPROVED">Схвалена</option>
+        <option value="REJECTED">Відхилена</option>
+      </select>
+      <select v-model="filterProgram" class="filter-select">
+        <option value="">Всі програми</option>
+        <option value="PROGRAM_A">Програма A</option>
+        <option value="PROGRAM_B">Програма B</option>
+      </select>
       <button type="button" class="btn-refresh" @click="load">
         Оновити
       </button>
@@ -120,9 +134,20 @@
         <div class="mentorship">
           <div class="mentorship__head">
             <h4 class="mentorship__title">Mentorship</h4>
-            <button type="button" class="btn-sm btn-sm--ghost" @click="openAssignMentor">
-              Assign Mentor
-            </button>
+            <div class="mentorship__assign">
+              <button
+                type="button"
+                class="btn-sm btn-sm--ghost"
+                :disabled="!canAssignMentorForModalRow"
+                :title="assignMentorHintForModalRow || undefined"
+                @click="openAssignMentor"
+              >
+                Assign Mentor
+              </button>
+              <p v-if="assignMentorHintForModalRow" class="mentorship__hint">
+                {{ assignMentorHintForModalRow }}
+              </p>
+            </div>
           </div>
 
           <div v-if="mentorshipsFor(modal.row?.id).length === 0" class="mentorship__empty">
@@ -246,6 +271,11 @@ import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { applicationsApi } from '@/api/applications'
 import { adminAllowedNextStatuses, statusLabel } from '@/utils/applicationStatus'
+import {
+  canAssignMentorshipToApplication,
+  MENTORSHIP_APPROVED_ONLY_HINT,
+  mentorshipAssignErrorMessage,
+} from '@/utils/applicationPermissions'
 import { useMentorshipStore } from '@/stores/mentorship'
 import { useNoteStore } from '@/stores/note'
 
@@ -253,6 +283,8 @@ const list = ref([])
 const loading = ref(true)
 const error = ref('')
 const search = ref('')
+const filterStatus = ref('')
+const filterProgram = ref('')
 const saving = ref(false)
 const router = useRouter()
 
@@ -284,17 +316,32 @@ const toast = reactive({
 
 const filtered = computed(() => {
   const q = search.value.trim().toLowerCase()
-  if (!q) return list.value
-  return list.value.filter((r) => {
-    const blob = [
-      r.id,
-      r.programName,
-      r.callTitle,
-      r.status,
-      r.programType,
-    ].join(' ').toLowerCase()
-    return blob.includes(q)
-  })
+  const st = filterStatus.value
+  const pr = filterProgram.value
+
+  return list.value
+    .filter((r) => {
+      if (st && r.status !== st) return false
+      if (pr && r.programType !== pr) return false
+      if (q) {
+        const blob = [r.applicantName, r.applicantEmail, r.id]
+          .join(' ')
+          .toLowerCase()
+        if (!blob.includes(q)) return false
+      }
+      return true
+    })
+    .slice()
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+})
+
+const canAssignMentorForModalRow = computed(() =>
+  canAssignMentorshipToApplication(modal.row, false),
+)
+
+const assignMentorHintForModalRow = computed(() => {
+  if (!modal.row || modal.row.status === 'APPROVED') return ''
+  return MENTORSHIP_APPROVED_ONLY_HINT
 })
 
 onMounted(load)
@@ -337,13 +384,17 @@ function formatDt(iso) {
 }
 
 function openStatus(row) {
-  modal.row = row
-  modal.comment = ''
-  modal.allowed = adminAllowedNextStatuses(row.status)
-  modal.nextStatus = modal.allowed[0] || ''
-  modal.show = true
-  mentorshipStore.getByApplication(row.id)
-  noteStore.fetchNotesByApplication(row.id)
+  console.log("Aké ID posielam?", row.id, typeof row.id);
+  console.log("DEBUG: Current Status:", row.status); // <--- Add this
+  modal.row = row;
+  modal.comment = '';
+  modal.allowed = adminAllowedNextStatuses(row.status);
+
+  console.log("DEBUG: Allowed transitions:", modal.allowed); // <--- Add this
+  modal.nextStatus = modal.allowed[0] || '';
+  modal.show = true;
+  mentorshipStore.getByApplication(row.id);
+  noteStore.fetchNotesByApplication(row.id);
 }
 
 async function submitStatus() {
@@ -392,6 +443,10 @@ function formatMentorshipDt(iso) {
 
 async function openAssignMentor() {
   if (!modal.row?.id) return
+  if (!canAssignMentorForModalRow.value) {
+    assign.error = assignMentorHintForModalRow.value || MENTORSHIP_APPROVED_ONLY_HINT
+    return
+  }
   assign.show = true
   assign.mentorUserId = ''
   assign.error = ''
@@ -404,6 +459,10 @@ async function openAssignMentor() {
 
 async function submitAssignMentor() {
   if (!modal.row?.id || !assign.mentorUserId) return
+  if (!canAssignMentorForModalRow.value) {
+    assign.error = assignMentorHintForModalRow.value || MENTORSHIP_APPROVED_ONLY_HINT
+    return
+  }
   assign.saving = true
   assign.error = ''
   try {
@@ -415,9 +474,7 @@ async function submitAssignMentor() {
     assign.show = false
     showToast('Ментор призначений', 'success')
   } catch (e) {
-    assign.error = e.response?.data?.message
-      || (typeof e.response?.data === 'string' ? e.response.data : null)
-      || 'Failed to assign mentor.'
+    assign.error = mentorshipAssignErrorMessage(e, 'Failed to assign mentor.')
   } finally {
     assign.saving = false
   }
@@ -475,6 +532,16 @@ function openProgramProposal(row) {
   border: 1px solid rgba(79, 70, 229, 0.2);
   font-size: 0.95rem;
   background: rgba(255, 255, 255, 0.95);
+}
+
+.filter-select {
+  padding: 0.65rem 0.9rem;
+  border-radius: 12px;
+  border: 1px solid rgba(79, 70, 229, 0.2);
+  font-size: 0.92rem;
+  background: rgba(255, 255, 255, 0.95);
+  color: #374151;
+  cursor: pointer;
 }
 
 .btn-refresh {
@@ -698,6 +765,22 @@ function openProgramProposal(row) {
   margin: 0;
   font-size: 0.95rem;
   color: #0f172a;
+}
+
+.mentorship__assign {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+}
+
+.mentorship__hint {
+  margin: 0;
+  max-width: 14rem;
+  text-align: right;
+  color: #64748b;
+  font-size: 0.76rem;
+  line-height: 1.35;
 }
 
 .mentorship__empty {

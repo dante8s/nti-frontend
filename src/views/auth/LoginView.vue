@@ -1,48 +1,47 @@
-﻿<template>
+<template>
     <div class="wrap">
         <div class="box">
-            <h1>Увійти до NTI</h1>
+            <h1>{{ t('auth.loginTitle') }}</h1>
 
             <div v-if="error" class="error">{{ error }}</div>
 
             <form @submit.prevent="handleLogin">
                 <div class="field">
-                    <label>Email</label>
+                    <label>{{ t('auth.email') }}</label>
                     <input v-model="email" type="email" required />
                 </div>
 
                 <div class="field">
-                    <label>Пароль</label>
+                    <label>{{ t('auth.password') }}</label>
                     <input v-model="password" type="password" required />
                 </div>
 
-                <!-- CAPTCHA -->
                 <div class="field">
                     <div id="recaptcha-login" class="g-recaptcha"
                         data-sitekey="6Lfl56gsAAAAAOBIsD-BT1Krdd9aGvTz7iWIZnDL"></div>
                     <span v-if="captchaError" class="error-text">
-                        Підтвердіть, що ви не робот
+                        {{ t('auth.captchaError') }}
                     </span>
                     <div v-if="captchaLoadError" class="error">
-                        Не вдалося завантажити капчу. Перевірте, що ви відкрили сайт через http://localhost:5173.
+                        {{ t('auth.captchaLoadError') }}
                     </div>
                 </div>
 
                 <button type="submit" :disabled="loading">
-                    {{ loading ? 'Завантаження...' : 'Увійти' }}
+                    {{ loading ? t('auth.loading') : t('auth.loginBtn') }}
                 </button>
             </form>
 
             <p>
                 <router-link to="/forgot-password">
-                    Забули пароль?
+                    {{ t('auth.forgotPassword') }}
                 </router-link>
             </p>
 
             <p>
-                Немає аккаунту?
+                {{ t('auth.noAccount') }}
                 <router-link to="/register">
-                    Зареєструватися
+                    {{ t('auth.register') }}
                 </router-link>
             </p>
         </div>
@@ -50,9 +49,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+
+const { t } = useI18n()
 const SITE_KEY = '6Lfl56gsAAAAAOBIsD-BT1Krdd9aGvTz7iWIZnDL'
 
 const router = useRouter()
@@ -66,14 +68,16 @@ const captchaError = ref(false)
 const captchaLoadError = ref(false)
 const captchaToken = ref('')
 
+let captchaInterval = null
+
 onMounted(() => {
-    const tryRender = setInterval(() => {
+    captchaInterval = setInterval(() => {
         if (window.grecaptcha?.render) {
-            clearInterval(tryRender)
+            clearInterval(captchaInterval)
+            captchaInterval = null
             window.grecaptcha.render('recaptcha-login', {
                 sitekey: SITE_KEY,
                 callback: token => {
-                    console.log('reCAPTCHA token:', token)
                     captchaToken.value = token
                     captchaError.value = false
                 },
@@ -90,8 +94,17 @@ onMounted(() => {
     setTimeout(() => {
         if (!captchaToken.value && !window.grecaptcha?.render) {
             captchaLoadError.value = true
+            clearInterval(captchaInterval)
+            captchaInterval = null
         }
     }, 5000)
+})
+
+onUnmounted(() => {
+    if (captchaInterval) {
+        clearInterval(captchaInterval)
+        captchaInterval = null
+    }
 })
 
 async function handleLogin() {
@@ -103,15 +116,12 @@ async function handleLogin() {
     error.value = ''
     loading.value = true
     try {
-        const data = await auth.login(
-            email.value,
-            password.value,
-            captchaToken.value
-        )
-
+        await auth.login(email.value, password.value, captchaToken.value)
         router.push('/app/dashboard')
     } catch (e) {
-        error.value = e.response?.data?.message || e.response?.data || 'Невірний email або пароль'
+        error.value = e.response?.data?.message || e.response?.data || t('auth.loginError')
+        window.grecaptcha?.reset()
+        captchaToken.value = ''
     } finally {
         loading.value = false
     }
@@ -191,6 +201,13 @@ button:disabled {
     border-radius: 8px;
     margin-bottom: 1rem;
     font-size: 0.875rem;
+}
+
+.error-text {
+    color: #dc2626;
+    font-size: 0.8rem;
+    margin-top: 4px;
+    display: block;
 }
 
 p {
