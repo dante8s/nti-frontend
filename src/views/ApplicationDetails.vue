@@ -518,23 +518,16 @@ const isProgramBApplication = computed(() =>
 /** Same navigation shape as AdminPrograms.openProgramDetails — program from nested call.program or flattened application fields */
 const programProposalRoute = computed(() => {
   const app = application.value
-  console.log('Computed Triggered. Application Value:', app)
 
   if (!app) return null
 
-  // Based on your console log, let's try these specific fields:
-  // 1. Check for programId, then fallback to program.id, then call.programId
-  // If your API doesn't provide programId, we might need to use callId or similar
   const pId = app.programId ||
               app.program?.id ||
               app.call?.programId ||
               app.call?.program?.id ||
-              app.callId; // Adding callId as a desperate fallback
+              app.callId
 
-  // 2. Resolve Type
-  const rawType = app.programType || (app.program?.type) || '';
-
-  console.log('ID check:', { pId, rawType });
+  const rawType = app.programType || (app.program?.type) || ''
 
   if (!pId) return null
 

@@ -244,6 +244,13 @@
         <p>Оберіть заявку зі списку</p>
       </div>
     </div>
+
+    <MilestoneFormModal
+      v-model="showMilestoneModal"
+      :application-id="editingAppId"
+      :milestone="editingMilestone"
+      @created="showMilestoneModal = false"
+    />
   </div>
 </template>
 
@@ -256,6 +263,7 @@ import { useMentorshipStore } from '@/stores/mentorship'
 import { useMilestoneStore } from '@/stores/milestone'
 import { apiErrorMessage } from '@/utils/apiError'
 import MilestoneDetailsPanel from '@/components/MilestoneDetailsPanel.vue'
+import MilestoneFormModal from '@/components/MilestoneFormModal.vue'
 import ConsultationsPanel from '@/components/ConsultationsPanel.vue'
 import DocumentUpload from '@/components/DocumentUpload.vue'
 import ResultDocumentUpload from '@/components/ResultDocumentUpload.vue'
@@ -284,6 +292,10 @@ const mentorshipStore = useMentorshipStore()
 const { mentorshipsByApplication } = storeToRefs(mentorshipStore)
 const milestoneStore = useMilestoneStore()
 const { milestones } = storeToRefs(milestoneStore)
+
+const showMilestoneModal = ref(false)
+const editingMilestone = ref(null)
+const editingAppId = ref(null)
 
 const canSubmitApplication = computed(() => {
   const status = selected.value?.status
@@ -315,6 +327,8 @@ async function load() {
   try {
     const res = await applicationsApi.getMy()
     const list = normalizeApplicationsList(res.data)
+        .slice()
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     applications.value = list
     if (!list.length) {
       selectedId.value = null
@@ -469,13 +483,18 @@ function formatMilestoneDate(date) {
   return formatDate(date)
 }
 
-// Реалізуй ці функції відповідно до свого milestone store/api
 function openEditMilestoneModal(appId, milestone) {
-  // TODO: відкрити MilestoneFormModal
+  editingAppId.value = appId
+  editingMilestone.value = milestone
+  showMilestoneModal.value = true
 }
 
 async function deleteMilestone(appId, milestoneId) {
-  // TODO: викликати milestoneStore.delete(milestoneId)
+  try {
+    await milestoneStore.delete(milestoneId, appId)
+  } catch {
+    // milestone list updates reactively via store
+  }
 }
 </script>
 

@@ -3,15 +3,12 @@
         <div class="hero-block" :style="heroStyle">
             <div class="hero-overlay"></div>
             <div class="hero-inner">
-                <span class="eyebrow">Ласкаво просимо у Нітру</span>
-                <h1>NTI — інноваційний проєкт у серці Словаччини</h1>
-                <p>
-                    Відчуйте атмосферу Нітри: середньовічні вулички, сучасні креативні простори
-                    та програми, які допомагають молодим командам рости.
-                </p>
+                <span class="eyebrow">{{ t('home.eyebrow') }}</span>
+                <h1>{{ t('home.title') }}</h1>
+                <p>{{ t('home.subtitle') }}</p>
                 <div class="hero-actions">
-                    <router-link to="/programs/a" class="btn btn-primary">Програма A</router-link>
-                    <router-link to="/programs/b" class="btn btn-secondary">Програма B</router-link>
+                    <router-link to="/programs/a" class="btn btn-primary">{{ t('home.programA') }}</router-link>
+                    <router-link to="/programs/b" class="btn btn-secondary">{{ t('home.programB') }}</router-link>
                 </div>
             </div>
             <div class="hero-wave" aria-hidden="true"></div>
@@ -20,26 +17,16 @@
         <div class="content-wrap">
             <div class="info-block">
                 <div class="info-card">
-                    <h2>Що таке NTI?</h2>
-                    <p>
-                        NTI — це простір для розвитку навчальних ідей, стартапів та партнерств.
-                        У Нітрі цінують культуру, освіту та сучасні технології, і тут кожна
-                        програма створена для того, щоб учасники змогли реалізувати свої сильні сторони.
-                    </p>
+                    <h2>{{ t('home.card1Title') }}</h2>
+                    <p>{{ t('home.card1Text') }}</p>
                 </div>
                 <div class="info-card">
-                    <h2>Програми A та B</h2>
-                    <p>
-                        Програма A орієнтована на глибоке навчання з підтримкою менторів.
-                        Програма B допомагає швидко підготуватися до конкурсу та отримати перші практичні результати.
-                    </p>
+                    <h2>{{ t('home.card2Title') }}</h2>
+                    <p>{{ t('home.card2Text') }}</p>
                 </div>
                 <div class="info-card">
-                    <h2>Подайте заявку</h2>
-                    <p>
-                        Перегляньте опис програм, оберіть свій виклик і подайте заявку.
-                        Щоб завершити заявку, потрібно зареєструватися та увійти в систему.
-                    </p>
+                    <h2>{{ t('home.card3Title') }}</h2>
+                    <p>{{ t('home.card3Text') }}</p>
                 </div>
             </div>
         </div>
@@ -47,6 +34,10 @@
 </template>
 
 <script setup>
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+
 const heroStyle = {
     backgroundImage: `linear-gradient(180deg, rgba(15, 23, 42, 0.55), rgba(15, 23, 42, 0.25)), url(${new URL('../img/nitra1.jpg', import.meta.url).href})`,
 }

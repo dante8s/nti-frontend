@@ -1,8 +1,11 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 
+const { t } = useI18n()
 const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
@@ -20,24 +23,26 @@ function logout() {
     <header v-if="!hidePublicChrome" class="app-header">
       <div class="brand-row">
         <router-link to="/" class="brand">NTI Nitra</router-link>
-        <span class="brand-subtitle">Cловаччина · програми A/B</span>
+        <span class="brand-subtitle">Slovensko · programy A/B</span>
       </div>
       <nav class="app-nav">
-        <router-link to="/programs/a" class="nav-link">Програма A</router-link>
-        <router-link to="/programs/b" class="nav-link">Програма B</router-link>
-        <router-link to="/organizations" class="nav-link">Organizations</router-link>
-        <router-link to="/mentors" class="nav-link">Mentors</router-link>
+        <router-link to="/programs/a" class="nav-link">{{ t('home.programA') }}</router-link>
+        <router-link to="/programs/b" class="nav-link">{{ t('home.programB') }}</router-link>
+        <router-link to="/organizations" class="nav-link">{{ t('nav.publicOrganizations') }}</router-link>
+        <router-link to="/mentors" class="nav-link">{{ t('nav.publicMentors') }}</router-link>
 
         <template v-if="!auth.isLoggedIn">
-          <router-link to="/login" class="nav-link nav-login">Увійти</router-link>
-          <router-link to="/register" class="nav-link nav-register">Зареєструватись</router-link>
+          <router-link to="/login" class="nav-link nav-login">{{ t('auth.loginBtn') }}</router-link>
+          <router-link to="/register" class="nav-link nav-register">{{ t('auth.registerBtn') }}</router-link>
         </template>
         <template v-else>
-          <router-link to="/app/dashboard" class="nav-link nav-login">Кабінет</router-link>
+          <router-link to="/app/dashboard" class="nav-link nav-login">{{ t('nav.dashboard') }}</router-link>
           <button type="button" class="nav-link nav-register nav-btn" @click="logout">
-            Вийти
+            {{ t('nav.logout') }}
           </button>
         </template>
+
+        <LanguageSwitcher />
       </nav>
     </header>
 
