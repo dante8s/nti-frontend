@@ -176,6 +176,18 @@ const router = createRouter({
           component: () => import('@/views/admin/CompletionRequests.vue'),
         },
         {
+          path: 'admin/project-reports',
+          name: 'admin-project-reports',
+          meta: { title: 'Звіти проектів', requiresAdmin: true },
+          component: () => import('@/views/admin/ProjectReports.vue'),
+        },
+        {
+          path: 'product-owner/completion-requests',
+          name: 'po-completion-requests',
+          meta: { title: 'Підтвердження завершення' },
+          component: () => import('@/views/product-owner/ProductOwnerCompletionRequests.vue'),
+        },
+        {
           path: 'admin/milestone-approvals',
           name: 'admin-milestone-approvals',
           meta: { title: 'Milestone approvals', requiresAdmin: true },

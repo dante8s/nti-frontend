@@ -25,6 +25,7 @@ export default {
     mentorships: 'Mentorships',
     emailTemplates: 'Email Templates',
     bulkMessage: 'Bulk Message',
+    completionRequests: 'Completion Requests',
     privacySettings: 'Privacy Settings',
     users: 'Users',
     auditLog: 'Audit Log',

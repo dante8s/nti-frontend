@@ -1,3 +1,6 @@
+# Environment secrets — copy .env.example → .env and fill in values
+.env
+
 # Logs
 logs
 *.log

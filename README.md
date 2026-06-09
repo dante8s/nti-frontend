@@ -1,44 +1,67 @@
-# nti-frontend
+# NTI Frontend
 
-This template should help get you started developing with Vue 3 in Vite.
+Vue 3 · Vite · Pinia · Vue Router · i18n (uk / sk / en)
 
-## Recommended IDE Setup
+---
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+## Quick start (Docker)
 
-## Recommended Browser Setup
+> Run from the **backend** repo — `docker-compose.yml` there starts both services.
+> See [nti-backend/README.md](../nti-backend/README.md).
 
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
+---
 
-## Customize configuration
+## Local development
 
-See [Vite Configuration Reference](https://vite.dev/config/).
+### Prerequisites
+- Node.js 20+
+- npm 10+
+- Backend running on `http://localhost:8080`
 
-## Project Setup
+### Steps
 
-```sh
+```bash
 npm install
-```
-
-### Compile and Hot-Reload for Development
-
-```sh
 npm run dev
 ```
 
-### Compile and Minify for Production
+The app is available at **http://localhost:5173**.  
+API calls (`/api/*`) are proxied to `http://localhost:8080` via Vite.
 
-```sh
-npm run build
+### Other commands
+
+```bash
+npm run build   # production build → dist/
+npm run lint    # ESLint
 ```
 
-### Lint with [ESLint](https://eslint.org/)
+---
 
-```sh
-npm run lint
+## Environment variables
+
+No `.env` file is required for the standard setup.  
+See `.env.example` for details.
+
+---
+
+## Tech stack
+
+- **Vue 3** + Composition API (`<script setup>`)
+- **Vite** — build tool & dev server
+- **Pinia** — state management
+- **Vue Router 4** — routing with role-based guards
+- **vue-i18n** — Ukrainian / Slovak / English
+- **Axios** — HTTP client (base: `/api`)
+
+## Project structure
+
+```
+src/
+├── api/          # Axios calls per domain (auth, applications, gdpr…)
+├── components/   # Shared components (NotificationBell, LanguageSwitcher…)
+├── i18n/         # Translations (uk.js, sk.js, en.js)
+├── layouts/      # AppShell (sidebar + header)
+├── router/       # Routes with meta guards
+├── stores/       # Pinia stores (auth, organization…)
+└── views/        # Pages grouped by role (admin/, student/, commission/…)
 ```

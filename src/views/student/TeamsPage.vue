@@ -6,6 +6,7 @@ import { getCallApplicationEligibility } from '@/api/profileApi'
 import { useAuthStore } from '@/stores/auth'
 import { hasTeamLeaderRole } from '@/utils/roles'
 import AppConfirmModal from '@/components/AppConfirmModal.vue'
+import ResultDocumentUpload from '@/components/ResultDocumentUpload.vue'
 
 const auth = useAuthStore()
 
@@ -41,6 +42,7 @@ const removalNoticeDismissed = ref(false)
 const myProjects = ref({ current: null, history: [] })
 const projectsLoading = ref(false)
 const completingProject = ref(false)
+const resultDocsReady = ref(false)
 
 const confirmModal = reactive({
   open: false,
@@ -800,17 +802,33 @@ async function onConfirmModalAction() {
                 :class="{ 'project-member-chip--leader': m.role === 'LEADER' }"
               >{{ m.email }}</router-link>
             </div>
-            <button
-              v-if="canManageTeam && myProjects.current.status !== 'COMPLETION_REQUESTED'"
-              type="button"
-              class="btn btn-complete"
-              :disabled="completingProject"
-              @click="onCompleteProject(myProjects.current.applicationId)"
-            >
-              {{ completingProject ? 'Надсилання…' : 'Проект закінчено' }}
-            </button>
+            <!-- Завантаження результатних документів (тільки лідер, статус APPROVED) -->
+            <template v-if="canManageTeam && myProjects.current.status === 'APPROVED'">
+              <ResultDocumentUpload
+                :key="myProjects.current.applicationId"
+                :application-id="myProjects.current.applicationId"
+                @change="val => resultDocsReady = val"
+              />
+              <button
+                type="button"
+                class="btn btn-complete"
+                :disabled="completingProject || !resultDocsReady"
+                :title="!resultDocsReady ? 'Завантажте обидва результатних документи' : ''"
+                @click="onCompleteProject(myProjects.current.applicationId)"
+              >
+                {{ completingProject ? 'Надсилання…' : 'Проект закінчено' }}
+              </button>
+              <p v-if="!resultDocsReady" class="completion-pending-note" style="color:#6b7280">
+                📎 Щоб закінчити проект — завантажте обидва результатних документи вище
+              </p>
+            </template>
+
             <p v-if="myProjects.current.status === 'COMPLETION_REQUESTED'" class="completion-pending-note">
-              ⏳ Запит на завершення надіслано — очікуйте підтвердження адміністратора.
+              ⏳ Запит на завершення надіслано — очікуйте підтвердження
+              {{ myProjects.current.programType === 'PROGRAM_B' ? 'Product Owner' : 'адміністратора' }}.
+            </p>
+            <p v-if="myProjects.current.status === 'COMPLETION_PO_APPROVED'" class="completion-pending-note" style="color:#059669">
+              ✅ Product Owner підтвердив завершення — очікуйте підтвердження адміністратора.
             </p>
           </div>
           <div v-else class="hint">Команда зараз не має активного проекту.</div>
