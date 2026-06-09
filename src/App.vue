@@ -26,10 +26,14 @@ function logout() {
         <span class="brand-subtitle">Slovensko · programy A/B</span>
       </div>
       <nav class="app-nav">
-        <router-link to="/programs/a" class="nav-link">{{ t('home.programA') }}</router-link>
-        <router-link to="/programs/b" class="nav-link">{{ t('home.programB') }}</router-link>
-        <router-link to="/organizations" class="nav-link">{{ t('nav.publicOrganizations') }}</router-link>
-        <router-link to="/mentors" class="nav-link">{{ t('nav.publicMentors') }}</router-link>
+        <router-link to="/programs/a" class="nav-link">Програма A</router-link>
+        <router-link to="/programs/b" class="nav-link">Програма B</router-link>
+        <router-link to="/organizations" class="nav-link">Organizations</router-link>
+        <router-link to="/mentors" class="nav-link">Mentors</router-link>
+        <router-link to="/news" class="nav-link">Novinky</router-link>
+        <router-link to="/success-stories" class="nav-link">Úspešné projekty</router-link>
+        <router-link to="/about" class="nav-link">O NTI</router-link>
+        <router-link to="/faq" class="nav-link">FAQ</router-link>
 
         <template v-if="!auth.isLoggedIn">
           <router-link to="/login" class="nav-link nav-login">{{ t('auth.loginBtn') }}</router-link>

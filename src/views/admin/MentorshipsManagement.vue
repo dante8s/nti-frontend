@@ -84,6 +84,15 @@
                 >
                   {{ savingRowId === row.id ? 'Збереження…' : 'Change Status' }}
                 </button>
+                <button
+                  v-if="isSuperAdminUser"
+                  type="button"
+                  class="btn-sm btn-sm--danger"
+                  :disabled="savingRowId === row.id"
+                  @click="removeMentorship(row)"
+                >
+                  Delete Mentorship
+                </button>
               </div>
             </td>
           </tr>
@@ -95,7 +104,11 @@
       <div class="modal">
         <h3>Assign mentorship</h3>
         <p class="modal-meta">
-          Choose application and mentor.
+          Choose an approved application and mentor.
+        </p>
+
+        <p v-if="selectedApplication && selectedApplication.status !== 'APPROVED'" class="modal-hint">
+          {{ MENTORSHIP_APPROVED_ONLY_HINT }}
         </p>
 
         <p v-if="assign.error" class="modal-hint modal-hint--error">
@@ -108,7 +121,7 @@
             <option disabled value="">
               Select application…
             </option>
-            <option v-for="app in applications" :key="app.id" :value="String(app.id)">
+            <option v-for="app in approvedApplications" :key="app.id" :value="String(app.id)">
               #{{ app.id }} — {{ app.programName }} ({{ app.callTitle }})
             </option>
           </select>
@@ -133,7 +146,7 @@
           <button
             type="button"
             class="btn-primary"
-            :disabled="assign.saving || !assign.applicationId || !assign.mentorUserId"
+            :disabled="assign.saving || !canSubmitAssign"
             @click="submitAssign"
           >
             {{ assign.saving ? 'Assigning…' : 'Assign' }}
@@ -150,12 +163,24 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
+import { useAuthStore } from '@/stores/auth'
 import { applicationsApi } from '@/api/applications'
 import { MentorshipStatus, useMentorshipStore } from '@/stores/mentorship'
+import { isSuperAdmin } from '@/utils/roles'
+import {
+  canAssignMentorshipToApplication,
+  MENTORSHIP_APPROVED_ONLY_HINT,
+  mentorshipAssignErrorMessage,
+} from '@/utils/applicationPermissions'
 
+const router = useRouter()
+const authStore = useAuthStore()
 const mentorshipStore = useMentorshipStore()
 const { mentorships, publicMentors } = storeToRefs(mentorshipStore)
+
+const isSuperAdminUser = computed(() => isSuperAdmin(authStore.roles))
 
 const loading = ref(true)
 const error = ref('')
@@ -188,6 +213,20 @@ const filtered = computed(() => {
     return blob.includes(q)
   })
 })
+
+const approvedApplications = computed(() =>
+  (applications.value || []).filter((app) => app.status === 'APPROVED'),
+)
+
+const selectedApplication = computed(() => {
+  if (!assign.applicationId) return null
+  return (applications.value || []).find((app) => String(app.id) === String(assign.applicationId)) || null
+})
+
+const canSubmitAssign = computed(() =>
+  Boolean(assign.applicationId && assign.mentorUserId)
+  && canAssignMentorshipToApplication(selectedApplication.value, false),
+)
 
 onMounted(load)
 
@@ -251,8 +290,35 @@ function openAssign() {
   assign.error = ''
 }
 
+async function removeMentorship(row) {
+  if (!row?.id) return
+  const ok = window.confirm('Delete this mentorship permanently?')
+  if (!ok) return
+  savingRowId.value = row.id
+  try {
+    await mentorshipStore.removeMentorship(row.id, row.applicationId)
+    showToast('Mentorship deleted', 'success')
+    if (router.currentRoute.value.path.startsWith('/applications/')) {
+      router.push('/app/admin/mentorships')
+      return
+    }
+    await load()
+  } catch (e) {
+    const msg = e.response?.data?.error
+      || e.response?.data?.message
+      || 'Failed to delete mentorship'
+    showToast(msg, 'error')
+  } finally {
+    savingRowId.value = null
+  }
+}
+
 async function submitAssign() {
   if (!assign.applicationId || !assign.mentorUserId) return
+  if (!canSubmitAssign.value) {
+    assign.error = MENTORSHIP_APPROVED_ONLY_HINT
+    return
+  }
   assign.saving = true
   assign.error = ''
   try {
@@ -262,10 +328,9 @@ async function submitAssign() {
     })
     assign.show = false
     showToast('Менторство призначено', 'success')
+    await load()
   } catch (e) {
-    assign.error = e.response?.data?.message
-      || (typeof e.response?.data === 'string' ? e.response.data : null)
-      || 'Не вдалося призначити менторство'
+    assign.error = mentorshipAssignErrorMessage(e, 'Не вдалося призначити менторство')
   } finally {
     assign.saving = false
   }
@@ -454,6 +519,16 @@ function showToast(message, type = 'success') {
 .btn-sm:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.btn-sm--danger {
+  background: white;
+  color: #b91c1c;
+  border: 1px solid rgba(220, 38, 38, 0.25);
+}
+
+.btn-sm--danger:hover:not(:disabled) {
+  background: rgba(220, 38, 38, 0.08);
 }
 
 .modal-overlay {

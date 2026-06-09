@@ -176,7 +176,10 @@
               {{ milestone.description || '—' }}
             </p>
 
-            <MilestoneDetailsPanel :milestone-id="milestone.id" />
+            <MilestoneDetailsPanel
+              :milestone-id="milestone.id"
+              :read-only="isProgramAReadOnly"
+            />
 
             <div class="application-details__actions">
               <button
@@ -193,7 +196,7 @@
                 class="application-details__danger-btn"
                 @click="deleteMilestone(milestone)"
               >
-                Remove
+                Delete Milestone
               </button>
 
               <button
@@ -212,16 +215,21 @@
       <section v-else-if="activeTab === 'mentorship'" class="application-details__panel">
         <div class="application-details__section-head">
           <h2 class="application-details__section-title">Mentorship</h2>
-          <button
-            v-if="isAdmin"
-            type="button"
-            class="application-details__primary-btn"
-            :class="{ 'application-details__primary-btn--disabled': hasActiveMentorship }"
-            :disabled="hasActiveMentorship"
-            @click="openAssignMentorModal"
-          >
-            Assign Mentor
-          </button>
+          <div v-if="isAdmin" class="application-details__assign-mentor">
+            <button
+              type="button"
+              class="application-details__primary-btn"
+              :class="{ 'application-details__primary-btn--disabled': !canAssignMentor }"
+              :disabled="!canAssignMentor"
+              :title="assignMentorDisabledReason || undefined"
+              @click="openAssignMentorModal"
+            >
+              Assign Mentor
+            </button>
+            <p v-if="assignMentorDisabledReason" class="application-details__hint">
+              {{ assignMentorDisabledReason }}
+            </p>
+          </div>
         </div>
         <p v-if="mentorshipError" class="application-details__error">
           {{ mentorshipError }}
@@ -247,25 +255,35 @@
               Assigned: {{ formatDateTime(mentorship.startDate || mentorship.createdAt) }}
             </p>
             <ConsultationsPanel :mentorship-id="mentorship.id" />
-            <div v-if="isAdmin && mentorship.status === MentorshipStatus.ACTIVE" class="application-details__actions">
-              <select v-model="mentorshipNextStatuses[mentorship.id]" class="application-details__select">
-                <option disabled value="">
-                  Close as...
-                </option>
-                <option :value="MentorshipStatus.COMPLETED">
-                  COMPLETED
-                </option>
-                <option :value="MentorshipStatus.CANCELLED">
-                  CANCELLED
-                </option>
-              </select>
+            <div class="application-details__actions">
+              <template v-if="isAdmin && mentorship.status === MentorshipStatus.ACTIVE">
+                <select v-model="mentorshipNextStatuses[mentorship.id]" class="application-details__select">
+                  <option disabled value="">
+                    Close as...
+                  </option>
+                  <option :value="MentorshipStatus.COMPLETED">
+                    COMPLETED
+                  </option>
+                  <option :value="MentorshipStatus.CANCELLED">
+                    CANCELLED
+                  </option>
+                </select>
+                <button
+                  type="button"
+                  class="application-details__secondary-btn"
+                  :disabled="!mentorshipNextStatuses[mentorship.id]"
+                  @click="updateMentorshipStatus(mentorship)"
+                >
+                  Change Status
+                </button>
+              </template>
               <button
+                v-if="isSuperAdmin"
                 type="button"
-                class="application-details__secondary-btn"
-                :disabled="!mentorshipNextStatuses[mentorship.id]"
-                @click="updateMentorshipStatus(mentorship)"
+                class="application-details__danger-btn"
+                @click="deleteMentorship(mentorship)"
               >
-                Change Status
+                Delete Mentorship
               </button>
             </div>
           </article>
@@ -449,6 +467,13 @@ import { useAuthStore } from '@/stores/auth'
 import { useOrganizationStore } from '@/stores/organization'
 import { useApplicationsStore } from '@/stores/applications'
 import { statusLabel } from '@/utils/applicationStatus'
+import {
+  isProgramAReadOnly as checkProgramAReadOnly,
+  isProgramBTeamLeader,
+  canAssignMentorshipToApplication,
+  MENTORSHIP_APPROVED_ONLY_HINT,
+  mentorshipAssignErrorMessage,
+} from '@/utils/applicationPermissions'
 
 const route = useRoute()
 const router = useRouter()
@@ -506,6 +531,7 @@ const teamError = ref('')
 
 const roles = computed(() => authStore.roles || [])
 const isAdmin = computed(() => roles.value.some((r) => r === 'ADMIN' || r === 'SUPER_ADMIN'))
+const isSuperAdmin = computed(() => roles.value.includes('SUPER_ADMIN'))
 const isStudent = computed(() => roles.value.includes('STUDENT'))
 const isMentor = computed(() => roles.value.includes('MENTOR'))
 const isFirm = computed(() => roles.value.includes('FIRM'))
@@ -557,11 +583,33 @@ const selectedProductOwnerId = computed(() =>
   ?? application.value?.assignedProductOwnerId
   ?? null,
 )
-const canCreateMilestone = computed(() =>
-  isAdmin.value
-  || isStudent.value
-  || ((isFirm.value || isFirmUser.value) && isProgramBApplication.value),
+const isProgramAReadOnly = computed(() =>
+  checkProgramAReadOnly(application.value, authStore.user?.id, isAdmin.value),
 )
+
+const canCreateMilestone = computed(() => {
+  if (isProgramAReadOnly.value) return false
+  if (isProgramBTeamLeader(application.value, authStore.user?.id, roles.value)) return false
+  return isAdmin.value
+    || isStudent.value
+    || ((isFirm.value || isFirmUser.value) && isProgramBApplication.value)
+})
+
+const isApplicationApproved = computed(() => application.value?.status === 'APPROVED')
+
+const canAssignMentor = computed(() =>
+  isAdmin.value
+  && canAssignMentorshipToApplication(application.value, hasActiveMentorship.value),
+)
+
+const assignMentorDisabledReason = computed(() => {
+  if (!isAdmin.value) return ''
+  if (hasActiveMentorship.value) {
+    return 'Active mentorship already exists for this application.'
+  }
+  if (!isApplicationApproved.value) return MENTORSHIP_APPROVED_ONLY_HINT
+  return ''
+})
 
 const applicationIdNumber = computed(() => Number(route.params.id))
 
@@ -700,7 +748,7 @@ const eligibleOrganizationMembers = computed(() => {
   if (!withRoleInfo.length) return raw
   return raw.filter((m) => {
     const rolesList = m?.userRoles || m?.roles || []
-    return rolesList.includes('FIRM') || rolesList.includes('FIRM_USER')
+    return rolesList.includes('FIRM')
   })
 })
 
@@ -777,11 +825,13 @@ function formatDate(value) {
 }
 
 function canEditMilestone(milestone) {
+  if (isProgramAReadOnly.value) return false
   if (isAdmin.value) return true
   return isStudent.value && milestone?.status === MilestoneStatus.PENDING_APPROVAL
 }
 
 function canDeleteMilestone() {
+  if (isProgramAReadOnly.value) return false
   return isAdmin.value
 }
 
@@ -813,8 +863,28 @@ async function onMilestoneSaved() {
 }
 
 async function deleteMilestone(milestone) {
-  await milestoneStore.delete(milestone.id, applicationIdNumber.value)
-  await milestoneStore.fetchByApplication(applicationIdNumber.value)
+  if (!milestone?.id) return
+  const ok = window.confirm('Delete this milestone permanently?')
+  if (!ok) return
+  try {
+    await milestoneStore.delete(milestone.id, applicationIdNumber.value)
+    await milestoneStore.fetchByApplication(applicationIdNumber.value)
+  } catch (e) {
+    error.value = e.response?.data?.error || e.response?.data?.message || 'Failed to delete milestone.'
+  }
+}
+
+async function deleteMentorship(mentorship) {
+  if (!mentorship?.id) return
+  const ok = window.confirm('Delete this mentorship permanently?')
+  if (!ok) return
+  mentorshipError.value = ''
+  try {
+    await mentorshipStore.removeMentorship(mentorship.id, applicationIdNumber.value)
+    router.push('/app/admin/mentorships')
+  } catch (e) {
+    mentorshipError.value = mentorshipAssignErrorMessage(e, 'Failed to delete mentorship.')
+  }
 }
 
 async function updateMilestoneStatus(milestone) {
@@ -830,8 +900,8 @@ async function approveMilestone(milestone) {
 
 async function openAssignMentorModal() {
   mentorshipError.value = ''
-  if (hasActiveMentorship.value) {
-    mentorshipError.value = 'Active mentorship already exists for this application.'
+  if (!canAssignMentor.value) {
+    mentorshipError.value = assignMentorDisabledReason.value || MENTORSHIP_APPROVED_ONLY_HINT
     return
   }
   assignMentorUserId.value = ''
@@ -843,17 +913,23 @@ async function openAssignMentorModal() {
 
 async function submitAssignMentor() {
   if (!assignMentorUserId.value) return
-  if (hasActiveMentorship.value) {
-    mentorshipError.value = 'Active mentorship already exists for this application.'
+  if (!canAssignMentor.value) {
+    mentorshipError.value = assignMentorDisabledReason.value || MENTORSHIP_APPROVED_ONLY_HINT
     assignModalOpen.value = false
     return
   }
-  await mentorshipStore.create({
-    mentorUserId: Number(assignMentorUserId.value),
-    applicationId: applicationIdNumber.value,
-  })
-  await mentorshipStore.getByApplication(applicationIdNumber.value)
-  assignModalOpen.value = false
+  mentorshipError.value = ''
+  try {
+    await mentorshipStore.create({
+      mentorUserId: Number(assignMentorUserId.value),
+      applicationId: applicationIdNumber.value,
+    })
+    await mentorshipStore.getByApplication(applicationIdNumber.value)
+    assignModalOpen.value = false
+  } catch (e) {
+    mentorshipError.value = mentorshipAssignErrorMessage(e, 'Failed to assign mentor.')
+    assignModalOpen.value = false
+  }
 }
 
 async function updateMentorshipStatus(mentorship) {
@@ -1099,6 +1175,22 @@ async function deleteNote(note) {
 .application-details__section-title {
   margin: 0;
   color: #0f172a;
+}
+
+.application-details__assign-mentor {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+}
+
+.application-details__hint {
+  margin: 0;
+  max-width: 16rem;
+  text-align: right;
+  color: #64748b;
+  font-size: 0.78rem;
+  line-height: 1.35;
 }
 
 .application-details__empty {

@@ -44,4 +44,7 @@ export const programsApi = {
   getPendingReview: () => api.get('/api/admin/programs/pending-review'),
 
   reviewProgram: (id, reviewData) => api.post(`/api/admin/programs/${id}/review`, reviewData),
+
+  assignOrganization: (programId, orgId) =>
+    api.patch(`/api/admin/programs/${programId}/organization`, null, { params: { orgId } }),
 }

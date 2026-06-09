@@ -176,6 +176,29 @@ export const useMentorshipStore = defineStore('mentorship', () => {
     }
   }
 
+  async function removeMentorship(id, applicationId = null) {
+    await mentorshipsApi.delete(id)
+    mentorships.value = mentorships.value.filter((m) => m?.id !== id)
+    myMentorships.value = myMentorships.value.filter((m) => m?.id !== id)
+    if (applicationId != null) {
+      mentorshipsByApplication.value = {
+        ...mentorshipsByApplication.value,
+        [applicationId]: (mentorshipsByApplication.value[applicationId] || []).filter(
+          (m) => m?.id !== id,
+        ),
+      }
+    } else {
+      const next = { ...mentorshipsByApplication.value }
+      for (const [appId, list] of Object.entries(next)) {
+        if ((list || []).some((m) => m?.id === id)) {
+          next[appId] = list.filter((m) => m?.id !== id)
+        }
+      }
+      mentorshipsByApplication.value = next
+    }
+    if (currentMentorship.value?.id === id) currentMentorship.value = null
+  }
+
   return {
     // Enums (usable in UI logic)
     MentorshipStatus,
@@ -204,6 +227,8 @@ export const useMentorshipStore = defineStore('mentorship', () => {
     createConsultation,
     updateConsultation,
     deleteConsultation,
+    removeMentorship,
+    delete: removeMentorship,
   }
 })
 

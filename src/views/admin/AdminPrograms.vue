@@ -109,6 +109,17 @@
           <span>Поточний статус</span>
           <StatusBadge :status="programModal.status" :label="statusLabel(programModal.status)" />
         </label>
+        <label v-if="showOrganizationAssign" class="field">
+          <span>Assign Organization</span>
+          <select v-model="programModal.organizationId">
+            <option value="">
+              — Select organization —
+            </option>
+            <option v-for="org in organizations" :key="org.id" :value="String(org.id)">
+              {{ org.name }}{{ org.ico ? ` (${org.ico})` : '' }}
+            </option>
+          </select>
+        </label>
         <div class="modal-actions">
           <button type="button" class="btn-secondary" @click="programModal.show = false">
             Скасувати
@@ -157,15 +168,21 @@
 </template>
 
 <script setup>
-import { reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { programsApi } from '@/api/programs'
+import { useAuthStore } from '@/stores/auth'
+import { useOrganizationStore } from '@/stores/organization'
 import { apiErrorMessage } from '@/utils/apiError'
+import { isSuperAdmin } from '@/utils/roles'
 import StatusBadge from '@/components/StatusBadge.vue'
 
 const router = useRouter()
+const authStore = useAuthStore()
+const orgStore = useOrganizationStore()
 const tab = ref('A')
 const programs = ref([])
+const organizations = ref([])
 const loading = ref(true)
 const error = ref('')
 
@@ -178,6 +195,8 @@ const programModal = reactive({
   name: '',
   description: '',
   status: '',
+  organizationId: '',
+  initialOrganizationId: '',
 })
 
 const callModal = reactive({
@@ -197,6 +216,21 @@ const toast = reactive({
 watch(tab, () => {
   loadTab()
 }, { immediate: true })
+
+const isSuperAdminUser = computed(() => isSuperAdmin(authStore.roles))
+
+const showOrganizationAssign = computed(() =>
+  tab.value === 'B' && isSuperAdminUser.value && programModal.show,
+)
+
+async function loadOrganizations() {
+  if (!isSuperAdminUser.value) return
+  try {
+    organizations.value = (await orgStore.getAll()) || []
+  } catch {
+    organizations.value = []
+  }
+}
 
 async function loadTab() {
   loading.value = true
@@ -238,12 +272,20 @@ function openProgramModal(p) {
     programModal.name = p.name
     programModal.description = p.description || ''
     programModal.status = p.status || ''
+    const orgId = programOrganizationId(p)
+    programModal.organizationId = orgId != null ? String(orgId) : ''
+    programModal.initialOrganizationId = programModal.organizationId
   } else {
     programModal.edit = false
     programModal.id = null
     programModal.name = ''
     programModal.description = ''
     programModal.status = ''
+    programModal.organizationId = ''
+    programModal.initialOrganizationId = ''
+  }
+  if (tab.value === 'B' && isSuperAdminUser.value) {
+    loadOrganizations()
   }
   programModal.show = true
 }
@@ -257,13 +299,27 @@ async function saveProgram() {
   }
 
   try {
+    let programId = programModal.id
     if (programModal.edit) {
       await programsApi.update(programModal.id, body)
       showToast('Програму оновлено', 'success')
     } else {
-      await programsApi.create(body)
+      const res = await programsApi.create(body)
+      programId = res.data?.id ?? null
       showToast('Програму створено', 'success')
     }
+
+    if (
+      tab.value === 'B'
+      && isSuperAdminUser.value
+      && programId
+      && programModal.organizationId
+      && programModal.organizationId !== programModal.initialOrganizationId
+    ) {
+      await programsApi.assignOrganization(programId, programModal.organizationId)
+      showToast('Organization assigned to program', 'success')
+    }
+
     programModal.show = false
     await loadTab()
   } catch (e) {
@@ -624,7 +680,8 @@ function openProgramDetails(program) {
 }
 
 .field input,
-.field textarea {
+.field textarea,
+.field select {
   padding: 0.5rem 0.65rem;
   border-radius: 10px;
   border: 1px solid #cbd5e1;

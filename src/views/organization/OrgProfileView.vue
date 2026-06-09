@@ -33,14 +33,33 @@
               Status: <strong>{{ org.status || '—' }}</strong>
             </p>
           </div>
-          <button
-            v-if="canEdit"
-            type="button"
-            class="btn-secondary"
-            @click="toggleEdit"
-          >
-            {{ editMode ? 'Cancel' : 'Edit' }}
-          </button>
+          <div v-if="canEdit || canChangeStatus || canDeleteOrg" class="card__actions">
+            <button
+              v-if="canEdit"
+              type="button"
+              class="btn-secondary"
+              @click="toggleEdit"
+            >
+              {{ editMode ? 'Cancel' : 'Edit Organization' }}
+            </button>
+            <button
+              v-if="canChangeStatus"
+              type="button"
+              class="btn-secondary"
+              @click="openStatusModal"
+            >
+              Change Status
+            </button>
+            <button
+              v-if="canDeleteOrg"
+              type="button"
+              class="btn-danger"
+              :disabled="deleting"
+              @click="confirmDeleteOrg"
+            >
+              {{ deleting ? 'Deleting…' : 'Delete Organization' }}
+            </button>
+          </div>
         </div>
 
         <div v-if="saveError" class="inline-error">
@@ -149,7 +168,7 @@
                 </td>
                 <td class="actions-cell">
                   <button
-                    v-if="isAdmin && m.role !== orgStore.OrgMemberRole.OWNER"
+                    v-if="canTransferOwnership && m.role !== orgStore.OrgMemberRole.OWNER"
                     type="button"
                     class="btn-link"
                     :disabled="memberSaving"
@@ -158,11 +177,11 @@
                     Transfer Ownership
                   </button>
                   <button
-                    v-if="canManageMembers"
+                    v-if="canRemoveMember(m)"
                     type="button"
                     class="btn-link btn-link--danger"
-                    :disabled="memberSaving || isMe(m)"
-                    @click="removeMember(m)"
+                    :disabled="memberSaving"
+                    @click="confirmRemoveMember(m)"
                   >
                     Remove
                   </button>
@@ -180,17 +199,57 @@
         </p>
       </div>
     </div>
+
+    <div v-if="statusModal.show" class="modal-overlay" @click.self="statusModal.show = false">
+      <div class="modal">
+        <h3>Change organization status</h3>
+        <p class="modal-meta">
+          {{ org?.name }} · current: {{ org?.status || '—' }}
+        </p>
+        <label class="field">
+          <span>New status</span>
+          <select v-model="statusModal.nextStatus">
+            <option disabled value="">
+              Select…
+            </option>
+            <option v-for="s in statusOptions" :key="s" :value="s">
+              {{ s }}
+            </option>
+          </select>
+        </label>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" @click="statusModal.show = false">
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn-primary"
+            :disabled="statusSaving || !statusModal.nextStatus"
+            @click="submitStatus"
+          >
+            {{ statusSaving ? 'Saving…' : 'Save' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
 import { useOrganizationStore } from '@/stores/organization'
+import { isGlobalAdmin, isSuperAdmin } from '@/utils/roles'
+import {
+  ORG_MEMBERSHIP_CONFLICT_MESSAGE,
+  isOrgMembershipConflictError,
+} from '@/utils/organizationMembership'
 
 const auth = useAuthStore()
 const orgStore = useOrganizationStore()
+const router = useRouter()
 
 const { currentOrganization, members } = storeToRefs(orgStore)
 
@@ -203,8 +262,15 @@ const membersLoading = ref(false)
 const membersError = ref('')
 const membersSuccess = ref('')
 const memberSaving = ref(false)
+const deleting = ref(false)
+const statusSaving = ref(false)
 
 const editMode = ref(false)
+
+const statusModal = reactive({
+  show: false,
+  nextStatus: '',
+})
 
 const profileForm = reactive({
   name: '',
@@ -220,7 +286,8 @@ const addMember = reactive({
   email: '',
 })
 
-const isAdmin = computed(() => auth.roles?.some((r) => r === 'ADMIN' || r === 'SUPER_ADMIN'))
+const isAdmin = computed(() => isGlobalAdmin(auth.roles))
+const isSuperAdminUser = computed(() => isSuperAdmin(auth.roles))
 
 const org = computed(() => currentOrganization.value)
 
@@ -239,6 +306,11 @@ const canManageMembers = computed(() =>
 )
 
 const canEdit = computed(() => canManageMembers.value)
+const canChangeStatus = computed(() => isAdmin.value)
+const canDeleteOrg = computed(() => isSuperAdminUser.value)
+const canTransferOwnership = computed(() => isAdmin.value)
+
+const statusOptions = computed(() => Object.values(orgStore.OrgStatus))
 
 onMounted(init)
 
@@ -317,28 +389,53 @@ async function refreshMembers() {
 }
 
 function isMe(m) {
+  const userId = auth.user?.id
+  if (userId != null && m?.userId != null) {
+    return Number(m.userId) === Number(userId)
+  }
   const email = auth.user?.email
   if (!email) return false
   return String(m?.userEmail || '').toLowerCase() === String(email).toLowerCase()
 }
 
+function canRemoveMember(m) {
+  if (!m?.id || m.role === orgStore.OrgMemberRole.OWNER) return false
+  if (isMe(m)) return false
+  return isAdmin.value || myMember.value?.role === orgStore.OrgMemberRole.OWNER
+}
+
 async function submitAddMember() {
   if (!org.value?.id) return
+  const email = addMember.email.trim()
+  if (!email) return
+
   memberSaving.value = true
   membersError.value = ''
   membersSuccess.value = ''
   try {
-    await orgStore.inviteMember(org.value.id, addMember.email.trim())
+    if (await orgStore.isEmailAlreadyOrgMember(email)) {
+      membersError.value = ORG_MEMBERSHIP_CONFLICT_MESSAGE
+      return
+    }
+    await orgStore.inviteMember(org.value.id, email)
     membersSuccess.value = 'Користувача успішно запрошено'
     addMember.email = ''
     await refreshMembers()
   } catch (e) {
-    membersError.value = e.response?.data?.message
-      || (typeof e.response?.data === 'string' ? e.response.data : null)
-      || 'Failed to invite member.'
+    membersError.value = isOrgMembershipConflictError(e)
+      ? ORG_MEMBERSHIP_CONFLICT_MESSAGE
+      : (e.response?.data?.message
+        || (typeof e.response?.data === 'string' ? e.response.data : null)
+        || 'Failed to invite member.')
   } finally {
     memberSaving.value = false
   }
+}
+
+async function confirmRemoveMember(m) {
+  const ok = window.confirm('Are you sure you want to remove this member from the organization?')
+  if (!ok) return
+  await removeMember(m)
 }
 
 async function removeMember(m) {
@@ -373,6 +470,41 @@ async function confirmTransferOwnership(m) {
   const ok = window.confirm('Are you sure? This will demote you to a regular member.')
   if (!ok) return
   await makeOwner(m)
+}
+
+function openStatusModal() {
+  statusModal.nextStatus = org.value?.status || ''
+  statusModal.show = true
+}
+
+async function submitStatus() {
+  if (!org.value?.id || !statusModal.nextStatus) return
+  statusSaving.value = true
+  saveError.value = ''
+  try {
+    await orgStore.changeStatus(org.value.id, statusModal.nextStatus)
+    statusModal.show = false
+  } catch (e) {
+    saveError.value = e.response?.data?.error || e.response?.data?.message || 'Failed to change status.'
+  } finally {
+    statusSaving.value = false
+  }
+}
+
+async function confirmDeleteOrg() {
+  const ok = window.confirm('Delete this organization permanently? This cannot be undone.')
+  if (!ok || !org.value?.id) return
+  deleting.value = true
+  saveError.value = ''
+  try {
+    await orgStore.delete(org.value.id)
+    currentOrganization.value = null
+    router.push(isAdmin.value ? '/app/admin/organizations' : '/app/dashboard')
+  } catch (e) {
+    saveError.value = e.response?.data?.error || e.response?.data?.message || 'Failed to delete organization.'
+  } finally {
+    deleting.value = false
+  }
 }
 </script>
 
@@ -477,6 +609,13 @@ async function confirmTransferOwnership(m) {
   margin-bottom: 0.75rem;
 }
 
+.card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  justify-content: flex-end;
+}
+
 .card__title {
   margin: 0;
   font-weight: 900;
@@ -561,6 +700,22 @@ async function confirmTransferOwnership(m) {
 
 .btn-secondary:hover:not(:disabled) {
   background: rgba(79, 70, 229, 0.06);
+}
+
+.btn-danger {
+  padding: 0.65rem 1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(220, 38, 38, 0.25);
+  background: white;
+  color: #b91c1c;
+  font-weight: 900;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.btn-danger:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .btn-primary {
@@ -663,6 +818,42 @@ async function confirmTransferOwnership(m) {
   color: #dc2626;
 }
 
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 1rem;
+}
+
+.modal {
+  width: 100%;
+  max-width: 520px;
+  background: white;
+  border-radius: 16px;
+  padding: 1.5rem;
+}
+
+.modal h3 {
+  margin: 0 0 0.35rem;
+}
+
+.modal-meta {
+  margin: 0 0 1rem;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
 @media (max-width: 900px) {
   .grid {
     grid-template-columns: 1fr;
@@ -675,6 +866,11 @@ async function confirmTransferOwnership(m) {
 
   .actions-cell {
     text-align: left;
+  }
+
+  .card__actions {
+    width: 100%;
+    justify-content: flex-start;
   }
 }
 </style>

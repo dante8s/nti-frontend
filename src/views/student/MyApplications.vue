@@ -197,41 +197,100 @@
           </div>
         </section>
 
-        <!-- Milestones (з гілки Andrii) -->
+        <!-- Milestones -->
         <section class="milestones">
-          <h3 class="milestones__title">Milestones</h3>
-          <div v-if="milestonesFor(selected.id).length === 0" class="milestones__empty">
+          <div class="milestones__head">
+            <h3 class="milestones__title">Milestones</h3>
+            <button
+              v-if="canCreateMilestone"
+              type="button"
+              class="milestone-btn milestone-btn--primary"
+              @click="openCreateMilestoneModal"
+            >
+              Add Milestone
+            </button>
+          </div>
+
+          <p v-if="milestoneError" class="milestones__error">
+            {{ milestoneError }}
+          </p>
+
+          <div v-if="milestoneList.length === 0" class="milestones__empty">
             No milestones yet.
           </div>
           <div v-else class="milestones__list">
             <article
-              v-for="m in milestonesFor(selected.id)"
-              :key="m.id"
+              v-for="milestone in milestoneList"
+              :key="milestone.id"
               class="milestone-item"
             >
               <div class="milestone-item__top">
-                <h4 class="milestone-item__title">{{ m.title || '—' }}</h4>
-                <span class="milestone-status" :class="milestoneStatusClass(m.status)">
-                  {{ m.status || '—' }}
-                </span>
+                <h4 class="milestone-item__title">
+                  {{ milestone.title || '—' }}
+                </h4>
+                <div class="milestone-item__status-controls">
+                  <StatusBadge :status="milestone.status" />
+                  <template v-if="canUpdateMilestoneStatus(milestone)">
+                    <select
+                      v-model="milestoneNextStatuses[milestone.id]"
+                      class="milestone-select"
+                    >
+                      <option disabled value="">
+                        Update status...
+                      </option>
+                      <option
+                        v-for="nextStatus in allowedStatusOptions(milestone)"
+                        :key="`${milestone.id}-${nextStatus}`"
+                        :value="nextStatus"
+                      >
+                        {{ nextStatus }}
+                      </option>
+                    </select>
+                    <button
+                      type="button"
+                      class="milestone-btn milestone-btn--secondary"
+                      :disabled="!milestoneNextStatuses[milestone.id]"
+                      @click="updateMilestoneStatus(milestone)"
+                    >
+                      Update Status
+                    </button>
+                  </template>
+                </div>
               </div>
-              <p class="milestone-item__meta">Due: {{ formatMilestoneDate(m.dueDate) }}</p>
-              <p class="milestone-item__desc">{{ m.description || '—' }}</p>
-              <MilestoneDetailsPanel :milestone-id="m.id" />
-              <div v-if="m.status === 'PENDING_APPROVAL'" class="milestone-item__actions">
+              <p class="milestone-item__meta">
+                Due: {{ formatDate(milestone.dueDate) }}
+              </p>
+              <p class="milestone-item__desc">
+                {{ milestone.description || '—' }}
+              </p>
+              <MilestoneDetailsPanel
+                :milestone-id="milestone.id"
+                :read-only="isProgramAReadOnly"
+              />
+              <div class="milestone-item__actions">
                 <button
+                  v-if="canEditMilestone(milestone)"
                   type="button"
-                  class="milestone-action-btn"
-                  @click="openEditMilestoneModal(selected.id, m)"
+                  class="milestone-btn milestone-btn--secondary"
+                  @click="openEditMilestoneModal(milestone)"
                 >
                   Edit
                 </button>
                 <button
+                  v-if="canDeleteMilestone(milestone)"
                   type="button"
-                  class="milestone-action-btn milestone-action-btn--danger"
-                  @click="deleteMilestone(selected.id, m.id)"
+                  class="milestone-btn milestone-btn--danger"
+                  @click="deleteMilestone(milestone)"
                 >
-                  Delete
+                  Delete Milestone
+                </button>
+                <button
+                  v-if="isAdmin && milestone.status === MilestoneStatus.PENDING_APPROVAL"
+                  type="button"
+                  class="milestone-btn milestone-btn--primary"
+                  @click="approveMilestone(milestone)"
+                >
+                  Approve
                 </button>
               </div>
             </article>
@@ -246,24 +305,27 @@
     </div>
 
     <MilestoneFormModal
-      v-model="showMilestoneModal"
-      :application-id="editingAppId"
+      v-model="milestoneModalOpen"
+      :application-id="selectedId"
       :milestone="editingMilestone"
-      @created="showMilestoneModal = false"
+      @created="onMilestoneSaved"
     />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onActivated } from 'vue'
+import { ref, computed, onMounted, onActivated, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { applicationsApi } from '@/api/applications'
 import { useMentorshipStore } from '@/stores/mentorship'
-import { useMilestoneStore } from '@/stores/milestone'
+import { MilestoneStatus, useMilestoneStore } from '@/stores/milestone'
+import { useAuthStore } from '@/stores/auth'
 import { apiErrorMessage } from '@/utils/apiError'
+import { isProgramAReadOnly as checkProgramAReadOnly, isProgramBTeamLeader } from '@/utils/applicationPermissions'
 import MilestoneDetailsPanel from '@/components/MilestoneDetailsPanel.vue'
 import MilestoneFormModal from '@/components/MilestoneFormModal.vue'
+import StatusBadge from '@/components/StatusBadge.vue'
 import ConsultationsPanel from '@/components/ConsultationsPanel.vue'
 import DocumentUpload from '@/components/DocumentUpload.vue'
 import ResultDocumentUpload from '@/components/ResultDocumentUpload.vue'
@@ -287,15 +349,48 @@ const completing = ref(false)
 const completeError = ref('')
 const resultDocsReady = ref(false)
 const timelineRef = ref(null)
+const milestoneModalOpen = ref(false)
+const editingMilestone = ref(null)
+const milestoneNextStatuses = ref({})
+const milestoneError = ref('')
 
+const authStore = useAuthStore()
 const mentorshipStore = useMentorshipStore()
 const { mentorshipsByApplication } = storeToRefs(mentorshipStore)
 const milestoneStore = useMilestoneStore()
 const { milestones } = storeToRefs(milestoneStore)
 
-const showMilestoneModal = ref(false)
-const editingMilestone = ref(null)
-const editingAppId = ref(null)
+const roles = computed(() => authStore.roles || [])
+const isAdmin = computed(() => roles.value.some((r) => r === 'ADMIN' || r === 'SUPER_ADMIN'))
+const isStudent = computed(() => roles.value.includes('STUDENT'))
+const isMentor = computed(() => roles.value.includes('MENTOR'))
+const isFirm = computed(() => roles.value.includes('FIRM'))
+const isFirmUser = computed(() => roles.value.includes('FIRM_USER'))
+
+const isProgramBApplication = computed(() =>
+  selected.value?.call?.program?.type === 'PROGRAM_B'
+  || selected.value?.programType === 'PROGRAM_B',
+)
+
+const isProgramAReadOnly = computed(() =>
+  checkProgramAReadOnly(selected.value, authStore.user?.id, isAdmin.value),
+)
+
+const canCreateMilestone = computed(() => {
+  if (isProgramAReadOnly.value) return false
+  if (isProgramBTeamLeader(selected.value, authStore.user?.id, roles.value)) return false
+  return isAdmin.value
+    || isStudent.value
+    || ((isFirm.value || isFirmUser.value) && isProgramBApplication.value)
+})
+
+const milestoneList = computed(() => {
+  const id = selectedId.value
+  if (id == null) return []
+  return [...(milestones.value?.[String(id)] || [])].sort(
+    (a, b) => new Date(a?.dueDate || 0) - new Date(b?.dueDate || 0),
+  )
+})
 
 const canSubmitApplication = computed(() => {
   const status = selected.value?.status
@@ -309,6 +404,30 @@ onMounted(() => {
 onActivated(() => {
   void load()
 })
+
+watch(selectedId, (id) => {
+  if (id == null) return
+  void loadApplicationExtras(id)
+})
+
+watch(
+  () => applications.value.length,
+  () => {
+    if (selectedId.value != null) void loadApplicationExtras(selectedId.value)
+  },
+)
+
+async function loadApplicationExtras(applicationId) {
+  if (applicationId == null) return
+  try {
+    await Promise.all([
+      milestoneStore.fetchByApplication(applicationId),
+      mentorshipStore.getByApplication(applicationId),
+    ])
+  } catch (e) {
+    console.error(e)
+  }
+}
 
 function sameApplicationId(a, b) {
   if (a == null || b == null) return false
@@ -335,6 +454,9 @@ async function load() {
     } else if (!list.some((a) => sameApplicationId(a.id, selectedId.value))) {
       selectedId.value = Number(list[0].id)
     }
+    if (selectedId.value != null) {
+      await loadApplicationExtras(selectedId.value)
+    }
   } catch (e) {
     console.error(e)
     if (e.code === 'ECONNABORTED') {
@@ -352,13 +474,18 @@ async function load() {
     loading.value = false
   }
 }
-
 function selectApplication(app) {
   if (app?.id == null) return
+
   selectedId.value = Number(app.id)
+
+  // Reset UI state
   submitError.value = ''
   completeError.value = ''
   resultDocsReady.value = false
+
+  // Load additional data for the selected application
+  void loadApplicationExtras(app.id)
 }
 
 async function refreshSelected() {
@@ -471,29 +598,78 @@ function mentorshipAssignedDt(m) {
   return formatDate(m.assignedAt)
 }
 
-function milestonesFor(appId) {
-  return milestones.value?.[String(appId)] || []
+function canEditMilestone(milestone) {
+  if (isProgramAReadOnly.value) return false
+  if (isAdmin.value) return true
+  return isStudent.value && milestone?.status === MilestoneStatus.PENDING_APPROVAL
 }
 
-function milestoneStatusClass(status) {
-  return status?.toLowerCase().replace(/_/g, '-') || ''
+function canDeleteMilestone() {
+  if (isProgramAReadOnly.value) return false
+  return isAdmin.value
 }
 
-function formatMilestoneDate(date) {
-  return formatDate(date)
+function canUpdateMilestoneStatus(milestone) {
+  if (isAdmin.value) return true
+  if (isMentor.value) return allowedStatusOptions(milestone).length > 0
+  return false
 }
 
-function openEditMilestoneModal(appId, milestone) {
-  editingAppId.value = appId
+function allowedStatusOptions(milestone) {
+  if (!milestone?.status) return []
+  return milestoneStore.getAllowedTransitions(milestone.status) || []
+}
+
+function openCreateMilestoneModal() {
+  editingMilestone.value = null
+  milestoneModalOpen.value = true
+}
+
+function openEditMilestoneModal(milestone) {
   editingMilestone.value = milestone
-  showMilestoneModal.value = true
+  milestoneModalOpen.value = true
 }
 
-async function deleteMilestone(appId, milestoneId) {
+async function onMilestoneSaved() {
+  const id = selectedId.value
+  if (id == null) return
+  await milestoneStore.fetchByApplication(id)
+  milestoneModalOpen.value = false
+  editingMilestone.value = null
+}
+
+async function deleteMilestone(milestone) {
+  if (!milestone?.id || selectedId.value == null) return
+  const ok = window.confirm('Delete this milestone permanently?')
+  if (!ok) return
+  milestoneError.value = ''
   try {
-    await milestoneStore.delete(milestoneId, appId)
-  } catch {
-    // milestone list updates reactively via store
+    await milestoneStore.delete(milestone.id, selectedId.value)
+    await milestoneStore.fetchByApplication(selectedId.value)
+  } catch (e) {
+    milestoneError.value = e.response?.data?.error || e.response?.data?.message || 'Failed to delete milestone.'
+  }
+}
+
+async function updateMilestoneStatus(milestone) {
+  const nextStatus = milestoneNextStatuses.value[milestone.id]
+  if (!nextStatus || selectedId.value == null) return
+  milestoneError.value = ''
+  try {
+    await milestoneStore.changeStatus(milestone.id, nextStatus, selectedId.value)
+    milestoneNextStatuses.value[milestone.id] = ''
+  } catch (e) {
+    milestoneError.value = e.response?.data?.error || e.response?.data?.message || 'Failed to update milestone status.'
+  }
+}
+
+async function approveMilestone(milestone) {
+  if (!milestone?.id || selectedId.value == null) return
+  milestoneError.value = ''
+  try {
+    await milestoneStore.changeStatus(milestone.id, MilestoneStatus.PLANNED, selectedId.value)
+  } catch (e) {
+    milestoneError.value = e.response?.data?.error || e.response?.data?.message || 'Failed to approve milestone.'
   }
 }
 </script>
@@ -837,6 +1013,20 @@ h1 {
   border-top: 1px solid #e5e7eb;
 }
 
+.milestones__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.milestones__error {
+  margin: 0 0 0.75rem;
+  color: #b91c1c;
+  font-size: 0.88rem;
+}
+
 .milestones__list {
   display: flex;
   flex-direction: column;
@@ -852,8 +1042,18 @@ h1 {
 .milestone-item__top {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 0.75rem;
   margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.milestone-item__status-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .milestone-item__title {
@@ -863,12 +1063,11 @@ h1 {
   color: #111827;
 }
 
-.milestone-status {
-  font-size: 0.72rem;
-  padding: 2px 8px;
-  border-radius: 20px;
-  background: #f3f4f6;
-  color: #6b7280;
+.milestone-select {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.78rem;
 }
 
 .milestone-item__meta {
@@ -885,24 +1084,44 @@ h1 {
 
 .milestone-item__actions {
   display: flex;
-  gap: 0.5rem;
+  flex-wrap: wrap;
+  gap: 0.45rem;
   margin-top: 8px;
 }
 
-.milestone-action-btn {
-  padding: 4px 12px;
-  border-radius: 6px;
+.milestone-btn {
+  border-radius: 8px;
+  padding: 0.35rem 0.75rem;
   font-size: 0.8rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  border: 1px solid #e5e7eb;
-  background: #fff;
-  color: #374151;
 }
 
-.milestone-action-btn--danger {
-  border-color: #fca5a5;
-  color: #dc2626;
+.milestone-btn--primary {
+  border: none;
+  background: #4f46e5;
+  color: white;
+}
+
+.milestone-btn--primary:hover:not(:disabled) {
+  background: #4338ca;
+}
+
+.milestone-btn--secondary {
+  border: 1px solid rgba(79, 70, 229, 0.25);
+  background: white;
+  color: #4338ca;
+}
+
+.milestone-btn--danger {
+  border: 1px solid rgba(220, 38, 38, 0.25);
+  background: white;
+  color: #b91c1c;
+}
+
+.milestone-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* ── Empty / Loading ── */

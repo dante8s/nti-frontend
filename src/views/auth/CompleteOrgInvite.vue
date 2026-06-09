@@ -32,7 +32,7 @@
             />
           </div>
 
-          <button type="submit" :disabled="isSubmitting">
+          <button type="submit" :disabled="isSubmitting || hasExistingOrganization">
             {{ isSubmitting ? 'Збереження...' : 'Завершити реєстрацію' }}
           </button>
         </form>
@@ -49,9 +49,16 @@
 import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useOrganizationStore } from '@/stores/organization'
+import {
+  ORG_MEMBERSHIP_CONFLICT_MESSAGE,
+  isOrgMembershipConflictError,
+  userHasOrganizationMembership,
+} from '@/utils/organizationMembership'
 
 const route = useRoute()
 const authStore = useAuthStore()
+const orgStore = useOrganizationStore()
 
 const inviteToken = ref('')
 const name = ref('')
@@ -60,13 +67,27 @@ const confirmPassword = ref('')
 const isSubmitting = ref(false)
 const error = ref('')
 const success = ref(false)
+const hasExistingOrganization = ref(false)
 
-onMounted(() => {
+onMounted(async () => {
   const tokenFromQuery = route.query.token
   inviteToken.value = Array.isArray(tokenFromQuery) ? tokenFromQuery[0] : tokenFromQuery || ''
 
   if (!inviteToken.value) {
     error.value = 'Токен запрошення відсутній або недійсний'
+    return
+  }
+
+  if (authStore.isLoggedIn) {
+    try {
+      const my = await orgStore.getMy()
+      if (userHasOrganizationMembership(my)) {
+        hasExistingOrganization.value = true
+        error.value = ORG_MEMBERSHIP_CONFLICT_MESSAGE
+      }
+    } catch {
+      // allow submit attempt; backend validates
+    }
   }
 })
 
@@ -90,10 +111,21 @@ async function handleSubmit() {
   isSubmitting.value = true
 
   try {
+    if (authStore.isLoggedIn) {
+      const my = await orgStore.getMy()
+      if (userHasOrganizationMembership(my)) {
+        hasExistingOrganization.value = true
+        error.value = ORG_MEMBERSHIP_CONFLICT_MESSAGE
+        return
+      }
+    }
+
     await authStore.completeOrgMemberInvite(inviteToken.value, name.value, password.value)
     success.value = true
   } catch (e) {
-    error.value = e.response?.data?.message || e.response?.data || 'Не вдалося завершити реєстрацію'
+    error.value = isOrgMembershipConflictError(e)
+      ? ORG_MEMBERSHIP_CONFLICT_MESSAGE
+      : (e.response?.data?.message || e.response?.data || 'Не вдалося завершити реєстрацію')
   } finally {
     isSubmitting.value = false
   }

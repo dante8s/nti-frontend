@@ -24,7 +24,7 @@ const isStudent = computed(() => auth.roles?.includes('STUDENT'))
 const showStudentNav = computed(() =>
   isStudent.value || auth.roles?.includes('SUPER_ADMIN'),
 )
-const isOrgUser = computed(() => auth.roles?.some((r) => r === 'FIRM' || r === 'FIRM_USER'))
+const isOrgUser = computed(() => auth.roles?.some((r) => r === 'FIRM'))
 const isMentor = computed(() => auth.roles?.includes('MENTOR'))
 const isCommissionMember = computed(() =>
   auth.roles?.some((r) => r === 'EVALUATOR' || r === 'SUPER_EVALUATOR'),
@@ -35,6 +35,7 @@ const showReportingNav = computed(
 
 const firmChecked = ref(false)
 const firmHasOrg = ref(false)
+const firmIsOwner = ref(false)
 
 const adminNav = computed(() => {
   const items = []
@@ -62,6 +63,16 @@ const adminNav = computed(() => {
   return items
 })
 
+const contentEditorNav = computed(() => {
+  if (!isAdmin.value) return []
+  return [
+    { to: '/app/admin/about-page', label: 'Stránka O NTI', icon: '◫' },
+    { to: '/app/admin/news', label: 'Správa noviniek', icon: '◰' },
+    { to: '/app/admin/success-stories', label: 'Úspešné príbehy', icon: '◆' },
+    { to: '/app/admin/faq', label: 'Správa FAQ', icon: '?' },
+  ]
+})
+
 const studentNav = computed(() => {
   if (!showStudentNav.value) return []
   return [
@@ -73,10 +84,22 @@ const studentNav = computed(() => {
 
 const organizationNav = computed(() => {
   if (!isOrgUser.value || !firmChecked.value || !firmHasOrg.value) return []
-  return [
+
+  // 1. Initialize the base array with items all organization users can see
+  const items = [
     { to: '/app/org/profile', label: t('nav.myOrganization'), icon: '◉' },
-    { to: '/app/programs/my', label: t('nav.programBProposals'), icon: '◈' },
   ]
+
+  // 2. Conditionally add the proposals link only if they are the owner
+  if (firmIsOwner.value) {
+    items.push({
+      to: '/app/programs/my',
+      label: t('nav.programBProposals'),
+      icon: '◈'
+    })
+  }
+
+  return items
 })
 
 const mentorNav = computed(() => {
@@ -141,10 +164,25 @@ async function checkPORequests() {
 
 async function checkFirmOrg() {
   if (!isOrgUser.value) return
+  firmIsOwner.value = false
   try {
     const my = await orgStore.getMy()
-    firmHasOrg.value = Array.isArray(my) ? my.length > 0 : my?.length > 0
-  } catch {
+    const orgs = Array.isArray(my) ? my : []
+    firmHasOrg.value = orgs.length > 0
+    if (!firmHasOrg.value) return
+
+    const primaryOrg = orgs[0]
+    const members = await orgStore.getMembers(primaryOrg.id)
+    const myEmail = auth.user?.email?.toLowerCase()
+    const myUserId = auth.user?.id
+    const membership = (members || []).find((member) => {
+      if (myUserId != null && member?.userId != null) {
+        return Number(member.userId) === Number(myUserId)
+      }
+      if (!myEmail) return false
+      return String(member?.userEmail || '').toLowerCase() === myEmail
+    })
+firmIsOwner.value = membership?.role === 'OWNER'  } catch {
     // keep nav usable even if endpoint fails
   } finally {
     firmChecked.value = true
@@ -270,6 +308,20 @@ async function checkFirmOrg() {
           {{ item.label }}
         </RouterLink>
 
+        <p v-if="contentEditorNav.length" class="shell__group-label">
+          Content editor
+        </p>
+        <RouterLink
+          v-for="item in contentEditorNav"
+          :key="item.to"
+          :to="item.to"
+          class="shell__link"
+          :class="{ active: isActive(item.to) }"
+          @click="closeMobile"
+        >
+          <span class="shell__ico" aria-hidden="true" v-html="item.icon" />
+          {{ item.label }}
+        </RouterLink>
         <template v-if="poNav.length">
           <p class="shell__group-label">Product Owner</p>
           <RouterLink
