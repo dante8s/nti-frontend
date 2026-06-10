@@ -39,14 +39,14 @@
                 {{ comment.createdByName || 'User' }} • {{ formatDateTime(comment.createdAt) }}
               </span>
               <button
-                v-if="!readOnly"
-                type="button"
-                class="milestone-details__danger-text"
-                title="Delete comment"
-                @click="removeComment(comment.id)"
-              >
-                Delete
-              </button>
+  v-if="String(comment.authorId) === String(authStore.user?.id) || isAdmin"
+  type="button"
+  class="milestone-details__danger-text"
+  title="Delete comment"
+  @click="removeComment(comment.id)"
+>
+  Delete
+</button>
             </div>
             <p class="milestone-details__text">{{ comment.content || '—' }}</p>
           </article>
