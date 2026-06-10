@@ -1,7 +1,7 @@
-<template>
+﻿<template>
   <div class="page">
     <p class="lead">
-      Список організацій у системі. Тут можна створювати нові та змінювати їхній статус.
+      List of organizations in the system. New ones can be created and their status changed here.
     </p>
 
     <div class="toolbar">
@@ -9,36 +9,36 @@
         v-model="search"
         type="search"
         class="search"
-        placeholder="Пошук за назвою, ICO, сектором, статусом…"
-        aria-label="Пошук"
+        placeholder="Search by name, ICO, sector, status…"
+        aria-label="Search"
       >
 
       <button type="button" class="btn-refresh" :disabled="loading" @click="load">
-        Оновити
+        Refresh
       </button>
       <button type="button" class="btn-refresh" @click="openCreate">
-        Створити організацію
+        Create organization
       </button>
     </div>
 
     <div v-if="loading" class="state">
-      Завантаження…
+      Loading…
     </div>
     <div v-else-if="error" class="state state--error">
       {{ error }}
     </div>
     <div v-else-if="filtered.length === 0" class="state">
-      Нічого не знайдено.
+      Nothing found.
     </div>
     <div v-else class="table-wrap">
       <table class="table">
         <thead>
           <tr>
             <th>ID</th>
-            <th>Організація</th>
-            <th>Контакт</th>
-            <th>Статус</th>
-            <th>Оновлено</th>
+            <th>Organization</th>
+            <th>Contact</th>
+            <th>Status</th>
+            <th>Updated</th>
             <th />
           </tr>
         </thead>
@@ -68,10 +68,10 @@
             </td>
             <td class="actions">
               <button type="button" class="btn-sm btn-sm--ghost" @click="openDetails(row)">
-                Деталі
+                Details
               </button>
               <button type="button" class="btn-sm" @click="openStatus(row)">
-                Змінити статус
+                Change status
               </button>
             </td>
           </tr>
@@ -82,53 +82,53 @@
     <!-- Create modal -->
     <div v-if="createModal.show" class="modal-overlay" @click.self="createModal.show = false">
       <div class="modal">
-        <h3>Створити організацію</h3>
+        <h3>Create organization</h3>
         <p class="modal-meta">
-          Заповніть поля згідно з профілем організації.
+          Fill in the fields according to the organization profile.
         </p>
 
         <label class="field">
-          <span>Назва *</span>
-          <input v-model="createModal.form.name" type="text" placeholder="Напр., NTI Nitra s.r.o." />
+          <span>Name *</span>
+          <input v-model="createModal.form.name" type="text" placeholder="E.g., NTI Nitra s.r.o." />
         </label>
 
         <label class="field">
           <span>ICO *</span>
-          <input v-model="createModal.form.ico" type="text" placeholder="Напр., 12345678" />
+          <input v-model="createModal.form.ico" type="text" placeholder="E.g., 12345678" />
         </label>
 
         <label class="field">
-          <span>Сектор</span>
-          <input v-model="createModal.form.sector" type="text" placeholder="Напр., IT" />
+          <span>Sector</span>
+          <input v-model="createModal.form.sector" type="text" placeholder="E.g., IT" />
         </label>
 
         <label class="field">
-          <span>Опис</span>
+          <span>Description</span>
           <textarea
             v-model="createModal.form.description"
             rows="3"
-            placeholder="Коротко про діяльність"
+            placeholder="Brief description of activities"
           />
         </label>
 
         <label class="field">
-          <span>Email для зв’язку</span>
+          <span>Contact email</span>
           <input v-model="createModal.form.contactEmail" type="email" placeholder="name@company.com" />
         </label>
 
         <label class="field">
-          <span>Телефон</span>
+          <span>Phone</span>
           <input v-model="createModal.form.contactPhone" type="tel" placeholder="+421..." />
         </label>
 
         <label class="field">
-          <span>Сайт</span>
+          <span>Website</span>
           <input v-model="createModal.form.website" type="url" placeholder="https://..." />
         </label>
 
         <div class="modal-actions">
           <button type="button" class="btn-secondary" @click="createModal.show = false">
-            Скасувати
+            Cancel
           </button>
           <button
             type="button"
@@ -136,7 +136,7 @@
             :disabled="creating || !createModal.form.name.trim() || !createModal.form.ico.trim()"
             @click="submitCreate"
           >
-            {{ creating ? 'Створення…' : 'Створити' }}
+            {{ creating ? 'Creating…' : 'Create' }}
           </button>
         </div>
       </div>
@@ -145,21 +145,21 @@
     <!-- Status modal -->
     <div v-if="statusModal.show" class="modal-overlay" @click.self="statusModal.show = false">
       <div class="modal">
-        <h3>Змінити статус</h3>
+        <h3>Change status</h3>
         <p class="modal-meta">
           {{ statusModal.row?.name }} · ICO: {{ statusModal.row?.ico }}
         </p>
 
         <p>
-          Поточний статус:
+          Current status:
           <strong>{{ statusModal.row?.status || '—' }}</strong>
         </p>
 
         <label class="field">
-          <span>Новий статус</span>
+          <span>New status</span>
           <select v-model="statusModal.nextStatus">
             <option disabled value="">
-              Оберіть…
+              Select…
             </option>
             <option v-for="s in statusOptions" :key="s" :value="s">
               {{ s }}
@@ -169,7 +169,7 @@
 
         <div class="modal-actions">
           <button type="button" class="btn-secondary" @click="statusModal.show = false">
-            Скасувати
+            Cancel
           </button>
           <button
             type="button"
@@ -177,7 +177,7 @@
             :disabled="savingStatus || !statusModal.row || !statusModal.nextStatus"
             @click="submitStatus"
           >
-            {{ savingStatus ? 'Збереження…' : 'Зберегти' }}
+            {{ savingStatus ? 'Saving…' : 'Save' }}
           </button>
         </div>
       </div>
@@ -261,7 +261,7 @@ async function load() {
   try {
     await orgStore.getAll()
   } catch (e) {
-    error.value = e.response?.data?.message || 'Не вдалося завантажити організації'
+    error.value = e.response?.data?.message || 'Failed to load organizations'
   } finally {
     loading.value = false
   }
@@ -294,12 +294,12 @@ async function submitCreate() {
     }
     await orgStore.create(payload)
     createModal.show = false
-    showToast('Організацію створено', 'success')
+    showToast('Organization created', 'success')
     await load()
   } catch (e) {
     const msg = e.response?.data?.message
       || (typeof e.response?.data === 'string' ? e.response.data : null)
-      || 'Не вдалося створити організацію'
+      || 'Failed to create organization'
     showToast(msg, 'error')
   } finally {
     creating.value = false
@@ -322,13 +322,13 @@ async function submitStatus() {
   savingStatus.value = true
   try {
     await orgStore.changeStatus(statusModal.row.id, statusModal.nextStatus)
-    showToast('Статус оновлено', 'success')
+    showToast('Status updated', 'success')
     statusModal.show = false
     await load()
   } catch (e) {
     const msg = e.response?.data?.message
       || (typeof e.response?.data === 'string' ? e.response.data : null)
-      || 'Не вдалося оновити статус'
+      || 'Failed to update status'
     showToast(msg, 'error')
   } finally {
     savingStatus.value = false
@@ -642,4 +642,5 @@ function showToast(message, type = 'success') {
   color: white;
 }
 </style>
+
 

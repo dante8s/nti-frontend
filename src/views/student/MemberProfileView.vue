@@ -15,7 +15,7 @@ const router = useRouter()
 
 const userId = computed(() => Number(route.params.userId))
 
-/** Безпечне повернення з потоку комісії (query `back=/app/...`). */
+/** Safe return from the commission flow (query `back=/app/...`). */
 const commissionBackTo = computed(() => {
   const b = route.query.back
   if (typeof b !== 'string' || !b) return null
@@ -32,7 +32,7 @@ const loading = ref(true)
 const error = ref('')
 const profile = ref(null)
 const cvOpening = ref(false)
-/** Перегляд PDF у застосунку (без window.open) — працює у вбудованих переглядачах на кшталт Cursor Browser. */
+/** In-app PDF view (without window.open) — works in embedded browsers like Cursor Browser. */
 const cvModalOpen = ref(false)
 const cvBlobUrl = ref('')
 const avatarHeadUrl = ref('')
@@ -58,7 +58,7 @@ async function loadAvatarHead(uid) {
 async function load() {
   const uid = userId.value
   if (!Number.isFinite(uid) || uid < 1) {
-    error.value = 'Некоректний ідентифікатор користувача.'
+    error.value = 'Invalid user identifier.'
     profile.value = null
     releaseAvatarHead()
     loading.value = false
@@ -72,12 +72,12 @@ async function load() {
   } catch (e) {
     if (e?.response?.status === 403) {
       error.value =
-        'Немає доступу до цього профілю (доступ мають власник, адміністратор або учасники тієї самої команди).'
+        'Access denied to this profile (accessible by the owner, administrator, or members of the same team).'
     } else if (e?.response?.status === 404) {
-      error.value = 'Профіль не знайдено або ще не заповнено.'
+      error.value = 'Profile not found or not yet filled in.'
     } else {
       error.value =
-        e?.response?.data?.message || 'Не вдалося завантажити профіль. Спробуйте пізніше.'
+        e?.response?.data?.message || 'Failed to load profile. Please try again later.'
     }
     profile.value = null
     releaseAvatarHead()
@@ -133,9 +133,9 @@ async function openCv() {
     cvModalOpen.value = true
   } catch (e) {
     if (e?.response?.status === 404) {
-      error.value = 'CV ще не завантажене.'
+      error.value = 'CV has not been uploaded yet.'
     } else {
-      error.value = 'Не вдалося відкрити CV.'
+      error.value = 'Failed to open CV.'
     }
   } finally {
     cvOpening.value = false
@@ -152,8 +152,8 @@ const hasCv = computed(() => {
 <template>
   <div class="page">
     <div class="back">
-      <router-link v-if="commissionBackTo" class="back-link" :to="commissionBackTo">← Назад</router-link>
-      <a v-else href="#" class="back-link" @click.prevent="router.back()">← Назад</a>
+      <router-link v-if="commissionBackTo" class="back-link" :to="commissionBackTo">← Back</router-link>
+      <a v-else href="#" class="back-link" @click.prevent="router.back()">← Back</a>
     </div>
 
     <div class="card">
@@ -163,21 +163,21 @@ const hasCv = computed(() => {
           <span v-else class="member-avatar__ph">?</span>
         </div>
         <div class="member-head__main">
-          <h1>Профіль учасника</h1>
+          <h1>Member profile</h1>
           <p class="subtitle">
-            <template v-if="isAdmin">Ідентифікатор користувача: <strong>{{ userId }}</strong></template>
+            <template v-if="isAdmin">User ID: <strong>{{ userId }}</strong></template>
           </p>
         </div>
       </div>
       <template v-else>
-        <h1>Профіль учасника</h1>
+        <h1>Member profile</h1>
         <p class="subtitle">
-          Ідентифікатор користувача: <strong>{{ userId }}</strong>
+          User ID: <strong>{{ userId }}</strong>
         </p>
       </template>
 
       <p v-if="loading" class="muted">
-        Завантаження…
+        Loading…
       </p>
       <p v-else-if="error" class="error">
         {{ error }}
@@ -186,35 +186,35 @@ const hasCv = computed(() => {
       <template v-else-if="profile">
         <dl class="grid">
           <div>
-            <dt>Навчальна програма</dt>
+            <dt>Study program</dt>
             <dd>{{ profile.studyProgram || '—' }}</dd>
           </div>
           <div>
-            <dt>Курс</dt>
+            <dt>Year</dt>
             <dd>{{ profile.yearOfStudy ?? '—' }}</dd>
           </div>
           <div class="full">
-            <dt>Навички</dt>
+            <dt>Skills</dt>
             <dd>{{ profile.skills || '—' }}</dd>
           </div>
           <div class="full">
-            <dt>Про себе</dt>
+            <dt>About</dt>
             <dd>{{ profile.bio || '—' }}</dd>
           </div>
           <div>
-            <dt>Середній бал</dt>
+            <dt>Average score</dt>
             <dd>{{ profile.profileAverageGrade ?? '—' }}</dd>
           </div>
           <div>
-            <dt>Є перездачі</dt>
-            <dd>{{ profile.hasRepeatedSubjects ? 'Так' : 'Ні' }}</dd>
+            <dt>Has retakes</dt>
+            <dd>{{ profile.hasRepeatedSubjects ? 'Yes' : 'No' }}</dd>
           </div>
         </dl>
 
         <div class="cv-row">
           <div>
             <span class="label">CV</span>
-            <span class="cv-name">{{ profile.cvOriginalName || 'не завантажено' }}</span>
+            <span class="cv-name">{{ profile.cvOriginalName || 'not uploaded' }}</span>
           </div>
           <button
             type="button"
@@ -222,7 +222,7 @@ const hasCv = computed(() => {
             :disabled="!hasCv || cvOpening"
             @click="openCv"
           >
-            {{ cvOpening ? 'Відкриття…' : 'Відкрити CV' }}
+            {{ cvOpening ? 'Opening…' : 'Open CV' }}
           </button>
         </div>
       </template>
@@ -234,14 +234,14 @@ const hasCv = computed(() => {
         class="cv-modal"
         role="dialog"
         aria-modal="true"
-        aria-label="Перегляд CV"
+        aria-label="View CV"
         @click.self="closeCvModal"
       >
         <div class="cv-modal-panel">
           <div class="cv-modal-bar">
             <span class="cv-modal-title">CV — PDF</span>
             <button type="button" class="btn-close" @click="closeCvModal">
-              Закрити
+              Close
             </button>
           </div>
           <iframe class="cv-iframe" title="CV (PDF)" :src="cvBlobUrl" />

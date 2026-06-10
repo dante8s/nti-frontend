@@ -1,19 +1,19 @@
-<template>
+﻿<template>
     <div class="admin-page">
 
         <div class="page-header">
-            <h1>Панель адміністратора</h1>
-            <p>Управління користувачами системи</p>
+            <h1>Admin panel</h1>
+            <p>User management</p>
         </div>
 
         <div class="invite-mentor-card">
-            <h2>Запросити ментора</h2>
-            <p>Надішліть запрошення на email для завершення реєстрації ментора.</p>
+            <h2>Invite a mentor</h2>
+            <p>Send an email invitation to complete the mentor registration.</p>
 
             <form class="invite-mentor-form" @submit.prevent="inviteMentor">
                 <input v-model.trim="mentorEmail" type="email" placeholder="mentor@example.com" required />
                 <button type="submit" :disabled="isInviting || !mentorEmail">
-                    {{ isInviting ? 'Надсилання...' : 'Надіслати запрошення' }}
+                    {{ isInviting ? 'Sending...' : 'Send invitation' }}
                 </button>
             </form>
 
@@ -22,26 +22,26 @@
             </div>
         </div>
 
-        <!-- Вкладки -->
+        <!-- Tabs -->
         <div class="tabs">
             <button :class="['tab', { active: activeTab === 'pending' }]" @click="activeTab = 'pending'">
-                Очікують схвалення
+                Pending approval
                 <span v-if="pendingCount" class="badge">
                     {{ pendingCount }}
                 </span>
             </button>
             <button :class="['tab', { active: activeTab === 'all' }]" @click="activeTab = 'all'; loadAll()">
-                Всі користувачі
+                All users
             </button>
         </div>
 
-        <!-- Вкладка: очікують -->
+        <!-- Tab: pending -->
         <div v-if="activeTab === 'pending'">
             <div v-if="loadingPending" class="loading">
-                Завантаження...
+                Loading...
             </div>
             <div v-else-if="pendingUsers.length === 0" class="empty">
-                Немає заявок на схвалення
+                No applications for approval
             </div>
             <div v-else class="users-list">
                 <div v-for="user in pendingUsers" :key="user.id" class="user-card pending">
@@ -65,32 +65,32 @@
 
                     <div class="user-actions">
                         <button class="btn-approve" :disabled="processing === user.id" @click="approve(user)">
-                            ✓ Схвалити
+                            ✓ Approve
                         </button>
                         <button class="btn-reject" :disabled="processing === user.id" @click="openRejectModal(user)">
-                            ✗ Відхилити
+                            ✗ Reject
                         </button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Вкладка: всі -->
+        <!-- Tab: all -->
         <div v-if="activeTab === 'all'">
             <div v-if="loadingAll" class="loading">
-                Завантаження...
+                Loading...
             </div>
             <div v-else>
-                <!-- Фільтр -->
+                <!-- Filter -->
                 <div class="filters">
                     <select v-model="filterStatus">
-                        <option value="">Всі статуси</option>
-                        <option value="PENDING">Очікують</option>
-                        <option value="APPROVED">Схвалені</option>
-                        <option value="REJECTED">Відхилені</option>
-                        <option value="SUSPENDED">Заблоковані</option>
+                        <option value="">All statuses</option>
+                        <option value="PENDING">Pending</option>
+                        <option value="APPROVED">Approved</option>
+                        <option value="REJECTED">Rejected</option>
+                        <option value="SUSPENDED">Suspended</option>
                     </select>
-                    <input v-model="search" type="text" placeholder="Пошук по імені або email..." />
+                    <input v-model="search" type="text" placeholder="Search by name or email..." />
                 </div>
 
                 <div class="users-list">
@@ -118,14 +118,14 @@
 
                         <div class="user-actions">
                             <button v-if="user.accountStatus !== 'APPROVED'" class="btn-approve" @click="approve(user)">
-                                ✓ Схвалити
+                                ✓ Approve
                             </button>
                             <button v-if="user.accountStatus !== 'SUSPENDED'" class="btn-suspend"
                                 @click="openSuspendModal(user)">
-                                ⊘ Блокувати
+                                ⊘ Suspend
                             </button>
                             <button class="btn-roles" @click="openRolesModal(user)">
-                                ⚙ Ролі
+                                ⚙ Roles
                             </button>
                         </div>
                     </div>
@@ -133,57 +133,57 @@
             </div>
         </div>
 
-        <!-- Модальне: відхилити -->
+        <!-- Modal: reject -->
         <div v-if="rejectModal.show" class="modal-overlay" @click.self="rejectModal.show = false">
             <div class="modal">
-                <h3>Відхилити акаунт</h3>
+                <h3>Reject account</h3>
                 <p>
-                    Юзер <strong>{{ rejectModal.user?.name }}</strong>
-                    отримає email з причиною відхилення.
+                    User <strong>{{ rejectModal.user?.name }}</strong>
+                    will receive an email with the reason for rejection.
                 </p>
                 <div class="field">
-                    <label>Причина відхилення</label>
-                    <textarea v-model="rejectModal.reason" rows="3" placeholder="Вкажіть причину..." />
+                    <label>Reason for rejection</label>
+                    <textarea v-model="rejectModal.reason" rows="3" placeholder="Provide the reason..." />
                 </div>
                 <div class="modal-actions">
                     <button class="btn-cancel" @click="rejectModal.show = false">
-                        Скасувати
+                        Cancel
                     </button>
                     <button class="btn-reject" :disabled="!rejectModal.reason" @click="reject()">
-                        Відхилити
+                        Reject
                     </button>
                 </div>
             </div>
         </div>
 
-        <!-- Модальне: блокувати -->
+        <!-- Modal: suspend -->
         <div v-if="suspendModal.show" class="modal-overlay" @click.self="suspendModal.show = false">
             <div class="modal">
-                <h3>Заблокувати акаунт</h3>
+                <h3>Suspend account</h3>
                 <p>
-                    Юзер <strong>{{ suspendModal.user?.name }}</strong>
-                    не зможе входити в систему.
+                    User <strong>{{ suspendModal.user?.name }}</strong>
+                    will not be able to log in.
                 </p>
                 <div class="field">
-                    <label>Причина блокування</label>
-                    <textarea v-model="suspendModal.reason" rows="3" placeholder="Вкажіть причину..." />
+                    <label>Reason for suspension</label>
+                    <textarea v-model="suspendModal.reason" rows="3" placeholder="Provide a reason..." />
                 </div>
                 <div class="modal-actions">
                     <button class="btn-cancel" @click="suspendModal.show = false">
-                        Скасувати
+                        Cancel
                     </button>
                     <button class="btn-reject" :disabled="!suspendModal.reason" @click="suspend()">
-                        Заблокувати
+                        Suspend
                     </button>
                 </div>
             </div>
         </div>
 
-        <!-- Модальне: ролі -->
+        <!-- Modal: roles -->
         <div v-if="rolesModal.show" class="modal-overlay" @click.self="rolesModal.show = false">
             <div class="modal">
                 <h3>
-                    Ролі користувача:
+                    User roles:
                     {{ rolesModal.user?.name }}
                 </h3>
                 <div class="roles-list">
@@ -191,22 +191,22 @@
                         <span>{{ roleLabel(role) }}</span>
                         <button v-if="rolesModal.user?.roles.includes(role)" class="btn-remove-role"
                             @click="removeRole(role)">
-                            Видалити
+                            Remove
                         </button>
                         <button v-else class="btn-add-role" @click="addRole(role)">
-                            Додати
+                            Add
                         </button>
                     </div>
                 </div>
                 <div class="modal-actions">
                     <button class="btn-cancel" @click="rolesModal.show = false">
-                        Закрити
+                        Close
                     </button>
                 </div>
             </div>
         </div>
 
-        <!-- Повідомлення -->
+        <!-- Notifications -->
         <div v-if="toast.show" class="toast" :class="toast.type">
             {{ toast.message }}
         </div>
@@ -287,7 +287,7 @@ async function loadPending() {
         const res = await adminApi.getPendingUsers()
         pendingUsers.value = res.data
     } catch (e) {
-        showToast('Помилка завантаження', 'error')
+        showToast('Failed to load', 'error')
     } finally {
         loadingPending.value = false
     }
@@ -299,7 +299,7 @@ async function loadAll() {
         const res = await adminApi.getAllUsers()
         allUsers.value = res.data
     } catch (e) {
-        showToast('Помилка завантаження', 'error')
+        showToast('Failed to load', 'error')
     } finally {
         loadingAll.value = false
     }
@@ -314,10 +314,10 @@ async function inviteMentor() {
     isInviting.value = true
     try {
         await adminApi.inviteMentor(mentorEmail.value)
-        showToast(`Запрошення успішно надіслано на ${mentorEmail.value}`, 'success')
+        showToast(`Invitation successfully sent to ${mentorEmail.value}`, 'success')
         mentorEmail.value = ''
     } catch (e) {
-        inviteError.value = e.response?.data?.message || e.response?.data || 'Помилка надсилання запрошення'
+        inviteError.value = e.response?.data?.message || e.response?.data || 'Failed to send invitation'
         showToast(inviteError.value, 'error')
     } finally {
         isInviting.value = false
@@ -331,13 +331,13 @@ async function approve(user) {
         pendingUsers.value = pendingUsers.value
             .filter(u => u.id !== user.id)
         showToast(
-            `${user.name} — акаунт схвалено!`, 'success'
+            `${user.name} — account approved!`, 'success'
         )
         if (activeTab.value === 'all') {
             await loadAll()
         }
     } catch (e) {
-        showToast('Помилка', 'error')
+        showToast('Error', 'error')
     } finally {
         processing.value = null
     }
@@ -357,9 +357,9 @@ async function reject() {
         pendingUsers.value = pendingUsers.value
             .filter(u => u.id !== user.id)
         rejectModal.show = false
-        showToast(`${user.name} — відхилено`, 'info')
+        showToast(`${user.name} — rejected`, 'info')
     } catch (e) {
-        showToast('Помилка', 'error')
+        showToast('Error', 'error')
     } finally {
         processing.value = null
     }
@@ -376,10 +376,10 @@ async function suspend() {
     try {
         await adminApi.suspendUser(user.id, suspendModal.reason)
         suspendModal.show = false
-        showToast(`${user.name} — заблоковано`, 'info')
+        showToast(`${user.name} — suspended`, 'info')
         await loadAll()
     } catch (e) {
-        showToast('Помилка', 'error')
+        showToast('Error', 'error')
     }
 }
 
@@ -395,10 +395,10 @@ async function addRole(role) {
     try {
         await adminApi.addRole(rolesModal.user.id, role)
         rolesModal.user.roles.push(role)
-        showToast(`Роль ${roleLabel(role)} додано`, 'success')
+        showToast(`Role ${roleLabel(role)} added`, 'success')
         await loadAll()
     } catch (e) {
-        showToast('Помилка', 'error')
+        showToast('Error', 'error')
     }
 }
 
@@ -408,11 +408,11 @@ async function removeRole(role) {
         rolesModal.user.roles =
             rolesModal.user.roles.filter(r => r !== role)
         showToast(
-            `Роль ${roleLabel(role)} видалено`, 'info'
+            `Role ${roleLabel(role)} removed`, 'info'
         )
         await loadAll()
     } catch (e) {
-        showToast('Помилка', 'error')
+        showToast('Error', 'error')
     }
 }
 
@@ -425,24 +425,24 @@ function showToast(message, type = 'success') {
 
 function roleLabel(role) {
     const labels = {
-        STUDENT: 'Студент',
-        FIRM: 'Компанія',
-        FIRM_USER: 'Представник фірми',
-        MENTOR: 'Ментор',
-        EVALUATOR: 'Комісія',
-        CONTENT_EDITOR: 'Редактор контенту',
-        ADMIN: 'Адмін',
-        SUPER_ADMIN: 'Супер адмін'
+        STUDENT: 'Student',
+        FIRM: 'Company',
+        FIRM_USER: 'Company representative',
+        MENTOR: 'Mentor',
+        EVALUATOR: 'Commission',
+        CONTENT_EDITOR: 'Content editor',
+        ADMIN: 'Admin',
+        SUPER_ADMIN: 'Super admin'
     }
     return labels[role] || role
 }
 
 function statusLabel(status) {
     const labels = {
-        PENDING: 'Очікує',
-        APPROVED: 'Схвалений',
-        REJECTED: 'Відхилений',
-        SUSPENDED: 'Заблокований'
+        PENDING: 'Pending',
+        APPROVED: 'Approved',
+        REJECTED: 'Rejected',
+        SUSPENDED: 'Suspended'
     }
     return labels[status] || status
 }
@@ -878,3 +878,4 @@ button:disabled {
     color: #9ca3af;
 }
 </style>
+

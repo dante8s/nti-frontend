@@ -1,29 +1,29 @@
-<template>
+﻿<template>
   <div class="page">
     <p class="lead">
-      Керуйте програмами A/B та викликами (дедлайни), а також відстежуйте поточний статус кожної програми.
+      Manage programs A/B and calls (deadlines), and track the current status of each program.
     </p>
 
     <div class="tabs">
       <button type="button" :class="['tab', { active: tab === 'A' }]" @click="tab = 'A'; loadTab()">
-        Програма A
+        Program A
       </button>
       <button type="button" :class="['tab', { active: tab === 'B' }]" @click="tab = 'B'; loadTab()">
-        Програма B
+        Program B
       </button>
     </div>
 
     <div class="toolbar">
       <button type="button" class="btn-primary" @click="openProgramModal(null)">
-        + Нова програма ({{ tab }})
+        + New program ({{ tab }})
       </button>
       <button type="button" class="btn-ghost" @click="loadTab">
-        Оновити
+        Refresh
       </button>
     </div>
 
     <div v-if="loading" class="state">
-      Завантаження…
+      Loading…
     </div>
     <div v-else-if="error" class="state state--error">
       {{ error }}
@@ -37,7 +37,7 @@
               {{ p.description || '—' }}
             </p>
             <p v-if="programOrganizationLine(p)" class="program-org">
-              Організація:
+              Organization:
               <router-link
                 v-if="programOrganizationAdminLink(p)"
                 class="program-org__link"
@@ -52,7 +52,7 @@
           </div>
           <div class="program-card__actions">
             <button type="button" class="btn-sm" @click="openProgramModal(p)">
-              Редагувати
+              Edit
             </button>
             <button type="button" class="btn-sm btn-sm--ghost" @click="openProgramDetails(p)">
               Open Details
@@ -62,17 +62,17 @@
 
         <section class="calls">
           <div class="calls__head">
-            <h3>Виклики</h3>
+            <h3>Calls</h3>
             <button type="button" class="btn-sm" @click="openCallModal(p)">
-              + Додати виклик
+              + Add call
             </button>
           </div>
 
           <div v-if="callsByProgram[p.id]?.loading" class="muted">
-            Завантаження викликів…
+            Loading calls…
           </div>
           <div v-else-if="!(callsByProgram[p.id]?.items || []).length" class="muted">
-            Поки немає викликів.
+            No calls yet.
           </div>
           <ul v-else class="call-rows">
             <li v-for="c in callsByProgram[p.id].items" :key="c.id" class="call-row">
@@ -81,11 +81,11 @@
                   {{ c.title }}
                 </div>
                 <div class="call-meta">
-                  Дедлайн: {{ formatDt(c.deadline) }} · {{ c.status }}
+                  Deadline: {{ formatDt(c.deadline) }} · {{ c.status }}
                 </div>
               </div>
               <button v-if="c.status === 'OPEN'" type="button" class="btn-sm btn-sm--warn" @click="closeCall(c)">
-                Закрити
+                Close
               </button>
             </li>
           </ul>
@@ -96,17 +96,17 @@
     <!-- Program modal -->
     <div v-if="programModal.show" class="modal-overlay" @click.self="programModal.show = false">
       <div class="modal">
-        <h3>{{ programModal.edit ? 'Редагувати програму' : 'Нова програма' }}</h3>
+        <h3>{{ programModal.edit ? 'Edit program' : 'New program' }}</h3>
         <label class="field">
-          <span>Назва</span>
+          <span>Name</span>
           <input v-model="programModal.name" type="text">
         </label>
         <label class="field">
-          <span>Опис</span>
+          <span>Description</span>
           <textarea v-model="programModal.description" rows="3" />
         </label>
         <label v-if="programModal.edit" class="field">
-          <span>Поточний статус</span>
+          <span>Current status</span>
           <StatusBadge :status="programModal.status" :label="statusLabel(programModal.status)" />
         </label>
         <label v-if="showOrganizationAssign" class="field">
@@ -122,10 +122,10 @@
         </label>
         <div class="modal-actions">
           <button type="button" class="btn-secondary" @click="programModal.show = false">
-            Скасувати
+            Cancel
           </button>
           <button type="button" class="btn-primary-solid" @click="saveProgram">
-            Зберегти
+            Save
           </button>
         </div>
       </div>
@@ -134,28 +134,28 @@
     <!-- Call modal -->
     <div v-if="callModal.show" class="modal-overlay" @click.self="callModal.show = false">
       <div class="modal">
-        <h3>Новий виклик</h3>
+        <h3>New call</h3>
         <p class="muted small">
-          Дедлайн має бути в майбутньому (перевірка на сервері).
+          The deadline must be in the future (validated on the server).
         </p>
         <label class="field">
-          <span>Назва</span>
+          <span>Name</span>
           <input v-model="callModal.title" type="text">
         </label>
         <label class="field">
-          <span>Дедлайн</span>
+          <span>Deadline</span>
           <input v-model="callModal.deadlineLocal" type="datetime-local">
         </label>
         <label class="field">
-          <span>Критерії оцінювання (необов’язково)</span>
+          <span>Evaluation criteria (optional)</span>
           <textarea v-model="callModal.evaluationCriteria" rows="2" />
         </label>
         <div class="modal-actions">
           <button type="button" class="btn-secondary" @click="callModal.show = false">
-            Скасувати
+            Cancel
           </button>
           <button type="button" class="btn-primary-solid" @click="saveCall">
-            Створити
+            Create
           </button>
         </div>
       </div>
@@ -243,7 +243,7 @@ async function loadTab() {
       loadCalls(p.id)
     }
   } catch (e) {
-    error.value = apiErrorMessage(e, 'Не вдалося завантажити програми')
+    error.value = apiErrorMessage(e, 'Failed to load programs')
   } finally {
     loading.value = false
   }
@@ -302,11 +302,11 @@ async function saveProgram() {
     let programId = programModal.id
     if (programModal.edit) {
       await programsApi.update(programModal.id, body)
-      showToast('Програму оновлено', 'success')
+      showToast('Program updated', 'success')
     } else {
       const res = await programsApi.create(body)
       programId = res.data?.id ?? null
-      showToast('Програму створено', 'success')
+      showToast('Program created', 'success')
     }
 
     if (
@@ -323,12 +323,12 @@ async function saveProgram() {
     programModal.show = false
     await loadTab()
   } catch (e) {
-    showToast(apiErrorMessage(e, 'Помилка збереження'), 'error')
+    showToast(apiErrorMessage(e, 'Save error'), 'error')
   }
 }
 
 function statusLabel(status) {
-  if (!status) return 'Невідомо'
+  if (!status) return 'Unknown'
   return status
     .toString()
     .toLowerCase()
@@ -355,15 +355,15 @@ function programOrganizationAdminLink(p) {
   return { name: 'OrganizationDetails', params: { id: String(id) } }
 }
 
-/** Рядок для <input type="datetime-local"> у локальному часі браузера. */
+/** String for <input type="datetime-local"> in the browser local time. */
 function toDatetimeLocalValue(d) {
   const pad = (n) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
 /**
- * Значення з datetime-local → "YYYY-MM-DDTHH:mm:ss" без перетворення в UTC,
- * щоб LocalDateTime на сервері збігався з тим, що обрав користувач.
+ * Value from datetime-local → "YYYY-MM-DDTHH:mm:ss" without UTC conversion,
+ * so that LocalDateTime on the server matches what the user selected.
  */
 function deadlineFromLocalInput(localStr) {
   if (!localStr || typeof localStr !== 'string') return null
@@ -388,7 +388,7 @@ async function saveCall() {
   if (!p || !callModal.title.trim()) return
   const deadline = deadlineFromLocalInput(callModal.deadlineLocal)
   if (!deadline) {
-    showToast('Оберіть дедлайн', 'error')
+    showToast('Please select a deadline', 'error')
     return
   }
   try {
@@ -397,25 +397,25 @@ async function saveCall() {
       deadline,
       evaluationCriteria: callModal.evaluationCriteria?.trim() || null,
     })
-    showToast('Виклик створено', 'success')
+    showToast('Call created', 'success')
     callModal.show = false
     await loadCalls(p.id)
   } catch (e) {
     showToast(
-      apiErrorMessage(e, 'Перевірте дедлайн (має бути в майбутньому відносно сервера)'),
+      apiErrorMessage(e, 'Check the deadline (must be in the future relative to the server)'),
       'error',
     )
   }
 }
 
 async function closeCall(c) {
-  if (!confirm('Закрити виклик для нових заявок?')) return
+  if (!confirm('Close the call for new applications?')) return
   try {
     await programsApi.closeCall(c.id)
-    showToast('Виклик закрито', 'success')
+    showToast('Call closed', 'success')
     await loadCalls(c.programId)
   } catch (e) {
-    showToast(apiErrorMessage(e, 'Не вдалося закрити виклик'), 'error')
+    showToast(apiErrorMessage(e, 'Failed to close the call'), 'error')
   }
 }
 
@@ -740,3 +740,4 @@ function openProgramDetails(program) {
   color: white;
 }
 </style>
+

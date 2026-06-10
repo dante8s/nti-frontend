@@ -1,11 +1,11 @@
 <template>
   <div class="wrap">
     <div class="box">
-      <h1>Завершення реєстрації</h1>
-      <p class="subtitle">Вас запросили до команди на платформі NTI.<br />Вкажіть ім'я та пароль щоб продовжити.</p>
+      <h1>Complete registration</h1>
+      <p class="subtitle">You have been invited to a team on the NTI platform.<br />Enter your name and password to continue.</p>
 
       <div v-if="success" class="success">
-        Реєстрацію завершено. Ви можете увійти в систему та прийняти запрошення до команди.
+        Registration complete. You can now log in and accept the team invitation.
       </div>
 
       <template v-if="!success">
@@ -13,17 +13,17 @@
 
         <form @submit.prevent="handleSubmit">
           <div class="field">
-            <label for="name">Ім'я</label>
+            <label for="name">Name</label>
             <input id="name" v-model.trim="name" type="text" required />
           </div>
 
           <div class="field">
-            <label for="password">Пароль</label>
+            <label for="password">Password</label>
             <input id="password" v-model="password" type="password" minlength="6" required />
           </div>
 
           <div class="field">
-            <label for="confirm-password">Підтвердіть пароль</label>
+            <label for="confirm-password">Confirm password</label>
             <input
               id="confirm-password"
               v-model="confirmPassword"
@@ -34,13 +34,13 @@
           </div>
 
           <button type="submit" :disabled="isSubmitting">
-            {{ isSubmitting ? 'Збереження...' : 'Завершити реєстрацію' }}
+            {{ isSubmitting ? 'Saving...' : 'Complete registration' }}
           </button>
         </form>
       </template>
 
       <p v-if="success">
-        <router-link to="/login">Перейти до входу</router-link>
+        <router-link to="/login">Go to login</router-link>
       </p>
     </div>
   </div>
@@ -67,23 +67,23 @@ onMounted(() => {
   inviteToken.value = Array.isArray(tokenFromQuery) ? tokenFromQuery[0] : tokenFromQuery || ''
 
   if (!inviteToken.value) {
-    error.value = 'Токен запрошення відсутній або недійсний'
+    error.value = 'Invitation token is missing or invalid'
   }
 })
 
 async function handleSubmit() {
   if (!inviteToken.value) {
-    error.value = 'Токен запрошення відсутній або недійсний'
+    error.value = 'Invitation token is missing or invalid'
     return
   }
 
   if (password.value.length < 6) {
-    error.value = 'Пароль має містити щонайменше 6 символів'
+    error.value = 'Password must contain at least 6 characters'
     return
   }
 
   if (password.value !== confirmPassword.value) {
-    error.value = 'Паролі не співпадають'
+    error.value = 'Passwords do not match'
     return
   }
 
@@ -94,7 +94,7 @@ async function handleSubmit() {
     await authStore.completeTeamMemberInvite(inviteToken.value, name.value, password.value)
     success.value = true
   } catch (e) {
-    error.value = e.response?.data?.message || e.response?.data || 'Не вдалося завершити реєстрацію'
+    error.value = e.response?.data?.message || e.response?.data || 'Failed to complete registration'
   } finally {
     isSubmitting.value = false
   }

@@ -47,10 +47,10 @@
           {{ membersError }}
         </p>
         <div v-if="membersLoading" class="application-details__meta">
-          Завантаження користувачів...
+          Loading users...
         </div>
         <div v-else-if="eligibleOrganizationMembers.length === 0" class="application-details__meta">
-          Немає доступних користувачів для призначення.
+          No users available for assignment.
         </div>
         <div v-else class="application-details__product-owner-row">
           <select
@@ -59,7 +59,7 @@
             :disabled="assigningProductOwner"
             @change="onAssignProductOwner"
           >
-            <option value="">Призначити Product Owner</option>
+            <option value="">Assign Product Owner</option>
             <option
               v-for="member in eligibleOrganizationMembers"
               :key="member.id ?? member.userId"
@@ -69,7 +69,7 @@
             </option>
           </select>
           <span class="application-details__meta">
-            {{ assigningProductOwner ? 'Збереження...' : (applicationOrganizationId ? 'Члени організації' : 'Всі користувачі') }}
+            {{ assigningProductOwner ? 'Saving...' : (applicationOrganizationId ? 'Organization members' : 'All users') }}
           </span>
         </div>
 
@@ -292,22 +292,22 @@
 
       <section v-else-if="activeTab === 'team' && isAdmin" class="application-details__panel">
         <div class="application-details__section-head">
-          <h2 class="application-details__section-title">Команда заявника</h2>
+          <h2 class="application-details__section-title">Applicant team</h2>
         </div>
-        <div v-if="teamLoading" class="application-details__meta">Завантаження...</div>
+        <div v-if="teamLoading" class="application-details__meta">Loading...</div>
         <div v-else-if="teamError" class="application-details__meta">{{ teamError }}</div>
-        <div v-else-if="!teamData" class="application-details__empty">Команду не знайдено</div>
+        <div v-else-if="!teamData" class="application-details__empty">Team not found</div>
         <div v-else>
           <p class="application-details__meta" style="margin-bottom:0.8rem">
-            <strong>{{ teamData.name }}</strong> · ID: {{ teamData.id }} · Місць: {{ teamData.members?.length ?? 0 }} / {{ teamData.maxCapacity }}
+            <strong>{{ teamData.name }}</strong> · ID: {{ teamData.id }} · Members: {{ teamData.members?.length ?? 0 }} / {{ teamData.maxCapacity }}
           </p>
           <table class="application-details__team-table">
             <thead>
               <tr>
-                <th>Ім'я</th>
+                <th>Name</th>
                 <th>Email</th>
-                <th>Роль</th>
-                <th>Статус</th>
+                <th>Role</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody>
@@ -521,7 +521,7 @@ const tabs = computed(() => {
     { key: 'mentorship', label: 'Mentorship' },
     { key: 'notes', label: 'Consultation Notes' },
   ]
-  if (isAdmin.value) base.push({ key: 'team', label: 'Команда' })
+  if (isAdmin.value) base.push({ key: 'team', label: 'Team' })
   return base
 })
 
@@ -666,7 +666,7 @@ async function loadApplicationDetails() {
         const teamRes = await teamsApi.getTeamForUser(application.value.applicantId)
         teamData.value = teamRes.data
       } catch {
-        teamError.value = 'Команду не знайдено або заявник не має команди'
+        teamError.value = 'Team not found or applicant has no team'
         teamData.value = null
       } finally {
         teamLoading.value = false
@@ -705,7 +705,7 @@ async function loadAllUsers() {
       userEmail: u.email,
     }))
   } catch (e) {
-    membersError.value = 'Не вдалося завантажити список користувачів.'
+    membersError.value = 'Failed to load the user list.'
   } finally {
     membersLoading.value = false
   }
@@ -740,7 +740,7 @@ function memberDisplayName(member) {
 }
 
 const eligibleOrganizationMembers = computed(() => {
-  // Якщо немає організації — показуємо всіх юзерів
+  // If no organization — show all users
   if (!applicationOrganizationId.value) return allUsers.value
 
   const raw = organizationMembers.value || []

@@ -5,12 +5,12 @@ function roleList(roles) {
   return Array.isArray(raw) ? raw : []
 }
 
-/** Доступ до студентського кабінету: заявки, профіль, команда. */
+/** Access to the student portal: applications, profile, team. */
 export function hasStudentPortalAccess(roles) {
   return roleList(roles).some((r) => r === 'STUDENT' || r === 'TEAM_LEADER')
 }
 
-/** Окремий акцент у UI для лідера команди (якщо роль з’явиться в JWT / user). */
+/** Separate UI highlight for team leader (if the role appears in JWT / user). */
 export function hasTeamLeaderRole(roles) {
   return roleList(roles).includes('TEAM_LEADER')
 }

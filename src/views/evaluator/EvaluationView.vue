@@ -1,23 +1,23 @@
 <template>
   <div class="page">
     <section class="page__head">
-      <p class="eyebrow">Комісія</p>
-      <h2 class="page__title">Оцінювання заявок</h2>
-      <p class="page__sub">Оберіть виклик та оцініть подані заявки за критеріями</p>
+      <p class="eyebrow">Commission</p>
+      <h2 class="page__title">Application evaluation</h2>
+      <p class="page__sub">Select a call and evaluate submitted applications by criteria</p>
     </section>
 
     <!-- Call selector -->
     <div class="call-selector card">
-      <label class="field__label">Виклик (Call ID)</label>
+      <label class="field__label">Call (Call ID)</label>
       <div class="call-input-row">
         <input
           v-model="callIdInput"
           class="field__input"
-          placeholder="Введіть ID виклику"
+          placeholder="Enter call ID"
           @keyup.enter="loadCall"
         />
         <button type="button" class="btn btn--primary" :disabled="!callIdInput.trim() || callLoading" @click="loadCall">
-          {{ callLoading ? 'Завантаження...' : 'Завантажити' }}
+          {{ callLoading ? 'Loading...' : 'Load' }}
         </button>
       </div>
       <div v-if="callError" class="alert alert--error">{{ callError }}</div>
@@ -26,8 +26,8 @@
     <div v-if="applications.length || criteria.length" class="workspace">
       <!-- Applications list -->
       <div class="apps-panel card">
-        <h3 class="panel-title">Заявки ({{ applications.length }})</h3>
-        <div v-if="applications.length === 0" class="empty-msg">Немає заявок у черзі</div>
+        <h3 class="panel-title">Applications ({{ applications.length }})</h3>
+        <div v-if="applications.length === 0" class="empty-msg">No applications in the queue</div>
         <div v-else class="apps-list">
           <button
             v-for="app in applications"
@@ -49,13 +49,13 @@
       <!-- Scoring panel -->
       <div class="score-panel">
         <div v-if="!selectedApp" class="card empty-select">
-          <p>Оберіть заявку зі списку</p>
+          <p>Select an application from the list</p>
         </div>
 
         <div v-else class="card">
           <div class="score-panel__head">
             <div>
-              <h3 class="panel-title">Заявка #{{ selectedApp.id }}</h3>
+              <h3 class="panel-title">Application #{{ selectedApp.id }}</h3>
               <p class="panel-sub">{{ selectedApp.programName }}</p>
             </div>
             <div v-if="completionInfo" class="completion">
@@ -63,17 +63,17 @@
                 class="completion__badge"
                 :class="completionInfo.complete ? 'completion__badge--ok' : 'completion__badge--pending'"
               >
-                {{ completionInfo.complete ? '✓ Оцінено' : `${scoredCount}/${completionInfo.totalCriteria} критеріїв` }}
+                {{ completionInfo.complete ? '✓ Evaluated' : `${scoredCount}/${completionInfo.totalCriteria} criteria` }}
               </span>
             </div>
           </div>
 
           <div v-if="scoreError" class="alert alert--error">{{ scoreError }}</div>
-          <div v-if="scoreSuccess" class="alert alert--ok">Оцінки збережено</div>
+          <div v-if="scoreSuccess" class="alert alert--ok">Scores saved</div>
 
-          <div v-if="loadingScores" class="state-msg">Завантаження оцінок...</div>
+          <div v-if="loadingScores" class="state-msg">Loading scores...</div>
 
-          <div v-else-if="criteria.length === 0" class="empty-msg">Немає критеріїв для цього виклику</div>
+          <div v-else-if="criteria.length === 0" class="empty-msg">No criteria for this call</div>
 
           <div v-else class="criteria-list">
             <div v-for="c in criteria" :key="c.id" class="criterion">
@@ -82,13 +82,13 @@
                   <span class="criterion__name">{{ c.name }}</span>
                   <span class="criterion__weight">{{ c.weightPercent }}%</span>
                 </div>
-                <span class="criterion__max">макс. {{ c.maxScore }}</span>
+                <span class="criterion__max">max {{ c.maxScore }}</span>
               </div>
               <p v-if="c.description" class="criterion__desc">{{ c.description }}</p>
 
               <div class="criterion__inputs">
                 <div class="score-field">
-                  <label class="field__label">Оцінка (0–{{ c.maxScore }})</label>
+                  <label class="field__label">Score (0–{{ c.maxScore }})</label>
                   <input
                     v-model.number="scoreForm[c.id].score"
                     class="field__input score-input"
@@ -100,21 +100,21 @@
                   />
                 </div>
                 <div class="comment-field">
-                  <label class="field__label">Коментар</label>
+                  <label class="field__label">Comment</label>
                   <input
                     v-model="scoreForm[c.id].comment"
                     class="field__input"
-                    placeholder="Необов'язково"
+                    placeholder="Optional"
                   />
                 </div>
                 <div class="recommendation-field">
-                  <label class="field__label">Рекомендація</label>
+                  <label class="field__label">Recommendation</label>
                   <select v-model="scoreForm[c.id].recommendation" class="field__input field__select">
-                    <option value="">— оберіть —</option>
-                    <option value="APPROVE">Схвалити</option>
-                    <option value="REJECT">Відхилити</option>
-                    <option value="REQUEST_CHANGES">Запросити зміни</option>
-                    <option value="ABSTAIN">Утриматись</option>
+                    <option value="">— select —</option>
+                    <option value="APPROVE">Approve</option>
+                    <option value="REJECT">Reject</option>
+                    <option value="REQUEST_CHANGES">Request changes</option>
+                    <option value="ABSTAIN">Abstain</option>
                   </select>
                 </div>
               </div>
@@ -128,13 +128,13 @@
               :disabled="submitting"
               @click="submitScores"
             >
-              {{ submitting ? 'Збереження...' : '💾 Зберегти всі оцінки' }}
+              {{ submitting ? 'Saving...' : '💾 Save all scores' }}
             </button>
 
             <div v-if="averageInfo" class="average-info">
-              <span class="average-info__label">Середнє:</span>
+              <span class="average-info__label">Average:</span>
               <span class="average-info__val">{{ averageInfo.weightedAverage?.toFixed(2) }}</span>
-              <span class="average-info__hint">(зважене)</span>
+              <span class="average-info__hint">(weighted)</span>
             </div>
           </div>
         </div>
@@ -188,7 +188,7 @@ async function loadCall() {
     applications.value = Array.isArray(appsRes.data) ? appsRes.data : []
     criteria.value = Array.isArray(critRes.data) ? critRes.data : []
   } catch (e) {
-    callError.value = e.response?.data?.message || 'Не вдалося завантажити виклик'
+    callError.value = e.response?.data?.message || 'Failed to load the call'
   } finally {
     callLoading.value = false
   }
@@ -270,7 +270,7 @@ async function submitScores() {
     scoreSuccess.value = true
     await loadMeta(selectedApp.value.id)
   } catch (e) {
-    scoreError.value = e.response?.data?.message || 'Помилка при збереженні оцінок'
+    scoreError.value = e.response?.data?.message || 'Error saving scores'
   } finally {
     submitting.value = false
   }
@@ -279,11 +279,11 @@ async function submitScores() {
 function statusLabel(s) {
   return (
     {
-      SUBMITTED: 'Відправлена',
-      IN_REVIEW: 'На розгляді',
-      APPROVED: 'Схвалена',
-      REJECTED: 'Відхилена',
-      NEEDS_REVISION: 'Потрібна правка',
+      SUBMITTED: 'Submitted',
+      IN_REVIEW: 'In review',
+      APPROVED: 'Approved',
+      REJECTED: 'Rejected',
+      NEEDS_REVISION: 'Needs revision',
     }[s] || s
   )
 }

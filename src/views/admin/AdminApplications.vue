@@ -1,7 +1,7 @@
-<template>
+﻿<template>
   <div class="page">
     <p class="lead">
-      Усі подані заявки. Змінюйте статус відповідно до етапів розгляду — студент отримає лист на email.
+      All submitted applications. Update the status according to review stages — the applicant will receive an email notification.
     </p>
 
     <div class="toolbar">
@@ -9,46 +9,46 @@
         v-model="search"
         type="search"
         class="search"
-        placeholder="Пошук за іменем або email заявника…"
-        aria-label="Пошук"
+        placeholder="Search by applicant name or email…"
+        aria-label="Search"
       >
       <select v-model="filterStatus" class="filter-select">
-        <option value="">Всі статуси</option>
-        <option value="DRAFT">Чернетка</option>
-        <option value="SUBMITTED">Подана</option>
-        <option value="IN_REVIEW">На розгляді</option>
-        <option value="NEEDS_REVISION">Потребує правок</option>
-        <option value="APPROVED">Схвалена</option>
-        <option value="REJECTED">Відхилена</option>
+        <option value="">All statuses</option>
+        <option value="DRAFT">Draft</option>
+        <option value="SUBMITTED">Submitted</option>
+        <option value="IN_REVIEW">In review</option>
+        <option value="NEEDS_REVISION">Needs revision</option>
+        <option value="APPROVED">Approved</option>
+        <option value="REJECTED">Rejected</option>
       </select>
       <select v-model="filterProgram" class="filter-select">
-        <option value="">Всі програми</option>
-        <option value="PROGRAM_A">Програма A</option>
-        <option value="PROGRAM_B">Програма B</option>
+        <option value="">All programs</option>
+        <option value="PROGRAM_A">Program A</option>
+        <option value="PROGRAM_B">Program B</option>
       </select>
       <button type="button" class="btn-refresh" @click="load">
-        Оновити
+        Refresh
       </button>
     </div>
 
     <div v-if="loading" class="state">
-      Завантаження…
+      Loading…
     </div>
     <div v-else-if="error" class="state state--error">
       {{ error }}
     </div>
     <div v-else-if="filtered.length === 0" class="state">
-      Нічого не знайдено.
+      Nothing found.
     </div>
     <div v-else class="table-wrap">
       <table class="table">
         <thead>
           <tr>
             <th>ID</th>
-            <th>Програма</th>
-            <th>Виклик</th>
-            <th>Статус</th>
-            <th>Оновлено</th>
+            <th>Program</th>
+            <th>Call</th>
+            <th>Status</th>
+            <th>Updated</th>
             <th />
           </tr>
         </thead>
@@ -67,7 +67,7 @@
                 {{ row.programName }}
               </div>
               <div class="cell-meta">
-                {{ row.programType === 'PROGRAM_A' ? 'Програма A' : 'Програма B' }}
+                {{ row.programType === 'PROGRAM_A' ? 'Program A' : 'Program B' }}
               </div>
             </td>
             <td>{{ row.callTitle }}</td>
@@ -83,7 +83,7 @@
                 class="btn-sm"
                 @click.stop="openStatus(row)"
               >
-                Змінити статус
+                Change status
               </button>
               <!-- <button
                 v-if="programDetailRoute(row)"
@@ -101,24 +101,24 @@
 
     <div v-if="modal.show" class="modal-overlay" @click.self="modal.show = false">
       <div class="modal">
-        <h3>Заявка #{{ modal.row?.id }}</h3>
+        <h3>Application #{{ modal.row?.id }}</h3>
         <p class="modal-meta">
           {{ modal.row?.programName }} · {{ modal.row?.callTitle }}
         </p>
 
         <p>
-          Поточний статус:
+          Current status:
           <strong>{{ statusLabel(modal.row?.status) }}</strong>
         </p>
 
         <p v-if="!modal.allowed.length" class="modal-hint">
-          Для цього статусу немає дій адміністратора (наприклад, чернетка або очікування дій студента).
+          No admin actions available for this status (e.g., draft or awaiting applicant action).
         </p>
         <label v-else class="field">
-          <span>Новий статус</span>
+          <span>New status</span>
           <select v-model="modal.nextStatus">
             <option disabled value="">
-              Оберіть…
+              Select…
             </option>
             <option v-for="s in modal.allowed" :key="s" :value="s">
               {{ statusLabel(s) }}
@@ -127,8 +127,8 @@
         </label>
 
         <label class="field">
-          <span>Коментар для студента (необов’язково)</span>
-          <textarea v-model="modal.comment" rows="3" placeholder="Наприклад, уточнення щодо документів" />
+          <span>Comment for student (optional)</span>
+          <textarea v-model="modal.comment" rows="3" placeholder="E.g., clarification regarding documents" />
         </label>
 
         <div class="mentorship">
@@ -206,7 +206,7 @@
 
         <div class="modal-actions">
           <button type="button" class="btn-secondary" @click="modal.show = false">
-            Скасувати
+            Cancel
           </button>
           <button
             type="button"
@@ -214,7 +214,7 @@
             :disabled="!modal.allowed.length || !modal.nextStatus || saving"
             @click="submitStatus"
           >
-            {{ saving ? 'Збереження…' : 'Зберегти' }}
+            {{ saving ? 'Saving…' : 'Save' }}
           </button>
         </div>
       </div>
@@ -353,7 +353,7 @@ async function load() {
     const res = await applicationsApi.getAll()
     list.value = res.data || []
   } catch (e) {
-    error.value = e.response?.data?.message || 'Не вдалося завантажити заявки'
+    error.value = e.response?.data?.message || 'Failed to load applications'
   } finally {
     loading.value = false
   }
@@ -406,13 +406,13 @@ async function submitStatus() {
       modal.nextStatus,
       modal.comment?.trim() || null,
     )
-    showToast('Статус оновлено', 'success')
+    showToast('Status updated', 'success')
     modal.show = false
     await load()
   } catch (e) {
     const msg = e.response?.data?.message
       || (typeof e.response?.data === 'string' ? e.response.data : null)
-      || 'Недозволений перехід або помилка сервера'
+      || 'Invalid transition or server error'
     showToast(msg, 'error')
   } finally {
     saving.value = false
@@ -472,7 +472,7 @@ async function submitAssignMentor() {
     })
     await mentorshipStore.getByApplication(modal.row.id)
     assign.show = false
-    showToast('Ментор призначений', 'success')
+    showToast('Mentor assigned', 'success')
   } catch (e) {
     assign.error = mentorshipAssignErrorMessage(e, 'Failed to assign mentor.')
   } finally {
@@ -898,3 +898,4 @@ function openProgramProposal(row) {
   color: white;
 }
 </style>
+

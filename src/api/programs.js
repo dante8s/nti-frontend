@@ -1,7 +1,7 @@
 import api from './axios'
 
 export const programsApi = {
-  // Публічні — без токена
+  // Public — no token required
   getAll: () => api.get('/api/public/programs'),
 
   getAllByType: (type) => api.get(`/api/public/programs-${type.toLowerCase()}`),
@@ -24,7 +24,7 @@ export const programsApi = {
 
   getByProgram: (programId) => api.get(`/api/calls?programId=${programId}`),
 
-  // Тільки ADMIN
+  // ADMIN only
   create: (data) => api.post('/api/admin/programs', data),
 
   update: (id, data) => api.put(`/api/admin/programs/${id}`, data),

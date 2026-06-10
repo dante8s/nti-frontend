@@ -4,10 +4,10 @@ import api from '@/api/axios'
 import { authApi } from '@/api/auth'
 
 /**
- * Сесія в браузері (однаково для всіх у команді — нічого руками не копіюють):
- * - localStorage `token` — JWT після успішного логіну
+ * Browser session (the same for everyone on the team — nothing copied by hand):
+ * - localStorage `token` — JWT after successful login
  * - localStorage `user` — JSON: id, name, email, roles, …
- * Ключі задає тільки цей стор; іншим достатньо залогінитись на своєму ПК.
+ * Keys are set only by this store; others just need to log in on their own PC.
  */
 function normalizeRoles(roles) {
   if (roles == null) return []
@@ -29,7 +29,7 @@ export const useAuthStore = defineStore('auth', () => {
     return response.data
   }
 
-  /** Підтягує id та ролі з API (завжди оновлює id — важливо для запрошень у команду). */
+  /** Fetches id and roles from API (always updates id — important for team invitations). */
   async function hydrateUserFromSession() {
     if (!token.value) return null
     const current = user.value

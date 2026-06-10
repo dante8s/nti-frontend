@@ -2,18 +2,18 @@
   <div class="reports-page">
     <div class="reports-page__header">
       <div>
-        <h1 class="reports-page__title">Звіти завершених проектів</h1>
-        <p class="reports-page__sub">Архів результатів, KPI та учасники завершених проектів.</p>
+        <h1 class="reports-page__title">Completed project reports</h1>
+        <p class="reports-page__sub">Archive of results, KPI, and members of completed projects.</p>
       </div>
       <button class="btn-export-all" :disabled="!reports.length || exportingAll" @click="exportAll">
-        {{ exportingAll ? 'Завантаження…' : '⬇ Експорт усіх (CSV)' }}
+        {{ exportingAll ? 'Loading…' : '⬇ Export all (CSV)' }}
       </button>
     </div>
 
-    <div v-if="loading" class="reports-page__loading">Завантаження звітів…</div>
+    <div v-if="loading" class="reports-page__loading">Loading reports…</div>
     <p v-else-if="error" class="reports-page__error">{{ error }}</p>
     <p v-else-if="!reports.length" class="reports-page__empty">
-      Завершених проектів ще немає.
+      No completed projects yet.
     </p>
 
     <div v-else class="reports-table-wrap">
@@ -21,14 +21,14 @@
         <thead>
           <tr>
             <th>#</th>
-            <th>Назва проекту</th>
-            <th>Програма</th>
-            <th>Тімлід</th>
+            <th>Project name</th>
+            <th>Program</th>
+            <th>Team leader</th>
             <th>Product Owner</th>
-            <th>Дата завершення</th>
-            <th>KPI бал</th>
-            <th>Мілстоуни</th>
-            <th>Дії</th>
+            <th>Completion date</th>
+            <th>KPI score</th>
+            <th>Milestones</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -37,7 +37,7 @@
             <td class="reports-table__name">{{ r.projectName || '—' }}</td>
             <td>
               <span class="badge" :class="r.programType === 'PROGRAM_B' ? 'badge--b' : 'badge--a'">
-                {{ r.programType === 'PROGRAM_B' ? 'Програма B' : 'Програма A' }}
+                {{ r.programType === 'PROGRAM_B' ? 'Program B' : 'Program A' }}
               </span>
             </td>
             <td>{{ r.teamLeaderName || '—' }}</td>
@@ -47,7 +47,7 @@
               <span v-if="r.kpiScore != null" class="kpi-score">
                 {{ r.kpiScore.toFixed(2) }}
               </span>
-              <span v-else class="kpi-empty">не оцінювався</span>
+              <span v-else class="kpi-empty">not evaluated</span>
             </td>
             <td>
               <span class="milestones">{{ r.milestonesDone }}/{{ r.milestonesTotal }}</span>
@@ -57,7 +57,7 @@
                 class="btn-details"
                 @click="toggleDetails(r.id)"
               >
-                {{ expanded === r.id ? 'Сховати' : 'Деталі' }}
+                {{ expanded === r.id ? 'Hide' : 'Details' }}
               </button>
               <button
                 class="btn-export"
@@ -69,16 +69,16 @@
             </td>
           </tr>
           
-          <!-- Розгорнутий рядок деталей -->
+          <!-- Expanded details row -->
           <tr v-if="expanded != null" v-for="r in reports.filter(x => x.id === expanded)" :key="'detail-' + r.id">
             <td colspan="9" class="reports-table__detail">
               <div class="detail-grid">
                 <div v-if="r.teamMembers" class="detail-block">
-                  <div class="detail-block__label">Учасники команди</div>
+                  <div class="detail-block__label">Team members</div>
                   <div class="detail-block__value">{{ r.teamMembers }}</div>
                 </div>
                 <div v-if="parsedKpi(r)" class="detail-block">
-                  <div class="detail-block__label">KPI по критеріях</div>
+                  <div class="detail-block__label">KPI by criteria</div>
                   <ul class="kpi-list">
                     <li v-for="(score, name) in parsedKpi(r)" :key="name">
                       <span class="kpi-list__name">{{ name }}</span>
@@ -87,7 +87,7 @@
                   </ul>
                 </div>
                 <div v-if="parsedDocs(r).length" class="detail-block">
-                  <div class="detail-block__label">Результатні документи</div>
+                  <div class="detail-block__label">Result documents</div>
                   <ul class="doc-list">
                     <li v-for="doc in parsedDocs(r)" :key="doc.type">
                       <span class="doc-list__type">{{ doc.type }}</span>
@@ -120,7 +120,7 @@ onMounted(async () => {
     const res = await adminApi.getReports()
     reports.value = res.data || []
   } catch (e) {
-    error.value = 'Не вдалося завантажити звіти.'
+    error.value = 'Failed to load reports.'
   } finally {
     loading.value = false
   }

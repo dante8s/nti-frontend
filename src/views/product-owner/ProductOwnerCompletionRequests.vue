@@ -1,17 +1,17 @@
 <template>
   <div class="page">
-    <h1>Запити на завершення проекту</h1>
+    <h1>Project completion requests</h1>
     <p class="lead">
-      Команди Програми B надіслали запити на завершення проекту. Підтвердіть або відхиліть кожен запит.
+      Program B teams have submitted project completion requests. Confirm or reject each request.
     </p>
 
     <div class="toolbar">
-      <button type="button" class="btn-refresh" @click="load">Оновити</button>
+      <button type="button" class="btn-refresh" @click="load">Refresh</button>
     </div>
 
-    <div v-if="loading" class="state">Завантаження...</div>
+    <div v-if="loading" class="state">Loading...</div>
     <div v-else-if="error" class="state state--error">{{ error }}</div>
-    <div v-else-if="!requests.length" class="state">Немає запитів на завершення проекту.</div>
+    <div v-else-if="!requests.length" class="state">No project completion requests.</div>
 
     <div v-else class="requests-list">
       <article v-for="app in requests" :key="app.id" class="request-card">
@@ -23,14 +23,14 @@
               <span class="request-card__call">{{ app.callTitle }}</span>
             </div>
           </div>
-          <span class="request-card__badge">Запит на завершення</span>
+          <span class="request-card__badge">Completion request</span>
         </div>
 
-        <!-- Результатні документи -->
+        <!-- Result documents -->
         <div class="request-card__docs">
-          <p class="request-card__docs-label">Результатні документи</p>
-          <div v-if="docsLoading[app.id]" class="docs-loading">Завантаження...</div>
-          <div v-else-if="!docsList[app.id]?.length" class="docs-empty">Документи не знайдено</div>
+          <p class="request-card__docs-label">Result documents</p>
+          <div v-if="docsLoading[app.id]" class="docs-loading">Loading...</div>
+          <div v-else-if="!docsList[app.id]?.length" class="docs-empty">Documents not found</div>
           <div v-else class="docs-list">
             <div
               v-for="doc in resultDocs(app.id)"
@@ -38,17 +38,17 @@
               class="doc-chip"
             >
               <span class="doc-chip__icon">📎</span>
-              {{ doc.label }}: {{ doc.fileName || 'не завантажено' }}
+              {{ doc.label }}: {{ doc.fileName || 'not uploaded' }}
             </div>
           </div>
         </div>
 
         <div class="request-card__actions">
           <button class="btn-approve" :disabled="busy[app.id]" @click="approve(app)">
-            ✓ Підтвердити завершення
+            ✓ Confirm completion
           </button>
           <button class="btn-reject" :disabled="busy[app.id]" @click="reject(app)">
-            ✕ Відхилити запит
+            ✕ Reject request
           </button>
         </div>
 
@@ -71,8 +71,8 @@ const docsList = reactive({})
 const docsLoading = reactive({})
 
 const RESULT_LABELS = {
-  RESULT_1: 'Документ 1',
-  RESULT_2: 'Документ 2',
+  RESULT_1: 'Document 1',
+  RESULT_2: 'Document 2',
 }
 
 onMounted(load)
@@ -91,7 +91,7 @@ async function load() {
         .finally(() => { docsLoading[app.id] = false })
     }
   } catch (e) {
-    error.value = e.response?.data?.message || 'Не вдалося завантажити запити.'
+    error.value = e.response?.data?.message || 'Failed to load requests.'
   } finally {
     loading.value = false
   }
@@ -115,12 +115,12 @@ async function approve(app) {
   messages[app.id] = ''
   try {
     await applicationsApi.approveCompletionPO(app.id)
-    messages[app.id] = '✓ Завершення підтверджено. Заявку передано адміністратору.'
+    messages[app.id] = '✓ Completion confirmed. The application has been sent to the administrator.'
     setTimeout(() => {
       requests.value = requests.value.filter(r => r.id !== app.id)
     }, 1500)
   } catch (e) {
-    messages[app.id] = e.response?.data?.message || 'Помилка підтвердження.'
+    messages[app.id] = e.response?.data?.message || 'Confirmation error.'
   } finally {
     busy[app.id] = false
   }
@@ -131,12 +131,12 @@ async function reject(app) {
   messages[app.id] = ''
   try {
     await applicationsApi.rejectCompletionPO(app.id)
-    messages[app.id] = '✕ Запит відхилено. Команда отримала повідомлення.'
+    messages[app.id] = '✕ Request rejected. The team has been notified.'
     setTimeout(() => {
       requests.value = requests.value.filter(r => r.id !== app.id)
     }, 1500)
   } catch (e) {
-    messages[app.id] = e.response?.data?.message || 'Помилка відхилення.'
+    messages[app.id] = e.response?.data?.message || 'Rejection error.'
   } finally {
     busy[app.id] = false
   }

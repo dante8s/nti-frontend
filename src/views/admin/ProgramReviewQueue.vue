@@ -2,13 +2,13 @@
   <div class="page">
     <div class="page-head">
       <div>
-        <h2>Черга Program B на розгляд</h2>
+        <h2>Program B review queue</h2>
         <p class="lead">
-          Заявки зі статусом PENDING_REVIEW, які очікують рішення адміністратора.
+          Applications with PENDING_REVIEW status awaiting the administrator decision.
         </p>
       </div>
       <button type="button" class="btn-ghost" :disabled="storeLoading" @click="loadPending">
-        Оновити
+        Refresh
       </button>
     </div>
 
@@ -16,10 +16,10 @@
       {{ loadError }}
     </div>
     <div v-else-if="storeLoading && pendingRows.length === 0" class="state">
-      Завантаження...
+      Loading...
     </div>
     <div v-else-if="pendingRows.length === 0" class="state">
-      Черга порожня.
+      Queue is empty.
     </div>
     <div v-else class="table-wrap">
       <table class="table">
@@ -82,7 +82,7 @@
         </div>
 
         <label class="field">
-          <span>Опис програми</span>
+          <span>Program description</span>
           <textarea :value="modal.program?.description || '—'" rows="4" readonly />
         </label>
 
@@ -163,7 +163,7 @@
           <textarea
             v-model.trim="modal.adminComment"
             rows="4"
-            placeholder="Коментар для організації (необов'язково)"
+            placeholder="Comment for the organization (optional)"
           />
         </label>
 
@@ -173,7 +173,7 @@
 
         <div class="modal-actions">
           <button type="button" class="btn-secondary" :disabled="submitting" @click="closeModal">
-            Закрити
+            Close
           </button>
           <button type="button" class="btn-primary" :disabled="submitting" @click="submitReview('APPROVED')">
             Approve
@@ -238,7 +238,7 @@ async function loadPending() {
   try {
     await programStore.getPendingReview()
   } catch (error) {
-    loadError.value = apiErrorMessage(error, 'Не вдалося завантажити чергу на розгляд')
+    loadError.value = apiErrorMessage(error, 'Failed to load the review queue')
   }
 }
 
@@ -268,7 +268,7 @@ async function submitReview(status) {
     })
     closeModal()
   } catch (error) {
-    actionError.value = apiErrorMessage(error, 'Не вдалося виконати review')
+    actionError.value = apiErrorMessage(error, 'Failed to perform review')
   } finally {
     submitting.value = false
   }

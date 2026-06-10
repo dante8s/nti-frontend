@@ -1,19 +1,19 @@
 <template>
     <div class="page">
         <div v-if="loading" class="loading">
-            Завантаження...
+            Loading...
         </div>
 
         <template v-else-if="program">
             <div class="back">
-                <router-link :to="`/programs/${(route.query.type || route.params.type || 'a').toLowerCase()}`">← {{ program.type === 'PROGRAM_A' ? 'Програма A' :
-                    'Програма B' }}</router-link>
+                <router-link :to="`/programs/${(route.query.type || route.params.type || 'a').toLowerCase()}`">← {{ program.type === 'PROGRAM_A' ? 'Program A' :
+                    'Program B' }}</router-link>
             </div>
 
             <div class="header">
                 <span class="badge">
                     {{ program.type === 'PROGRAM_A'
-                        ? 'Програма A' : 'Програма B' }}
+                        ? 'Program A' : 'Program B' }}
                 </span>
                 <h1>{{ program.name }}</h1>
                 <p>{{ program.description }}</p>
@@ -88,22 +88,22 @@
                 </div>
 
                 <div v-if="!requirements?.specificationName && !requirements?.budgetName" class="empty">
-                    Наразі файли вимог відсутні
+                    No requirement files currently available
                 </div>
             </div>
 
             <div class="calls-section">
-                <h2>Активні виклики</h2>
+                <h2>Active calls</h2>
 
                 <div v-if="calls.length === 0" class="empty">
-                    Наразі немає активних викликів
+                    No active calls at the moment
                 </div>
 
                 <div v-for="call in calls" :key="call.id" class="call-card">
                     <div class="call-info">
                         <h3>{{ call.title }}</h3>
                         <div class="deadline">
-                            Дедлайн:
+                            Deadline:
                             {{ formatDate(call.deadline) }}
                         </div>
                         <p v-if="call.evaluationCriteria">
@@ -116,10 +116,10 @@
                             @click="handleApply(call)"
                             class="btn-apply"
                         >
-                            {{ isLoggedIn ? 'Подати заявку' : 'Зареєструватись щоб подати' }}
+                            {{ isLoggedIn ? 'Submit application' : 'Register to submit' }}
                         </button>
                         <span v-else class="deadline-passed">
-                            Термін подачі закінчився
+                            Application deadline has passed
                         </span>
                     </div>
                 </div>
@@ -159,7 +159,7 @@ const orgStore = useOrganizationStore()
 const program = ref(null)
 const calls = ref([])
 const loading = ref(true)
-const notFoundMessage = ref('Програму не знайдено або вона недоступна')
+const notFoundMessage = ref('Program not found or unavailable')
 const requirements = ref(null)
 const requirementsLoading = ref(false)
 const requirementsError = ref('')
@@ -198,8 +198,8 @@ async function handleApply(call) {
 
     if (!roles.includes('STUDENT')) {
         openAlert({
-            title: 'Доступ обмежено',
-            message: 'Тільки студенти можуть подавати заявки на виклики.',
+            title: 'Access restricted',
+            message: 'Only students can submit applications for calls.',
             variant: 'warning',
         })
         return
@@ -211,9 +211,9 @@ async function handleApply(call) {
             const eligibility = await getCallApplicationEligibility()
             if (!eligibility?.teamLeader) {
                 openAlert({
-                    title: 'Лише лідер команди',
+                    title: 'Team leader only',
                     message:
-                        'Подавати заявку на виклик може лише лідер команди. Якщо ви учасник — зверніться до лідера або перейдіть на сторінку «Моя команда».',
+                        'Only the team leader can submit a call application. If you are a member — contact the leader or go to the My team page.',
                     variant: 'warning',
                     teamsLink: true,
                 })
@@ -221,30 +221,30 @@ async function handleApply(call) {
             }
         } catch {
             openAlert({
-                title: 'Помилка перевірки',
-                message: 'Не вдалося перевірити права на подачу заявки. Спробуйте пізніше.',
+                title: 'Verification error',
+                message: 'Failed to verify application rights. Please try again later.',
                 variant: 'error',
             })
             return
         }
     }
 
-    // Перевірка: чи є вже активний проект у команди
+    // Check: does the team already have an active project
     try {
         const projectsRes = await applicationsApi.getMyProjects()
         if (projectsRes.data?.current) {
             const status = projectsRes.data.current.status
-            const label = status === 'COMPLETION_REQUESTED' ? 'очікує підтвердження завершення' : 'активний'
+            const label = status === 'COMPLETION_REQUESTED' ? 'awaiting completion confirmation' : 'active'
             openAlert({
-                title: 'Команда вже має проект',
-                message: `Ваша команда вже має ${label} проект «${projectsRes.data.current.programName}». Завершіть поточний проект перш ніж подавати нову заявку.`,
+                title: 'Team already has a project',
+                message: `Your team already has a ${label} project "${projectsRes.data.current.programName}". Please complete the current project before applying for a new one.`,
                 variant: 'warning',
                 teamsLink: true,
             })
             return
         }
     } catch {
-        // якщо не вдалося перевірити — пропускаємо, бекенд все одно заблокує
+        // if check fails — skip, the backend will block it anyway
     }
 
     const programKey = program.value.type === 'PROGRAM_A' ? 'a' : 'b'
@@ -275,7 +275,7 @@ async function fetchData() {
         if (progRes.data?.status !== 'APPROVED') {
             program.value = null
             calls.value = []
-            notFoundMessage.value = 'Програма недоступна для публічного перегляду'
+            notFoundMessage.value = 'Program is not available for public viewing'
             return
         }
         program.value = progRes.data
@@ -290,7 +290,7 @@ async function fetchData() {
         program.value = null
         calls.value = []
         requirements.value = null
-        notFoundMessage.value = 'Програму не знайдено або вона недоступна'
+        notFoundMessage.value = 'Program not found or unavailable'
     } finally {
         loading.value = false
     }
@@ -298,7 +298,7 @@ async function fetchData() {
 
 onMounted(fetchData)
 
-// Спостерігати за змінами параметрів маршруту
+// Watch for route parameter changes
 watch([() => route.params.id, () => route.params.type, () => route.query?.type], () => {
     fetchData()
 })

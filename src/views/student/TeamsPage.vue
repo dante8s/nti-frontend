@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { teamsApi } from '@/api/teams'
 import { applicationsApi } from '@/api/applications'
@@ -20,7 +20,7 @@ function apiErrorMessage(error, fallback) {
       return fallback
     }
   }
-  if (error?.response?.status === 403) return 'Доступ заборонено (перевірте вхід у систему або ID лідера).'
+  if (error?.response?.status === 403) return 'Access denied (check login or leader ID).'
   return fallback
 }
 
@@ -51,12 +51,12 @@ const confirmModal = reactive({
   highlight: '',
   profileLink: null,
   variant: 'danger',
-  confirmLabel: 'Підтвердити',
+  confirmLabel: 'Confirm',
   action: null,
   payload: null,
 })
 const confirmLoading = ref(false)
-/** Від GET /api/profile/me/call-application-eligibility */
+/** From GET /api/profile/me/call-application-eligibility */
 const callEligibility = ref(null)
 
 const acceptedCount = computed(
@@ -79,7 +79,7 @@ const isTeamLeader = computed(
     myMembership.value?.role === 'LEADER',
 )
 const canManageTeam = computed(() => isTeamLeader.value || isSuperAdmin.value)
-/** Якщо є активний або очікуючий підтвердження проект — лідер не може видаляти команду/учасників */
+/** If there is an active or pending-confirmation project — the leader cannot delete the team/members */
 const hasActiveProject = computed(() => !!myProjects.value.current)
 const isTeamMemberOnly = computed(
   () => !!teamId.value && !isTeamLeader.value && !isSuperAdmin.value,
@@ -99,8 +99,8 @@ const leaderMember = computed(() =>
 const leaderEmail = computed(() => {
   const email = leaderMember.value?.memberEmail
   if (email && String(email).trim()) return String(email).trim()
-  if (team.leaderId) return `користувач #${team.leaderId}`
-  return 'лідер команди'
+  if (team.leaderId) return `user #${team.leaderId}`
+  return 'team leader'
 })
 
 function memberLinkLabel(member) {
@@ -108,7 +108,7 @@ function memberLinkLabel(member) {
   if (email) return email
   const name = member?.memberDisplayName?.trim()
   if (name) return name
-  return member?.userId != null ? `Користувач #${member.userId}` : '—'
+  return member?.userId != null ? `User #${member.userId}` : '—'
 }
 
 function memberProfileRoute(userId) {
@@ -128,7 +128,7 @@ function canRemoveMember(member) {
 }
 
 function memberRemoveLabel(member) {
-  return member.inviteStatus === 'PENDING' ? 'Скасувати' : 'Виключити'
+  return member.inviteStatus === 'PENDING' ? 'Cancel' : 'Remove'
 }
 
 function removalNoticeStorageKey(teamId) {
@@ -157,7 +157,7 @@ function dismissRemovalNotice() {
 function formatRemovedAt(iso) {
   if (!iso) return ''
   try {
-    return new Date(iso).toLocaleString('uk-UA', {
+    return new Date(iso).toLocaleString('en-GB', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -169,7 +169,7 @@ function formatRemovedAt(iso) {
   }
 }
 
-/** Є команда й ви можете діяти від імені лідера (або SUPER_ADMIN для тесту). */
+/** Team exists and you can act on behalf of the leader (or SUPER_ADMIN for testing). */
 const canSeeApplyInstructions = computed(
   () =>
     !!teamId.value &&
@@ -181,13 +181,13 @@ async function loadMyTeam() {
   const uid = auth.user?.id
   try {
     if (!uid) {
-      message.value = 'Увійдіть у систему знову — у профілі бракує ідентифікатора користувача (userId).'
+      message.value = 'Please log in again — the user identifier (userId) is missing from the profile.'
       return
     }
     const res = await teamsApi.getMyTeam(Number(uid))
     const data = res.data
     if (!data) {
-      message.value = 'Команда ще не створена. Створіть нову або прийміть запрошення.'
+      message.value = 'Team not yet created. Create a new one or accept an invitation.'
       teamId.value = null
       teamMembers.value = []
       return
@@ -200,7 +200,7 @@ async function loadMyTeam() {
     teamMembers.value = data.members || []
     removalNotice.value = null
     removalNoticeDismissed.value = false
-    message.value = `Команда завантажена: ${data.name}`
+    message.value = `Team loaded: ${data.name}`
   } catch (err) {
     if (err?.response?.status === 404) {
       teamId.value = null
@@ -209,11 +209,11 @@ async function loadMyTeam() {
       if (removalNotice.value) {
         message.value = ''
       } else {
-        message.value = 'Команда ще не створена. Створіть нову або прийміть запрошення.'
+        message.value = 'Team not yet created. Create a new one or accept an invitation.'
       }
       return
     }
-    message.value = apiErrorMessage(err, 'Не вдалося завантажити команду.')
+    message.value = apiErrorMessage(err, 'Failed to load team.')
   } finally {
     busy.value = false
   }
@@ -227,12 +227,12 @@ async function loadMyInvites(options = {}) {
     const res = await teamsApi.getMyPendingInvites()
     pendingInvites.value = res.data || []
     if (!silent && pendingInvites.value.length) {
-      message.value = 'Є нові запрошення в команду — перегляньте нижче.'
+      message.value = 'You have new team invitations — see below.'
     }
   } catch (e) {
     pendingInvites.value = []
     if (!silent) {
-      message.value = apiErrorMessage(e, 'Не вдалося завантажити запрошення.')
+      message.value = apiErrorMessage(e, 'Failed to load invitations.')
     }
   }
 }
@@ -245,7 +245,7 @@ async function loadCallEligibility() {
   }
 }
 
-/** При відкритті сторінки підтягуємо команду й вхідні інвайти (раніше список лишався порожнім без ручної дії). */
+/** On page open, load the team and incoming invites (previously the list remained empty without manual action). */
 onMounted(async () => {
   await auth.hydrateUserFromSession()
   await loadMyTeam()
@@ -266,12 +266,12 @@ async function loadMyProjects() {
 }
 
 function onCompleteProject(applicationId) {
-  confirmModal.title = 'Надіслати запит на завершення?'
-  confirmModal.message = 'Запит на завершення буде надіслано адміністратору. Після підтвердження проект зміниться на «Завершено».'
+  confirmModal.title = 'Send completion request?'
+  confirmModal.message = 'The completion request will be sent to the administrator. After confirmation the project will change to Completed.'
   confirmModal.highlight = myProjects.value.current?.programName || ''
   confirmModal.profileLink = null
   confirmModal.variant = 'warning'
-  confirmModal.confirmLabel = 'Так, надіслати запит'
+  confirmModal.confirmLabel = 'Yes, send request'
   confirmModal.action = 'complete-project'
   confirmModal.payload = { applicationId }
   confirmModal.open = true
@@ -279,27 +279,27 @@ function onCompleteProject(applicationId) {
 
 function formatProjectDate(iso) {
   if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('uk-UA', {
+  return new Date(iso).toLocaleDateString('en-GB', {
     day: '2-digit', month: 'short', year: 'numeric',
   })
 }
 
 async function onCreateTeam() {
   if (teamId.value && !canManageTeam.value) {
-    message.value = 'Ви вже в команді як учасник. Створити нову може лише користувач без команди.'
+    message.value = 'You are already in a team as a member. Only a user without a team can create a new one.'
     return
   }
   if (!team.name.trim()) {
-    message.value = 'Вкажіть назву команди.'
+    message.value = 'Please specify the team name.'
     return
   }
   const leaderId = Number(auth.user?.id)
   if (!Number.isFinite(leaderId) || leaderId < 1) {
-    message.value = 'Не вдалося визначити ваш ID. Вийдіть і увійдіть знову після оновлення сервера.'
+    message.value = 'Could not determine your ID. Log out and log back in after the server update.'
     return
   }
   if (!team.description.trim()) {
-    message.value = 'Вкажіть опис команди.'
+    message.value = 'Please specify the team description.'
     return
   }
   busy.value = true
@@ -315,12 +315,12 @@ async function onCreateTeam() {
     team.leaderId = res.data?.leaderId ?? leaderId
     teamMembers.value = res.data?.members || []
     message.value = isAdmin.value
-      ? `Команду створено (ID: ${res.data?.id}).`
-      : 'Команду створено.'
+      ? `Team created (ID: ${res.data?.id}).`
+      : 'Team created.'
     await auth.hydrateUserFromSession()
     await loadCallEligibility()
   } catch (e) {
-    message.value = apiErrorMessage(e, 'Не вдалося створити команду.')
+    message.value = apiErrorMessage(e, 'Failed to create team.')
   } finally {
     busy.value = false
   }
@@ -328,21 +328,21 @@ async function onCreateTeam() {
 
 async function onInviteMember() {
   if (!canManageTeam.value) {
-    message.value = 'Запрошувати учасників може лише лідер команди.'
+    message.value = 'Only the team leader can invite members.'
     return
   }
   if (!teamId.value) {
-    message.value = 'Спочатку створіть або завантажте команду.'
+    message.value = 'Please create or load a team first.'
     return
   }
   const raw = invitedUserRef.value.trim()
   if (!raw) {
-    message.value = 'Вкажіть email або ID користувача для запрошення.'
+    message.value = 'Please provide the email or user ID to invite.'
     return
   }
   const params = raw.includes('@') ? { email: raw } : { userId: Number(raw) }
   if (!raw.includes('@') && (!Number.isFinite(params.userId) || params.userId < 1)) {
-    message.value = 'Некоректний ID. Вкажіть число або email учасника.'
+    message.value = 'Invalid ID. Please enter a number or email.'
     return
   }
   busy.value = true
@@ -350,9 +350,9 @@ async function onInviteMember() {
     await teamsApi.invite(Number(teamId.value), params)
     invitedUserRef.value = ''
     await loadMyTeam()
-    message.value = 'Запрошення відправлено. Учасник побачить його в «Мої вхідні запрошення».'
+    message.value = 'Invitation sent. The member will see it in their incoming invitations.'
   } catch (e) {
-    message.value = e?.response?.data?.message || 'Не вдалося надіслати запрошення.'
+    message.value = e?.response?.data?.message || 'Failed to send invitation.'
   } finally {
     busy.value = false
   }
@@ -363,15 +363,15 @@ async function onRespondInvite(invite, accepted) {
   try {
     const uid = auth.user?.id
     if (!uid) {
-      message.value = 'Не вдалося визначити користувача.'
+      message.value = 'Could not determine the user.'
       return
     }
     await teamsApi.respondInvite(Number(invite.teamId), Number(uid), accepted)
     await loadMyInvites({ silent: true })
     await loadMyTeam()
-    message.value = accepted ? 'Запрошення прийнято.' : 'Запрошення відхилено.'
+    message.value = accepted ? 'Invitation accepted.' : 'Invitation declined.'
   } catch (e) {
-    message.value = apiErrorMessage(e, 'Не вдалося обробити запрошення.')
+    message.value = apiErrorMessage(e, 'Failed to process invitation.')
   } finally {
     busy.value = false
   }
@@ -389,10 +389,10 @@ function resetTeamForm() {
 function onRemoveMember(member) {
   if (!canRemoveMember(member)) return
   const wasPending = member.inviteStatus === 'PENDING'
-  confirmModal.title = wasPending ? 'Скасувати запрошення?' : 'Виключити з команди?'
+  confirmModal.title = wasPending ? 'Cancel invitation?' : 'Remove from team?'
   confirmModal.message = wasPending
-    ? 'Користувач більше не зможе прийняти це запрошення.'
-    : 'Учасник зникне зі складу. У нього в кабінеті з’явиться повідомлення, що його виключили з команди.'
+    ? 'The user will no longer be able to accept this invitation.'
+    : 'The member will be removed. They will receive a notification in their dashboard that they have been removed from the team.'
   confirmModal.highlight = memberLinkLabel(member)
   confirmModal.profileLink = member.userId ? memberProfileRoute(member.userId) : null
   confirmModal.variant = wasPending ? 'warning' : 'danger'
@@ -404,20 +404,20 @@ function onRemoveMember(member) {
 
 function onDeleteTeam() {
   if (!canManageTeam.value) {
-    message.value = 'Видалити команду може лише її лідер.'
+    message.value = 'Only the team leader can delete the team.'
     return
   }
   if (!teamId.value) {
-    message.value = 'Немає команди для видалення.'
+    message.value = 'No team to delete.'
     return
   }
-  confirmModal.title = 'Видалити команду?'
+  confirmModal.title = 'Delete team?'
   confirmModal.message =
-    'Дію не можна скасувати: зникнуть склад і всі запрошення. Подані заявки на виклики в «Мої заявки» залишаться — видалиться лише запис команди в системі.'
+    'This action cannot be undone: the team composition and all invitations will be removed. Submitted call applications in My Applications will remain — only the team record in the system will be deleted.'
   confirmModal.highlight = team.name ? `«${team.name}»` : ''
   confirmModal.profileLink = null
   confirmModal.variant = 'danger'
-  confirmModal.confirmLabel = 'Видалити команду'
+  confirmModal.confirmLabel = 'Delete team'
   confirmModal.action = 'delete-team'
   confirmModal.payload = null
   confirmModal.open = true
@@ -442,10 +442,10 @@ async function onConfirmModalAction() {
       closeConfirmModal()
       await loadMyTeam()
       message.value = wasPending
-        ? 'Запрошення скасовано.'
-        : 'Учасника виключено з команди.'
+        ? 'Invitation cancelled.'
+        : 'Member removed from team.'
     } catch (e) {
-      message.value = apiErrorMessage(e, 'Не вдалося виконати дію.')
+      message.value = apiErrorMessage(e, 'Failed to perform action.')
     } finally {
       confirmLoading.value = false
       busy.value = false
@@ -460,13 +460,13 @@ async function onConfirmModalAction() {
       await teamsApi.deleteTeam(Number(teamId.value))
       closeConfirmModal()
       resetTeamForm()
-      message.value = 'Команду видалено. Можете створити нову.'
+      message.value = 'Team deleted. You can create a new one.'
       await loadCallEligibility()
       await loadMyInvites({ silent: true })
     } catch (e) {
       const serverMsg = e?.response?.data?.message
       message.value =
-        typeof serverMsg === 'string' ? serverMsg : apiErrorMessage(e, 'Не вдалося видалити команду.')
+        typeof serverMsg === 'string' ? serverMsg : apiErrorMessage(e, 'Failed to delete team.')
     } finally {
       confirmLoading.value = false
       busy.value = false
@@ -483,9 +483,9 @@ async function onConfirmModalAction() {
       await applicationsApi.completeProject(applicationId)
       closeConfirmModal()
       await loadMyProjects()
-      message.value = 'Запит на завершення надіслано. Очікуйте підтвердження від адміністратора.'
+      message.value = 'Completion request sent. Please wait for administrator confirmation.'
     } catch (e) {
-      message.value = apiErrorMessage(e, 'Не вдалося завершити проект.')
+      message.value = apiErrorMessage(e, 'Failed to complete project.')
     } finally {
       confirmLoading.value = false
       completingProject.value = false
@@ -497,8 +497,8 @@ async function onConfirmModalAction() {
 <template>
   <section class="panel">
     <header class="panel-header">
-      <h2>Моя команда</h2>
-      <p>Створення команди, запрошення учасників та керування вхідними інвайтами.</p>
+      <h2>My team</h2>
+      <p>Team creation, member invitations and incoming invite management.</p>
     </header>
 
     <div
@@ -506,35 +506,34 @@ async function onConfirmModalAction() {
       class="removal-banner"
       role="alert"
     >
-      <strong>Вас виключили з команди</strong>
+      <strong>You have been removed from the team</strong>
       <p class="removal-banner__text">
-        Лідер команди «{{ removalNotice.teamName }}» прибрав вас із складу.
+        The leader of team "{{ removalNotice.teamName }}" removed you from the team.
         <span v-if="removalNotice.removedAt">
           ({{ formatRemovedAt(removalNotice.removedAt) }})
         </span>
-        Ви можете приєднатися до іншої команди за запрошенням або створити власну, якщо ще не
-        були лідером іншої команди.
+        You can join another team via invitation or create your own, if you have not
+        been a leader of another team.
       </p>
       <button type="button" class="removal-banner__btn" @click="dismissRemovalNotice">
-        Зрозуміло
+        Understood
       </button>
     </div>
 
     <div v-if="isTeamMemberOnly" class="member-banner" role="status">
-      <strong>Ви — учасник команди</strong>
+      <strong>You are a team member</strong>
       <span class="member-banner__text">
-        Змінювати назву, запрошувати людей, видаляти команду та подавати заявки на виклики може лише
-        <strong>лідер</strong> ({{ leaderEmail }}). Ви можете переглядати склад і
-        приймати вхідні запрошення в інші команди нижче.
+        Only the <strong>leader</strong> ({{ leaderEmail }}) can change the name, invite members, delete the team, and submit call applications. You can view the composition and
+        accept incoming invitations to other teams below.
       </span>
     </div>
 
     <div v-if="hasLeaderRoleBadge" class="leader-banner">
       <span class="leader-banner__icon" aria-hidden="true">⚑</span>
       <div>
-        <strong>Роль «Лідер команди»</strong>
+        <strong>Role: Team Leader</strong>
         <span class="leader-banner__text">
-          Після створення команди ви зможете запрошувати учасників і подавати заявки на програми від імені команди (як її лідер).
+          After creating a team you will be able to invite members and submit applications to programs on behalf of the team (as its leader).
         </span>
       </div>
     </div>
@@ -544,32 +543,31 @@ async function onConfirmModalAction() {
       class="eligibility-banner"
       role="alert"
     >
-      <strong class="eligibility-banner__title">Нагадування щодо готовності до виклику</strong>
+      <strong class="eligibility-banner__title">Reminder: call application readiness</strong>
       <p class="eligibility-banner__lead">
-        Якщо профіль або CV ще «не дотягнуті», система не вважає вас готовим подати заявку на виклик —
-        спочатку виправте це у
+        If your profile or CV are not yet complete, the system will not consider you ready to submit a call application —
+        fix this first in
         <router-link class="eligibility-banner__link eligibility-banner__link--inline" to="/app/my-profile">
-          Мій профіль
+          My profile
         </router-link>.
       </p>
       <p
         v-if="callEligibility.profileComplete === false"
         class="eligibility-banner__error"
       >
-        Помилка готовності: профіль або CV ще «не дотягнуті» — завершіть усі обовʼязкові поля студентського
-        профілю та завантажте файл CV у форматі PDF.
+        Readiness error: profile or CV are not yet complete — fill in all required student profile fields and upload a CV in PDF format.
       </p>
-      <p class="eligibility-banner__subtitle">Що варто зробити далі:</p>
+      <p class="eligibility-banner__subtitle">What to do next:</p>
       <ul v-if="callEligibility.remindersUk?.length" class="eligibility-banner__list">
         <li v-for="(line, idx) in callEligibility.remindersUk" :key="idx">{{ line }}</li>
       </ul>
       <p v-else class="eligibility-banner__fallback">
-        Перевірте «Мій профіль»: анкета має бути повністю заповненою, а CV — завантаженим (PDF).
+        Check 'My profile': the form must be fully completed and the CV must be uploaded (PDF).
       </p>
       <div class="eligibility-banner__links">
-        <router-link class="eligibility-banner__link" to="/programs/a">Каталог програми A</router-link>
+        <router-link class="eligibility-banner__link" to="/programs/a">Program A catalog</router-link>
         <span class="eligibility-banner__sep">·</span>
-        <router-link class="eligibility-banner__link" to="/programs/b">Каталог програми B</router-link>
+        <router-link class="eligibility-banner__link" to="/programs/b">Program B catalog</router-link>
       </div>
     </div>
 
@@ -578,45 +576,45 @@ async function onConfirmModalAction() {
       class="ready-banner"
       role="status"
     >
-      <strong>Можна подавати заявку на виклик</strong>
+      <strong>You can submit a call application</strong>
       <span class="ready-banner__text">
-        Оберіть програму нижче, відкрийте картку виклику та натисніть «Подати заявку» — форма відкриється у вашому кабінеті.
+        Select a program below, open the call card and click 'Submit application' — the form will open in your dashboard.
       </span>
       <div class="ready-banner__links">
-        <router-link class="ready-banner__link" to="/programs/a">Каталог A → виклики</router-link>
-        <router-link class="ready-banner__link" to="/programs/b">Каталог B → виклики</router-link>
+        <router-link class="ready-banner__link" to="/programs/a">Catalog A → calls</router-link>
+        <router-link class="ready-banner__link" to="/programs/b">Catalog B → calls</router-link>
       </div>
     </div>
 
     <article v-if="canSeeApplyInstructions" class="card card--muted">
-      <h3>Подача заявки на виклик після створення команди</h3>
+      <h3>Submitting a call application after creating a team</h3>
       <ol class="apply-steps">
         <li>
-          Заповніть
-          <router-link class="inline-link" to="/app/my-profile">студентський профіль</router-link>
-          та завантажте CV (якщо ще не зробили): без цього бекенд може не вважати профіль завершеним.
+          Fill in the
+          <router-link class="inline-link" to="/app/my-profile">student profile</router-link>
+          and upload your CV (if you haven't yet): without this the backend may not consider the profile complete.
         </li>
         <li>
-          Перейдіть у
-          <router-link class="inline-link" to="/programs/a">каталог програми A</router-link>
-          або
-          <router-link class="inline-link" to="/programs/b">каталог програми B</router-link>
-          та оберіть конкретну програму.
+          Go to the
+          <router-link class="inline-link" to="/programs/a">Program A catalog</router-link>
+          or
+          <router-link class="inline-link" to="/programs/b">Program B catalog</router-link>
+          and select a specific program.
         </li>
         <li>
-          У розділі «Активні виклики» біля потрібного виклику натисніть «Подати заявку». Відкриється форма заявки; збережіть чернетку, потім надішліть її з розділу «Мої заявки» за правилами програми.
+          In the 'Active calls' section, click 'Submit application' next to the desired call. The application form will open; save a draft, then submit it from 'My applications' according to the program rules.
         </li>
       </ol>
       <p v-if="!isTeamLeader && isSuperAdmin" class="hint">
-        SUPER_ADMIN: кнопка подачі на сайті також працює в тестовому режимі; для реального сценарію увійдіть під акаунтом лідера з роллю STUDENT.
+        SUPER_ADMIN: the submission button on the site also works in test mode; for a real scenario log in under the leader account with the STUDENT role.
       </p>
     </article>
 
     <article class="card">
-      <h3>{{ teamId ? (canManageTeam ? 'Моя команда' : 'Моя команда (перегляд)') : 'Створення команди' }}</h3>
+      <h3>{{ teamId ? (canManageTeam ? 'My team' : 'My team (view only)') : 'Create team' }}</h3>
       <div class="grid two form-fields">
         <div class="form-field">
-          <label class="label" for="team-name">Назва команди</label>
+          <label class="label" for="team-name">Team name</label>
           <input
             id="team-name"
             v-model="team.name"
@@ -627,7 +625,7 @@ async function onConfirmModalAction() {
           />
         </div>
         <div class="form-field">
-          <label class="label" for="team-max-capacity">Ліміт учасників</label>
+          <label class="label" for="team-max-capacity">Member limit</label>
           <input
             id="team-max-capacity"
             value="3"
@@ -638,53 +636,52 @@ async function onConfirmModalAction() {
         </div>
       </div>
       <div class="field-desc form-field">
-        <label class="label" for="team-description">Опис команди</label>
+        <label class="label" for="team-description">Team description</label>
         <textarea
           id="team-description"
           v-model="team.description"
           rows="4"
-          placeholder="Коротко опишіть напрямок проєкту або компетенції команди"
+          placeholder="Briefly describe the project direction or team competencies"
           :readonly="teamFormReadonly"
           :disabled="teamFormReadonly"
           style="resize: none"
         ></textarea>
       </div>
       <button v-if="!teamId" type="button" :disabled="busy" @click="onCreateTeam">
-        Створити команду
+        Create team
       </button>
-      <p v-if="teamId && canViewTeamId" class="hint">Поточний ID команди: {{ teamId }}</p>
+      <p v-if="teamId && canViewTeamId" class="hint">Current team ID: {{ teamId }}</p>
 
       <div v-if="teamId && canManageTeam && !hasActiveProject" class="danger-zone">
         <p class="danger-zone__text">
-          Видалення команди незворотне: зникнуть склад і запрошення. Подані заявки на виклики в кабінеті
-          залишаються — зникає лише запис команди в системі.
+          Team deletion is irreversible: team composition and invitations will be removed. Submitted call applications will remain — only the team record in the system will be deleted.
         </p>
         <button type="button" class="danger" :disabled="busy" @click="onDeleteTeam">
-          Видалити команду
+          Delete team
         </button>
       </div>
       <div v-if="teamId && canManageTeam && hasActiveProject" class="active-project-lock">
-        🔒 Команда має активний проект — видалення та зміни складу заблоковані.
+        🔒 The team has an active project — deletion and composition changes are blocked.
       </div>
     </article>
 
     <article v-if="teamId" class="card">
-      <h3>{{ canManageTeam ? 'Запросити учасника' : 'Склад команди' }}</h3>
+      <h3>{{ canManageTeam ? 'Invite member' : 'Team members' }}</h3>
       <div v-if="canManageTeam && !hasActiveProject" class="row">
         <input
           v-model="invitedUserRef"
           type="text"
-          placeholder="Email користувача"
+          placeholder="User email"
           autocomplete="off"
         />
-        <button :disabled="busy" @click="onInviteMember">Запросити</button>
+        <button :disabled="busy" @click="onInviteMember">Invite</button>
       </div>
       <div v-if="canManageTeam && hasActiveProject" class="active-project-lock active-project-lock--inline">
-        🔒 Запрошення заблоковано — є активний проект.
+        🔒 Invitations are blocked — active project exists.
       </div>
-      <p class="hint">Підтверджено учасників: {{ acceptedCount }} / {{ team.maxCapacity }}</p>
+      <p class="hint">Confirmed members: {{ acceptedCount }} / {{ team.maxCapacity }}</p>
       <p v-if="canManageTeam" class="hint hint--sub">
-        Після виключення того самого користувача можна запросити його знову — необмежену кількість разів.
+        After removing a member, you can invite the same user again — unlimited times.
       </p>
       <div v-if="teamMembers.length" class="member-table-wrap">
         <table class="member-table" :class="{ 'member-table--actions': canManageTeam }">
@@ -696,20 +693,20 @@ async function onConfirmModalAction() {
           </colgroup>
           <thead>
             <tr>
-              <th scope="col" class="member-table__th-email">Учасник</th>
-              <th scope="col" class="member-table__th-center">Статус</th>
-              <th scope="col" class="member-table__th-center">Роль</th>
-              <th v-if="canManageTeam" scope="col" class="member-table__th-center">Дія</th>
+              <th scope="col" class="member-table__th-email">Member</th>
+              <th scope="col" class="member-table__th-center">Status</th>
+              <th scope="col" class="member-table__th-center">Role</th>
+              <th v-if="canManageTeam" scope="col" class="member-table__th-center">Action</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="member in teamMembers" :key="member.id">
-              <td class="member-table__email" data-label="Учасник">
+              <td class="member-table__email" data-label="Member">
                 <router-link
                   v-if="member.userId"
                   class="member-link"
                   :to="memberProfileRoute(member.userId)"
-                  :title="'Профіль та CV — ' + memberLinkLabel(member)"
+                  :title="'Profile and CV — ' + memberLinkLabel(member)"
                 >
                   <span class="member-link__icon">✉</span>
                   {{ memberLinkLabel(member) }}
@@ -719,11 +716,11 @@ async function onConfirmModalAction() {
                   {{ memberLinkLabel(member) }}
                 </span>
               </td>
-              <td class="member-table__status" data-label="Статус">
+              <td class="member-table__status" data-label="Status">
                 <span class="badge">{{ member.inviteStatus }}</span>
               </td>
-              <td class="member-table__role" data-label="Роль">{{ member.role }}</td>
-              <td v-if="canManageTeam" class="member-table__action" data-label="Дія">
+              <td class="member-table__role" data-label="Role">{{ member.role }}</td>
+              <td v-if="canManageTeam" class="member-table__action" data-label="Action">
                 <button
                   v-if="canRemoveMember(member)"
                   type="button"
@@ -743,38 +740,38 @@ async function onConfirmModalAction() {
 
     <article class="card">
       <div class="card-title-row">
-        <h3>Мої вхідні запрошення</h3>
+        <h3>My incoming invitations</h3>
         <button type="button" class="link-btn" :disabled="busy" @click="loadMyInvites()">
-          Оновити
+          Refresh
         </button>
       </div>
       <p class="hint">
-        Запрошення приходять на акаунт, під яким ви увійшли ({{ auth.user?.email || '—' }}).
-        Лідер може вказати ваш email замість ID.
+        Invitations are sent to the account you logged in with ({{ auth.user?.email || '—' }}).
+        The leader can specify your email instead of ID.
       </p>
-      <div v-if="!pendingInvites.length" class="hint">Немає запрошень у статусі очікування.</div>
+      <div v-if="!pendingInvites.length" class="hint">No pending invitations.</div>
       <div v-for="invite in pendingInvites" :key="`${invite.teamId}-${invite.userId}-${invite.id}`" class="invite-row">
-        <span class="invite-team-name">{{ invite.teamName || `Команда #${invite.teamId}` }}</span>
+        <span class="invite-team-name">{{ invite.teamName || `Team #${invite.teamId}` }}</span>
         <span class="badge">{{ invite.inviteStatus }}</span>
         <div class="row actions">
-          <button :disabled="busy" @click="onRespondInvite(invite, true)">Прийняти</button>
+          <button :disabled="busy" @click="onRespondInvite(invite, true)">Accept</button>
           <button class="danger" :disabled="busy" @click="onRespondInvite(invite, false)">
-            Відхилити
+            Decline
           </button>
         </div>
       </div>
     </article>
 
-    <!-- Проекти -->
+    <!-- Projects -->
     <article class="card">
-      <h3 class="card-title">Проекти</h3>
+      <h3 class="card-title">Projects</h3>
 
-      <div v-if="projectsLoading" class="hint">Завантаження…</div>
+      <div v-if="projectsLoading" class="hint">Loading…</div>
       <template v-else>
 
-        <!-- Актуальний проект -->
+        <!-- Current project -->
         <div class="project-section">
-          <h4 class="project-section__title">Поточний проект</h4>
+          <h4 class="project-section__title">Current project</h4>
           <div v-if="myProjects.current" class="project-card project-card--active">
             <div class="project-card__head">
               <span class="project-card__program">{{ myProjects.current.programName }}</span>
@@ -783,17 +780,17 @@ async function onConfirmModalAction() {
                 class="project-badge"
                 :class="myProjects.current.status === 'COMPLETION_REQUESTED' ? 'project-badge--pending' : 'project-badge--active'"
               >
-                {{ myProjects.current.status === 'COMPLETION_REQUESTED' ? 'Чекає підтвердження' : 'Активний' }}
+                {{ myProjects.current.status === 'COMPLETION_REQUESTED' ? 'Awaiting confirmation' : 'Active' }}
               </span>
             </div>
             <div class="project-card__team">
-              Команда: <strong>{{ myProjects.current.teamName || '—' }}</strong>
+              Team: <strong>{{ myProjects.current.teamName || '—' }}</strong>
             </div>
             <div class="project-card__dates">
-              Подано: {{ formatProjectDate(myProjects.current.createdAt) }}
+              Submitted: {{ formatProjectDate(myProjects.current.createdAt) }}
             </div>
             <div v-if="myProjects.current.members?.length" class="project-card__members">
-              <span class="project-card__members-label">Учасники:</span>
+              <span class="project-card__members-label">Members:</span>
               <router-link
                 v-for="m in myProjects.current.members"
                 :key="m.userId"
@@ -802,7 +799,7 @@ async function onConfirmModalAction() {
                 :class="{ 'project-member-chip--leader': m.role === 'LEADER' }"
               >{{ m.email }}</router-link>
             </div>
-            <!-- Завантаження результатних документів (тільки лідер, статус APPROVED) -->
+            <!-- Upload result documents (leader only, status APPROVED) -->
             <template v-if="canManageTeam && myProjects.current.status === 'APPROVED'">
               <ResultDocumentUpload
                 :key="myProjects.current.applicationId"
@@ -813,30 +810,30 @@ async function onConfirmModalAction() {
                 type="button"
                 class="btn btn-complete"
                 :disabled="completingProject || !resultDocsReady"
-                :title="!resultDocsReady ? 'Завантажте обидва результатних документи' : ''"
+                :title="!resultDocsReady ? 'Upload both result documents' : ''"
                 @click="onCompleteProject(myProjects.current.applicationId)"
               >
-                {{ completingProject ? 'Надсилання…' : 'Проект закінчено' }}
+                {{ completingProject ? 'Sending…' : 'Project completed' }}
               </button>
               <p v-if="!resultDocsReady" class="completion-pending-note" style="color:#6b7280">
-                📎 Щоб закінчити проект — завантажте обидва результатних документи вище
+                📎 To complete the project — upload both result documents above
               </p>
             </template>
 
             <p v-if="myProjects.current.status === 'COMPLETION_REQUESTED'" class="completion-pending-note">
-              ⏳ Запит на завершення надіслано — очікуйте підтвердження
-              {{ myProjects.current.programType === 'PROGRAM_B' ? 'Product Owner' : 'адміністратора' }}.
+              ⏳ Completion request sent — awaiting confirmation from
+              {{ myProjects.current.programType === 'PROGRAM_B' ? 'Product Owner' : 'administrator' }}.
             </p>
             <p v-if="myProjects.current.status === 'COMPLETION_PO_APPROVED'" class="completion-pending-note" style="color:#059669">
-              ✅ Product Owner підтвердив завершення — очікуйте підтвердження адміністратора.
+              ✅ Product Owner confirmed completion — awaiting administrator confirmation.
             </p>
           </div>
-          <div v-else class="hint">Команда зараз не має активного проекту.</div>
+          <div v-else class="hint">The team currently has no active project.</div>
         </div>
 
-        <!-- Завершені проекти -->
+        <!-- Completed projects -->
         <div v-if="myProjects.history?.length" class="project-section">
-          <h4 class="project-section__title">Завершені проекти</h4>
+          <h4 class="project-section__title">Completed projects</h4>
           <div
             v-for="proj in myProjects.history"
             :key="proj.applicationId"
@@ -845,17 +842,17 @@ async function onConfirmModalAction() {
             <div class="project-card__head">
               <span class="project-card__program">{{ proj.programName }}</span>
               <span v-if="proj.callTitle" class="project-card__call">{{ proj.callTitle }}</span>
-              <span class="project-badge project-badge--done">Завершено</span>
+              <span class="project-badge project-badge--done">Completed</span>
             </div>
             <div class="project-card__team">
-              Команда: <strong>{{ proj.teamName || '—' }}</strong>
+              Team: <strong>{{ proj.teamName || '—' }}</strong>
             </div>
             <div class="project-card__dates">
-              Подано: {{ formatProjectDate(proj.createdAt) }} ·
-              Завершено: {{ formatProjectDate(proj.updatedAt) }}
+              Submitted: {{ formatProjectDate(proj.createdAt) }} ·
+              Completed: {{ formatProjectDate(proj.updatedAt) }}
             </div>
             <div v-if="proj.members?.length" class="project-card__members">
-              <span class="project-card__members-label">Учасники:</span>
+              <span class="project-card__members-label">Members:</span>
               <router-link
                 v-for="m in proj.members"
                 :key="m.userId"
@@ -1688,3 +1685,4 @@ button:disabled {
   }
 }
 </style>
+

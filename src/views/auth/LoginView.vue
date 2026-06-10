@@ -16,7 +16,7 @@
                     <input v-model="password" type="password" required />
                 </div>
 
-                <div class="field">
+                <div v-if="SITE_KEY" class="field">
                     <div id="recaptcha-login" class="g-recaptcha"></div>
                     <span v-if="captchaError" class="error-text">
                         {{ t('auth.captchaError') }}
@@ -70,6 +70,8 @@ const captchaToken = ref('')
 let captchaInterval = null
 
 onMounted(() => {
+    if (!SITE_KEY) return
+
     captchaInterval = setInterval(() => {
         if (window.grecaptcha?.render) {
             clearInterval(captchaInterval)
@@ -107,7 +109,7 @@ onUnmounted(() => {
 })
 
 async function handleLogin() {
-    if (!captchaToken.value) {
+    if (SITE_KEY && !captchaToken.value) {
         captchaError.value = true
         return
     }

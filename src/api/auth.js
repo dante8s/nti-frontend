@@ -5,8 +5,8 @@ export const authApi = {
   completeTeamInvite: (payload) => api.post('/api/auth/complete-team-invite', payload),
 
   /**
-   * Мінімальні дані поточного користувача (userId, ролі) з JWT.
-   * Не в модулі `/api/auth`, але потрібен для відновлення `user.id` у сесії після логіну без id у localStorage.
+   * Minimal data of the current user (userId, roles) from JWT.
+   * Not in the `/api/auth` module, but needed to restore `user.id` in session after login without id in localStorage.
    */
   getSessionBrief: () => api.get('/api/profile/me/session'),
 }

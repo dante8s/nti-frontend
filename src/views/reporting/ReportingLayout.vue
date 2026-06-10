@@ -5,10 +5,10 @@ import { RouterView } from 'vue-router'
 <template>
   <section class="reporting-shell">
     <header class="shell-header">
-      <h2>Звітність</h2>
+      <h2>Reporting</h2>
       <p class="shell-lead">
-        Доступно з меню «Адміністрування» або «Комісія». Перегляд панелей студента / компанії — з кнопок на сторінці
-        зведення та експорту; показуються дані поточного користувача (для перевірки інтерфейсу).
+        Available from the Administration or Commission menu. View student / company panels — from buttons on the page
+        summary and export; shows data for the current user (for interface testing).
       </p>
     </header>
 

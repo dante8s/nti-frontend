@@ -1,15 +1,15 @@
 <template>
-  <section class="docs-download" aria-label="Документи заявки">
+  <section class="docs-download" aria-label="Application documents">
     <div class="docs-download__head">
-      <h2>Матеріали заявки</h2>
+      <h2>Application materials</h2>
       <p class="docs-download__sub">
-        Обовʼязкові документи, які подав учасник — для перегляду та завантаження під час оцінювання.
+        Required documents submitted by the applicant — for review and download during evaluation.
       </p>
     </div>
 
-    <div v-if="loading" class="docs-download__loading">Завантаження списку…</div>
+    <div v-if="loading" class="docs-download__loading">Loading list…</div>
     <p v-else-if="error" class="docs-download__err">{{ error }}</p>
-    <div v-else-if="!docs.length" class="docs-download__empty">Документів за цією заявкою немає.</div>
+    <div v-else-if="!docs.length" class="docs-download__empty">No documents for this application.</div>
 
     <ul v-else class="docs-download__list">
       <li
@@ -35,7 +35,7 @@
               @click="openPreview(doc)"
             >
               {{
-                previewBusy && openingForType === doc.documentType ? 'Відкриття…' : 'Переглянути'
+                previewBusy && openingForType === doc.documentType ? 'Opening…' : 'Preview'
               }}
             </button>
             <button
@@ -44,10 +44,10 @@
               :disabled="downloading[doc.documentType]"
               @click="downloadOne(doc)"
             >
-              {{ downloading[doc.documentType] ? 'Завантаження…' : 'Завантажити' }}
+              {{ downloading[doc.documentType] ? 'Downloading…' : 'Download' }}
             </button>
           </template>
-          <span v-else class="docs-download__missing">Не подано</span>
+          <span v-else class="docs-download__missing">Not submitted</span>
         </div>
       </li>
     </ul>
@@ -59,17 +59,17 @@
         class="doc-preview-modal"
         role="dialog"
         aria-modal="true"
-        :aria-label="'Перегляд: ' + (previewTitle || 'документ')"
+        :aria-label="'Preview: ' + (previewTitle || 'document')"
         @click.self="closePreview"
       >
         <div class="doc-preview-panel">
           <div class="doc-preview-bar">
-            <span class="doc-preview-title">{{ previewTitle || 'Документ PDF' }}</span>
+            <span class="doc-preview-title">{{ previewTitle || 'PDF Document' }}</span>
             <button type="button" class="doc-preview-close" @click="closePreview">
-              Закрити
+              Close
             </button>
           </div>
-          <iframe class="doc-preview-iframe" title="PDF документ" :src="previewBlobUrl" />
+          <iframe class="doc-preview-iframe" title="PDF document" :src="previewBlobUrl" />
         </div>
       </div>
     </Teleport>
@@ -155,7 +155,7 @@ async function openPreview(doc) {
   const dt = doc.documentType
   if (!isPdfFile(doc)) {
     downloadMessage.value =
-      'Перегляд у вікні доступний лише для PDF. Скористайтесь «Завантажити».'
+      'Preview in window is only available for PDF. Use the Download button.'
     return
   }
   previewBusy.value = true
@@ -182,10 +182,10 @@ async function openPreview(doc) {
   } catch (e) {
     const d = e.response?.data
     if (d instanceof Blob) {
-      downloadMessage.value = (await blobLooksLikeJsonError(d)) || 'Не вдалося відкрити файл.'
+      downloadMessage.value = (await blobLooksLikeJsonError(d)) || 'Failed to open the file.'
     } else {
       downloadMessage.value =
-        e.response?.data?.message || e.response?.data?.error || 'Не вдалося відкрити файл.'
+        e.response?.data?.message || e.response?.data?.error || 'Failed to open the file.'
     }
   } finally {
     previewBusy.value = false
@@ -216,10 +216,10 @@ async function downloadOne(doc) {
     const d = e.response?.data
     if (d instanceof Blob) {
       const errText = await blobLooksLikeJsonError(d)
-      downloadMessage.value = errText || 'Не вдалося отримати файл.'
+      downloadMessage.value = errText || 'Failed to retrieve the file.'
     } else {
       downloadMessage.value =
-        e.response?.data?.message || e.response?.data?.error || 'Не вдалося завантажити файл.'
+        e.response?.data?.message || e.response?.data?.error || 'Failed to download the file.'
     }
   } finally {
     downloading[dt] = false
@@ -233,12 +233,12 @@ async function loadDocs() {
   downloadMessage.value = ''
   try {
     const res = await applicationsApi.getDocumentStatus(props.applicationId)
-    // Результатні документи показуються окремо — не в секції матеріалів заявки
+    // Result documents are shown separately — not in the application materials section
     docs.value = (Array.isArray(res.data) ? res.data : []).filter(
       d => d.documentType !== 'RESULT_1' && d.documentType !== 'RESULT_2'
     )
   } catch (e) {
-    error.value = e.response?.data?.message || 'Не вдалося завантажити перелік документів.'
+    error.value = e.response?.data?.message || 'Failed to load document list.'
     docs.value = []
   } finally {
     loading.value = false

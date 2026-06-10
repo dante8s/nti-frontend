@@ -4,32 +4,32 @@ import { previewBulkMessage, sendBulkMessage } from '@/api/bulkMessage'
 import { programsApi } from '@/api/programs'
 
 const TARGET_OPTIONS = [
-  { value: 'ALL',                    label: 'Всі активні користувачі' },
-  { value: 'BY_ROLE',               label: 'За роллю' },
-  { value: 'BY_CALL',               label: 'За викликом (call)' },
-  { value: 'BY_APPLICATION_STATUS', label: 'За статусом заявки' },
+  { value: 'ALL',                    label: 'All active users' },
+  { value: 'BY_ROLE',               label: 'By role' },
+  { value: 'BY_CALL',               label: 'By call' },
+  { value: 'BY_APPLICATION_STATUS', label: 'By application status' },
 ]
 
 const ROLE_OPTIONS = [
-  { value: 'STUDENT',         label: 'Студент' },
-  { value: 'FIRM',            label: 'Компанія (FIRM)' },
-  { value: 'FIRM_USER',       label: 'Представник фірми' },
-  { value: 'MENTOR',          label: 'Ментор' },
-  { value: 'EVALUATOR',       label: 'Комісія (перегляд)' },
-  { value: 'SUPER_EVALUATOR', label: 'Комісія (рішення)' },
-  { value: 'ADMIN',           label: 'Адміністратор' },
+  { value: 'STUDENT',         label: 'Student' },
+  { value: 'FIRM',            label: 'Company (FIRM)' },
+  { value: 'FIRM_USER',       label: 'Company representative' },
+  { value: 'MENTOR',          label: 'Mentor' },
+  { value: 'EVALUATOR',       label: 'Commission (review)' },
+  { value: 'SUPER_EVALUATOR', label: 'Commission (decision)' },
+  { value: 'ADMIN',           label: 'Administrator' },
 ]
 
 const APP_STATUS_OPTIONS = [
-  { value: 'SUBMITTED',         label: 'Подано' },
-  { value: 'FORMALLY_VERIFIED', label: 'Офіційно підтверджено' },
-  { value: 'IN_REVIEW',         label: 'На оцінюванні' },
-  { value: 'NEEDS_REVISION',    label: 'Потрібні виправлення' },
-  { value: 'APPROVED',          label: 'Схвалено' },
-  { value: 'ONBOARDING',        label: 'Адаптація' },
-  { value: 'ACTIVE',            label: 'Активний проєкт' },
-  { value: 'SUSPENDED',         label: 'Відсторонено' },
-  { value: 'REJECTED',          label: 'Відхилено' },
+  { value: 'SUBMITTED',         label: 'Submitted' },
+  { value: 'FORMALLY_VERIFIED', label: 'Formally verified' },
+  { value: 'IN_REVIEW',         label: 'In review' },
+  { value: 'NEEDS_REVISION',    label: 'Needs revision' },
+  { value: 'APPROVED',          label: 'Approved' },
+  { value: 'ONBOARDING',        label: 'Onboarding' },
+  { value: 'ACTIVE',            label: 'Active project' },
+  { value: 'SUSPENDED',         label: 'Suspended' },
+  { value: 'REJECTED',          label: 'Rejected' },
 ]
 
 const form = ref({
@@ -88,7 +88,7 @@ async function preview() {
     const { data } = await previewBulkMessage(payload.value)
     previewCount.value = data.recipientCount
   } catch (e) {
-    error.value = e.response?.data?.error || 'Помилка preview'
+    error.value = e.response?.data?.error || 'Preview error'
   } finally {
     previewing.value = false
   }
@@ -105,7 +105,7 @@ async function send() {
     sent.value = true
     setTimeout(() => (sent.value = false), 4000)
   } catch (e) {
-    error.value = e.response?.data?.error || 'Помилка надсилання'
+    error.value = e.response?.data?.error || 'Send error'
   } finally {
     sending.value = false
   }
@@ -115,14 +115,14 @@ async function send() {
 <template>
   <div class="bm">
     <div class="bm__head">
-      <h1 class="bm__title">Масова розсилка</h1>
-      <p class="bm__sub">Надішліть in-app повідомлення (та email) групі користувачів одразу</p>
+      <h1 class="bm__title">Bulk message</h1>
+      <p class="bm__sub">Send an in-app notification (and email) to a group of users at once</p>
     </div>
 
     <div class="bm__card">
       <!-- Target -->
       <div class="bm__field">
-        <label class="bm__label">Кому надсилати</label>
+        <label class="bm__label">Send to</label>
         <select v-model="form.targetType" class="bm__select">
           <option v-for="opt in TARGET_OPTIONS" :key="opt.value" :value="opt.value">
             {{ opt.label }}
@@ -132,71 +132,71 @@ async function send() {
 
       <!-- BY_ROLE filter -->
       <div v-if="form.targetType === 'BY_ROLE'" class="bm__field">
-        <label class="bm__label">Роль</label>
+        <label class="bm__label">Role</label>
         <select v-model="form.roleFilter" class="bm__select">
-          <option value="" disabled>Оберіть роль...</option>
+          <option value="" disabled>Select a role...</option>
           <option v-for="r in ROLE_OPTIONS" :key="r.value" :value="r.value">{{ r.label }}</option>
         </select>
       </div>
 
       <!-- BY_CALL filter -->
       <div v-if="form.targetType === 'BY_CALL'" class="bm__field">
-        <label class="bm__label">Виклик (Call)</label>
+        <label class="bm__label">Call</label>
         <select v-model="form.callId" class="bm__select">
-          <option :value="null" disabled>Оберіть виклик...</option>
+          <option :value="null" disabled>Select a call...</option>
           <option v-for="c in calls" :key="c.id" :value="c.id">
             {{ c.title }} (id {{ c.id }})
           </option>
         </select>
-        <p v-if="calls.length === 0" class="bm__hint">Відкритих викликів не знайдено</p>
+        <p v-if="calls.length === 0" class="bm__hint">No open calls found</p>
       </div>
 
       <!-- BY_APPLICATION_STATUS filter -->
       <div v-if="form.targetType === 'BY_APPLICATION_STATUS'" class="bm__field">
-        <label class="bm__label">Статус заявки</label>
+        <label class="bm__label">Application status</label>
         <select v-model="form.applicationStatus" class="bm__select">
-          <option value="" disabled>Оберіть статус...</option>
+          <option value="" disabled>Select a status...</option>
           <option v-for="s in APP_STATUS_OPTIONS" :key="s.value" :value="s.value">{{ s.label }}</option>
         </select>
       </div>
 
       <!-- Subject -->
       <div class="bm__field">
-        <label class="bm__label">Тема повідомлення</label>
-        <input v-model="form.subject" class="bm__input" type="text" placeholder="Наприклад: Важливе оголошення NTI" />
+        <label class="bm__label">Message subject</label>
+        <input v-model="form.subject" class="bm__input" type="text" placeholder="E.g., Important NTI announcement" />
       </div>
 
       <!-- Message -->
       <div class="bm__field">
-        <label class="bm__label">Текст повідомлення</label>
+        <label class="bm__label">Message body</label>
         <textarea v-model="form.message" class="bm__textarea" rows="8"
-          placeholder="Введіть текст повідомлення..." />
+          placeholder="Enter your message text..." />
       </div>
 
       <!-- Email toggle -->
       <div class="bm__field bm__field--row">
         <label class="bm__toggle">
           <input type="checkbox" v-model="form.sendEmail" />
-          <span>Також надіслати на email</span>
+          <span>Also send via email</span>
         </label>
       </div>
 
       <!-- Preview result -->
       <div v-if="previewCount !== null" class="bm__preview-result">
         <span class="bm__preview-icon">◎</span>
-        <span>Знайдено одержувачів: <strong>{{ previewCount }}</strong></span>
+        <span>Recipients found: <strong>{{ previewCount }}</strong></span>
       </div>
 
       <p v-if="error" class="bm__error">{{ error }}</p>
 
       <div class="bm__actions">
         <button class="bm__btn bm__btn--preview" :disabled="!canSend || previewing" @click="preview">
-          {{ previewing ? 'Перевірка...' : 'Переглянути кількість' }}
+          {{ previewing ? 'Checking...' : 'Preview count' }}
         </button>
         <button class="bm__btn bm__btn--send" :disabled="!canSend || sending" @click="send">
-          {{ sending ? 'Надсилання...' : 'Надіслати' }}
+          {{ sending ? 'Sending...' : 'Send' }}
         </button>
-        <span v-if="sent" class="bm__ok">✓ Надіслано {{ previewCount }} одержувачам</span>
+        <span v-if="sent" class="bm__ok">✓ Sent to {{ previewCount }} recipients</span>
       </div>
     </div>
   </div>

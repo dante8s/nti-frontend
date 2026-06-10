@@ -1,14 +1,14 @@
 <template>
     <div class="docs-section">
         <div class="section-title">
-            <span>Обов'язкові документи</span>
+            <span>Required documents</span>
             <span class="progress-text">
-                {{ uploadedCount }}/{{ docs.length }} завантажено
+                {{ uploadedCount }}/{{ docs.length }} uploaded
             </span>
         </div>
 
         <div v-if="loading" class="loading">
-            Завантаження...
+            Loading...
         </div>
 
         <div v-else class="docs-list">
@@ -23,19 +23,19 @@
                 <div class="doc-info">
                     <div class="doc-label">
                         {{ doc.label }}
-                        <span class="required-badge">Обов'язково</span>
+                        <span class="required-badge">Required</span>
                     </div>
                     <div class="doc-desc">{{ doc.description }}</div>
                     <div v-if="doc.uploaded" class="doc-filename">
                         📎 {{ doc.fileName }}
                     </div>
-                    <!-- Прогрес -->
+                    <!-- Progress -->
                     <div v-if="uploading[doc.documentType] !== undefined" class="progress-wrap">
                         <div class="progress-bar" :style="{
                             width: uploading[doc.documentType] + '%'
                         }"></div>
                     </div>
-                    <!-- Помилка конкретного файлу -->
+                    <!-- Individual file error -->
                     <div v-if="errors[doc.documentType]" class="doc-error">
                         {{ errors[doc.documentType] }}
                     </div>
@@ -44,7 +44,7 @@
                 <div class="doc-action">
                     <template v-if="!isLocked">
                         <label class="btn-upload">
-                            {{ doc.uploaded ? '↻ Замінити' : '↑ Завантажити' }}
+                            {{ doc.uploaded ? '↻ Replace' : '↑ Upload' }}
                             <input type="file" accept=".pdf,.doc,.docx" style="display:none" :disabled="uploading[doc.documentType] !== undefined
                                 " @change="e => onFileSelect(e, doc)" />
                         </label>
@@ -52,8 +52,8 @@
                     <template v-else>
                         <span class="locked-text">
                             {{ doc.uploaded
-                                ? '✓ Завантажено'
-                                : '— Не завантажено' }}
+                                ? '✓ Uploaded'
+                                : '— Not uploaded' }}
                         </span>
                     </template>
                 </div>
@@ -61,7 +61,7 @@
         </div>
 
         <div v-if="isLocked" class="locked-notice">
-            🔒 Документи не можна змінювати після відправки
+            🔒 Documents cannot be changed after submission
         </div>
     </div>
 </template>
@@ -98,12 +98,12 @@ async function loadDocs() {
     try {
         const res = await applicationsApi
             .getDocumentStatus(props.applicationId)
-        // Результатні документи показуються тільки в "Моя команда"
+        // Result documents are shown only in "My Team"
         docs.value = (res.data || []).filter(
             d => d.documentType !== 'RESULT_1' && d.documentType !== 'RESULT_2'
         )
     } catch (e) {
-        console.error('Помилка завантаження статусу:', e)
+        console.error('Failed to load document status:', e)
     } finally {
         loading.value = false
     }
@@ -113,7 +113,7 @@ async function onFileSelect(event, doc) {
     const file = event.target.files[0]
     if (!file) return
 
-    // Очищаємо попередню помилку
+    // Clear previous error
     delete errors[doc.documentType]
 
     const name = file.name.toLowerCase()
@@ -121,14 +121,14 @@ async function onFileSelect(event, doc) {
         && !name.endsWith('.docx')
         && !name.endsWith('.doc')) {
         errors[doc.documentType] =
-            'Дозволені тільки PDF і DOCX файли'
+            'Only PDF and DOCX files are allowed'
         event.target.value = ''
         return
     }
 
     if (file.size > 10 * 1024 * 1024) {
         errors[doc.documentType] =
-            'Файл не може бути більше 10MB'
+            'File cannot exceed 10 MB'
         event.target.value = ''
         return
     }
@@ -148,7 +148,7 @@ async function onFileSelect(event, doc) {
         emit('change')
     } catch (e) {
         errors[doc.documentType] =
-            e.response?.data || 'Помилка завантаження'
+            e.response?.data || 'Upload error'
     } finally {
         delete uploading[doc.documentType]
         event.target.value = ''

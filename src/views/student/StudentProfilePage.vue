@@ -36,7 +36,7 @@ const form = reactive({
   profileAverageGrade: '',
 })
 
-/** Завжди `/api/profile/me` — id з JWT, без залежності від (можливо застарілого) `auth.user.id` у localStorage. */
+/** Always `/api/profile/me` — id from JWT, without dependency on (possibly stale) `auth.user.id` in localStorage. */
 const ME = null
 
 const hasAvatarPhoto = computed(() => Boolean(loadedProfile.value?.avatarFilePath))
@@ -55,7 +55,7 @@ async function refreshAvatarPreview() {
     const res = await fetchProfilePhotoBlob(ME)
     avatarBlobUrl.value = URL.createObjectURL(res.data)
   } catch {
-    /* 404 або мережа — без прев’ю */
+    /* 404 or network error — no preview */
   }
 }
 
@@ -70,14 +70,14 @@ function extractApiError(error, fallback) {
   const apiMessage =
     payload?.error || payload?.message || (typeof payload === 'string' ? payload : '')
 
-  if (status === 401) return 'Сесія закінчилась. Увійдіть у систему знову.'
+  if (status === 401) return 'Session expired. Please log in again.'
   if (status === 403) {
     return (
       apiMessage
-      || 'Доступ заборонено. Якщо ви студент або адмін — вийдіть і увійдіть знову, щоб синхронізувати сесію.'
+      || 'Access denied. If you are a student or admin — log out and log back in to sync the session.'
     )
   }
-  if (status === 404) return apiMessage || 'Профіль не знайдено.'
+  if (status === 404) return apiMessage || 'Profile not found.'
   if (status) return apiMessage || `${fallback} (HTTP ${status})`
   return apiMessage || fallback
 }
@@ -125,7 +125,7 @@ async function loadProfile() {
     loadedProfile.value = profile
     syncForm(profile)
     profileExists.value = true
-    setMessage('Профіль завантажено.', 'success')
+    setMessage('Profile loaded.', 'success')
     await refreshAvatarPreview()
   } catch (error) {
     if (error?.response?.status === 404) {
@@ -133,10 +133,10 @@ async function loadProfile() {
       loadedProfile.value = null
       releaseAvatarBlob()
       clearForm()
-      setMessage('Профіль ще не створено. Заповніть поля та натисніть "Зберегти".')
+      setMessage('Profile not yet created. Fill in the fields and click "Save".')
       return
     }
-    setMessage(extractApiError(error, 'Не вдалося завантажити профіль.'), 'error')
+    setMessage(extractApiError(error, 'Failed to load profile.'), 'error')
   } finally {
     loading.value = false
   }
@@ -153,10 +153,10 @@ async function saveProfile() {
     loadedProfile.value = profile
     syncForm(profile)
     profileExists.value = true
-    setMessage('Профіль успішно збережено.', 'success')
+    setMessage('Profile saved successfully.', 'success')
     await refreshAvatarPreview()
   } catch (error) {
-    setMessage(extractApiError(error, 'Не вдалося зберегти профіль.'), 'error')
+    setMessage(extractApiError(error, 'Failed to save profile.'), 'error')
   } finally {
     saving.value = false
   }
@@ -169,7 +169,7 @@ function onFilePicked(event) {
     return
   }
   if (!file.name.toLowerCase().endsWith('.pdf')) {
-    setMessage('Дозволено тільки PDF.', 'error')
+    setMessage('Only PDF files are allowed.', 'error')
     event.target.value = ''
     selectedFile.value = null
     return
@@ -179,7 +179,7 @@ function onFilePicked(event) {
 
 async function submitCv() {
   if (!selectedFile.value) {
-    setMessage('Спочатку виберіть PDF файл.', 'error')
+    setMessage('Please select a PDF file first.', 'error')
     return
   }
   uploading.value = true
@@ -189,9 +189,9 @@ async function submitCv() {
     selectedFile.value = null
     const profile = await getProfile(ME)
     loadedProfile.value = profile
-    setMessage('CV успішно завантажено.', 'success')
+    setMessage('CV uploaded successfully.', 'success')
   } catch (error) {
-    setMessage(extractApiError(error, 'Не вдалося завантажити CV.'), 'error')
+    setMessage(extractApiError(error, 'Failed to upload CV.'), 'error')
   } finally {
     uploading.value = false
   }
@@ -206,9 +206,9 @@ async function removeCv() {
     if (cvFileInput.value) cvFileInput.value.value = ''
     const profile = await getProfile(ME)
     loadedProfile.value = profile
-    setMessage('CV видалено.', 'success')
+    setMessage('CV deleted.', 'success')
   } catch (error) {
-    setMessage(extractApiError(error, 'Не вдалося видалити CV.'), 'error')
+    setMessage(extractApiError(error, 'Failed to delete CV.'), 'error')
   } finally {
     deleting.value = false
   }
@@ -241,13 +241,13 @@ function onPhotoPicked(event) {
     return
   }
   if (!isLikelyImageFile(file)) {
-    setMessage('Оберіть файл зображення (типові формати фото).', 'error')
+    setMessage('Please select an image file (common photo formats).', 'error')
     event.target.value = ''
     selectedPhotoFile.value = null
     return
   }
   if (file.size > MAX_PHOTO_BYTES) {
-    setMessage('Фото має бути не більше 10 МБ.', 'error')
+    setMessage('Photo must be no larger than 10 MB.', 'error')
     event.target.value = ''
     selectedPhotoFile.value = null
     return
@@ -257,11 +257,11 @@ function onPhotoPicked(event) {
 
 async function submitPhoto() {
   if (!profileExists.value) {
-    setMessage('Спочатку збережіть профіль (блок нижче).', 'error')
+    setMessage('Please save the profile first (section below).', 'error')
     return
   }
   if (!selectedPhotoFile.value) {
-    setMessage('Оберіть файл фото.', 'error')
+    setMessage('Please select a photo file.', 'error')
     return
   }
   photoUploading.value = true
@@ -272,10 +272,10 @@ async function submitPhoto() {
     selectedPhotoFile.value = null
     if (photoInputRef.value)
       photoInputRef.value.value = ''
-    setMessage('Фото профілю оновлено.', 'success')
+    setMessage('Profile photo updated.', 'success')
     await refreshAvatarPreview()
   } catch (error) {
-    setMessage(extractApiError(error, 'Не вдалося завантажити фото.'), 'error')
+    setMessage(extractApiError(error, 'Failed to upload photo.'), 'error')
   } finally {
     photoUploading.value = false
   }
@@ -290,9 +290,9 @@ async function removePhoto() {
     const updated = await deleteProfilePhoto(ME)
     loadedProfile.value = { ...(loadedProfile.value || {}), ...updated }
     releaseAvatarBlob()
-    setMessage('Фото профілю видалено.', 'success')
+    setMessage('Profile photo deleted.', 'success')
   } catch (error) {
-    setMessage(extractApiError(error, 'Не вдалося видалити фото.'), 'error')
+    setMessage(extractApiError(error, 'Failed to delete photo.'), 'error')
   } finally {
     photoDeleting.value = false
   }
@@ -309,12 +309,12 @@ onMounted(loadProfile)
   <div class="page">
 
     <article class="card card--photo">
-      <h3 class="title-sm">Фото профілю</h3>
+      <h3 class="title-sm">Profile photo</h3>
       <div class="photo-row">
         <div class="photo-preview" aria-hidden="true">
           <img v-if="avatarBlobUrl" class="photo-preview__img" :src="avatarBlobUrl" alt="">
           <span v-else class="photo-preview__placeholder">
-            {{ profileExists ? 'Немає фото' : '—' }}
+            {{ profileExists ? 'No photo' : '—' }}
           </span>
         </div>
         <div class="photo-actions">
@@ -334,9 +334,9 @@ onMounted(loadProfile)
               @click="photoInputRef.click()"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              Обрати фото
+              Choose photo
             </button>
-            <span class="cv-filename">{{ selectedPhotoFile ? selectedPhotoFile.name : 'Файл не обрано' }}</span>
+            <span class="cv-filename">{{ selectedPhotoFile ? selectedPhotoFile.name : 'No file selected' }}</span>
           </div>
           <button
             type="button"
@@ -344,7 +344,7 @@ onMounted(loadProfile)
             :disabled="!profileExists || photoUploading || !selectedPhotoFile"
             @click="submitPhoto"
           >
-            {{ photoUploading ? 'Завантаження…' : 'Завантажити фото' }}
+            {{ photoUploading ? 'Uploading…' : 'Upload photo' }}
           </button>
           <button
             type="button"
@@ -352,24 +352,24 @@ onMounted(loadProfile)
             :disabled="!profileExists || photoDeleting || !hasAvatarPhoto"
             @click="removePhoto"
           >
-            {{ photoDeleting ? 'Видалення…' : 'Видалити фото' }}
+            {{ photoDeleting ? 'Deleting…' : 'Delete photo' }}
           </button>
         </div>
       </div>
       <p v-if="!profileExists" class="photo-hint">
-        Збережіть профіль у блоці нижче, щоб додати фото.
+        Save the profile in the section below to add a photo.
       </p>
       <p v-else class="photo-hint photo-hint--muted">
-        JPEG, PNG, GIF, WebP, HEIC, SVG та інші поширені формати, до 10 МБ.
+        JPEG, PNG, GIF, WebP, HEIC, SVG and other common formats, up to 10 MB.
       </p>
     </article>
 
     <article class="card">
-      <h3 class="title-sm">Дані профілю</h3>
+      <h3 class="title-sm">Profile data</h3>
       <div class="profile-form">
         <div class="grid two form-fields">
           <div class="form-field">
-            <label class="label" for="study-program">Навчальна програма</label>
+            <label class="label" for="study-program">Study program</label>
             <input
               id="study-program"
               v-model="form.studyProgram"
@@ -378,7 +378,7 @@ onMounted(loadProfile)
             />
           </div>
           <div class="form-field">
-            <label class="label" for="year-of-study">Курс</label>
+            <label class="label" for="year-of-study">Year of study</label>
             <input
               id="year-of-study"
               v-model="form.yearOfStudy"
@@ -392,7 +392,7 @@ onMounted(loadProfile)
 
         <div class="grid two form-fields">
           <div class="form-field">
-            <label class="label" for="average-grade">Середній бал</label>
+            <label class="label" for="average-grade">Average grade</label>
             <input
               id="average-grade"
               v-model="form.profileAverageGrade"
@@ -406,13 +406,13 @@ onMounted(loadProfile)
           <div class="form-field form-field--checkbox">
             <label class="check-row">
               <input v-model="form.hasRepeatedSubjects" type="checkbox" />
-              <span>Є перездачі</span>
+              <span>Has retakes</span>
             </label>
           </div>
         </div>
 
         <div class="form-field">
-          <label class="label" for="skills">Навички</label>
+          <label class="label" for="skills">Skills</label>
           <textarea
             id="skills"
             v-model="form.skills"
@@ -422,18 +422,18 @@ onMounted(loadProfile)
         </div>
 
         <div class="form-field">
-          <label class="label" for="bio">Коротко про себе</label>
+          <label class="label" for="bio">About me</label>
           <textarea
             id="bio"
             v-model="form.bio"
             rows="4"
-            placeholder="Ваш досвід та мотивація..."
+            placeholder="Your experience and motivation..."
           />
         </div>
       </div>
 
       <button class="btn profile-form__submit" :disabled="saving" @click="saveProfile">
-        {{ saving ? 'Збереження...' : 'Зберегти профіль' }}
+        {{ saving ? 'Saving...' : 'Save profile' }}
       </button>
     </article>
 
@@ -443,16 +443,16 @@ onMounted(loadProfile)
         <input ref="cvFileInput" type="file" accept=".pdf,application/pdf" class="cv-input-hidden" @change="onFilePicked" />
         <button class="btn ghost cv-browse-btn" @click="cvFileInput.click()">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          Обрати файл
+          Choose file
         </button>
-        <span class="cv-filename">{{ selectedFile ? selectedFile.name : 'Файл не обрано' }}</span>
+        <span class="cv-filename">{{ selectedFile ? selectedFile.name : 'No file selected' }}</span>
       </div>
       <div class="row cv-actions-row">
         <button class="btn" :disabled="uploading" @click="submitCv">
-          {{ uploading ? 'Завантаження...' : 'Завантажити CV' }}
+          {{ uploading ? 'Uploading...' : 'Upload CV' }}
         </button>
         <button class="btn danger" :disabled="deleting" @click="removeCv">
-          {{ deleting ? 'Видалення...' : 'Видалити CV' }}
+          {{ deleting ? 'Deleting...' : 'Delete CV' }}
         </button>
       </div>
     </article>

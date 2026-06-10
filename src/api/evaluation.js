@@ -1,6 +1,6 @@
 import api from './axios'
 
-/** Тіло для Spring: вкладені сутності з id. */
+/** Request body for Spring: nested entities with id. */
 function buildEvaluationScoreBody(payload) {
   return {
     application: { id: Number(payload.applicationId) },
