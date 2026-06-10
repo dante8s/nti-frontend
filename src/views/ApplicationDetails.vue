@@ -588,11 +588,10 @@ const isProgramAReadOnly = computed(() =>
 )
 
 const canCreateMilestone = computed(() => {
+if (isAdmin.value) return true;
   if (isProgramAReadOnly.value) return false
   if (isProgramBTeamLeader(application.value, authStore.user?.id, roles.value)) return false
-  return isAdmin.value
-    || isStudent.value
-    || ((isFirm.value || isFirmUser.value) && isProgramBApplication.value)
+  return isStudent.value || ((isFirm.value || isFirmUser.value) && isProgramBApplication.value)
 })
 
 const isApplicationApproved = computed(() => application.value?.status === 'APPROVED')
