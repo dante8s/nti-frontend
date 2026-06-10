@@ -20,6 +20,7 @@ export default {
     applications: 'Žiadosti',
     milestoneApprovals: 'Schválenia míľnikov',
     programs: 'Programy a výzvy',
+    qualificationStacks: 'Kvalifikačné stacky',
     programBReview: 'Fronta na posúdenie programu B',
     organizations: 'Organizácie',
     mentorships: 'Mentorstvá',

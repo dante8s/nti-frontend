@@ -20,6 +20,7 @@ export default {
     applications: 'Applications',
     milestoneApprovals: 'Milestone Approvals',
     programs: 'Programs & Challenges',
+    qualificationStacks: 'Qualification Stacks',
     programBReview: 'Program B Review Queue',
     organizations: 'Organizations',
     mentorships: 'Mentorships',

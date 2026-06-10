@@ -1,67 +1,97 @@
-# NTI Frontend
+# NTI — Getting Started
 
-Vue 3 · Vite · Pinia · Vue Router · i18n (uk / sk / en)
+## Prerequisites
 
----
-
-## Quick start (Docker)
-
-> Run from the **backend** repo — `docker-compose.yml` there starts both services.
-> See [nti-backend/README.md](../nti-backend/README.md).
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (includes Docker Compose)
+- Git
 
 ---
 
-## Local development
-
-### Prerequisites
-- Node.js 20+
-- npm 10+
-- Backend running on `http://localhost:8080`
-
-### Steps
+## 1. Clone both repositories side by side
 
 ```bash
-npm install
-npm run dev
+git clone https://github.com/dante8s/nti-backend.git
+git clone https://github.com/dante8s/nti-frontend.git
 ```
 
-The app is available at **http://localhost:5173**.  
-API calls (`/api/*`) are proxied to `http://localhost:8080` via Vite.
+The folder structure must be:
 
-### Other commands
+```
+project-nti/
+├── nti-backend/
+└── nti-frontend/
+```
+
+---
+
+## 2. Configure backend environment
 
 ```bash
-npm run build   # production build → dist/
-npm run lint    # ESLint
+cd nti-backend
+cp .env.example .env
 ```
+
+Open `.env` and fill in the required values:
+
+| Variable | What to set |
+|---|---|
+| `JWT_SECRET` | Any random string, min 32 chars. Generate: `openssl rand -hex 32` |
+| `MAIL_USERNAME` | Your Gmail address |
+| `MAIL_PASSWORD` | Gmail [App Password](https://myaccount.google.com/apppasswords) (16 chars) |
+| `MAIL_FROM` | Same Gmail address |
+| `MAIL_ADMIN` | Email that receives admin notifications |
+| `RECAPTCHA_SECRET` | Secret key from [Google reCAPTCHA admin](https://www.google.com/recaptcha/admin) |
+
+Database and Redis values can stay as defaults for local development.
 
 ---
 
-## Environment variables
+## 3. Configure frontend environment
 
-No `.env` file is required for the standard setup.  
-See `.env.example` for details.
+```bash
+cd ../nti-frontend
+cp .env.example .env
+```
+
+Open `.env` and set:
+
+| Variable | What to set |
+|---|---|
+| `VITE_RECAPTCHA_SITE_KEY` | **Site key** from the same reCAPTCHA registration (not the secret key) |
+
+> **Note:** reCAPTCHA site key and secret key must come from the same registration at [google.com/recaptcha/admin](https://www.google.com/recaptcha/admin). Register `localhost` as the domain for local development.
 
 ---
 
-## Tech stack
+## 4. Start everything
 
-- **Vue 3** + Composition API (`<script setup>`)
-- **Vite** — build tool & dev server
-- **Pinia** — state management
-- **Vue Router 4** — routing with role-based guards
-- **vue-i18n** — Ukrainian / Slovak / English
-- **Axios** — HTTP client (base: `/api`)
+From the `nti-backend` folder:
 
-## Project structure
-
+```bash
+docker compose up --build
 ```
-src/
-├── api/          # Axios calls per domain (auth, applications, gdpr…)
-├── components/   # Shared components (NotificationBell, LanguageSwitcher…)
-├── i18n/         # Translations (uk.js, sk.js, en.js)
-├── layouts/      # AppShell (sidebar + header)
-├── router/       # Routes with meta guards
-├── stores/       # Pinia stores (auth, organization…)
-└── views/        # Pages grouped by role (admin/, student/, commission/…)
+
+First run takes a few minutes (downloads images, compiles Java, builds Vue).
+
+---
+
+## 5. Access the app
+
+| Service | URL |
+|---|---|
+| Frontend | http://localhost:3000 |
+| Backend API | http://localhost:8080 |
+
+---
+
+## Stopping
+
+```bash
+docker compose down
+```
+
+To also delete the database volume:
+
+```bash
+docker compose down -v
 ```
