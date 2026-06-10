@@ -20,6 +20,7 @@ export default {
     applications: 'Заявки',
     milestoneApprovals: 'Затвердження етапів',
     programs: 'Програми та виклики',
+    qualificationStacks: 'Кваліфікаційні стеки',
     programBReview: 'Черга перевірки програми B',
     organizations: 'Організації',
     mentorships: 'Менторство',

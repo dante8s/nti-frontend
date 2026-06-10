@@ -45,6 +45,13 @@
                                 <option value="iot">IoT та embedded</option>
                             </select>
                         </div>
+                        <div v-if="stackSubjects.length" class="field stack-subjects">
+                            <label>Kvalifikačný stack — predmety</label>
+                            <ul class="subjects-list">
+                                <li v-for="s in stackSubjects" :key="s.id">{{ s.subjectName }}</li>
+                            </ul>
+                        </div>
+
                         <div class="field">
                             <label>Технологічний стек *</label>
                             <input v-model="form.techStack" type="text" placeholder="React, Spring Boot..." required />
@@ -107,11 +114,12 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { programsApi } from '@/api/programs'
 import { applicationsApi } from '@/api/applications'
 import { getCallApplicationEligibility } from '@/api/profileApi'
+import { qualificationApi } from '@/api/qualificationStacks'
 import { useAuthStore } from '@/stores/auth'
 import { apiErrorMessage } from '@/utils/apiError'
 import DocumentUpload from '@/components/DocumentUpload.vue'
@@ -136,6 +144,18 @@ const form = reactive({
     category: '',
     techStack: '',
     teamDescription: '',
+})
+
+const stackSubjects = ref([])
+
+watch(() => form.category, async (key) => {
+    if (!key) { stackSubjects.value = []; return }
+    try {
+        const { data } = await qualificationApi.getByKey(key)
+        stackSubjects.value = data.subjects || []
+    } catch {
+        stackSubjects.value = []
+    }
 })
 
 // Збережені дані для відображення підсумку на кроці 2
@@ -281,6 +301,17 @@ function formatDate(date) {
 </script>
 
 <style scoped>
+.stack-subjects label { font-weight: 600; margin-bottom: 0.4rem; display: block; }
+.subjects-list {
+    margin: 0;
+    padding-left: 1.2rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.5rem;
+    list-style: disc;
+}
+.subjects-list li { color: #374151; font-size: 0.9rem; }
+
 .page {
     max-width: 700px;
     margin: 0 auto;
