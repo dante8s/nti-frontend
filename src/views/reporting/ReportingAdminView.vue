@@ -232,7 +232,7 @@ onMounted(async () => {
     <article class="card">
       <h3>Teams and calls</h3>
       <p class="hint">
-        Team-to-call link via the leader’s application (any status). ‘No call’ — the leader has not submitted an application.
+        Team-to-call link via the leader's application (any status). 'No call' — the leader has not submitted an application.
       </p>
       <div class="grid">
         <div>

@@ -34,7 +34,7 @@ onMounted(load)
       <h3>Company panel</h3>
       <p class="hint lead">
         Tasks (calls and deadlines), application load, assigned mentorships, and teams on applications. The
-        The ‘budget’ will appear after adding relevant data to the program model — currently showing available summaries from the API.
+        The 'budget' will appear after adding relevant data to the program model — currently showing available summaries from the API.
       </p>
       <div class="quick-links">
         <RouterLink class="link-pill" to="/app/programs/my">My Program B proposals</RouterLink>

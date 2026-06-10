@@ -2,17 +2,17 @@
   <div class="dash">
     <section class="welcome">
       <p class="welcome__eyebrow">
-        {{ $t(‘dashboard.welcome’) }}
+        {{ $t('dashboard.welcome') }}
       </p>
       <h2 class="welcome__title">
-        {{ auth.user?.name || ‘User’ }}
+        {{ auth.user?.name || 'User' }}
       </h2>
       <p class="welcome__text">
-        {{ $t(‘dashboard.welcomeText’) }}
+        {{ $t('dashboard.welcomeText') }}
       </p>
       <p v-if="isTeamLeader" class="welcome__pill-line">
-        <span class="welcome__pill">{{ $t(‘dashboard.teamLeader’) }}</span>
-        {{ $t(‘dashboard.teamLeaderLine’) }}
+        <span class="welcome__pill">{{ $t('dashboard.teamLeader') }}</span>
+        {{ $t('dashboard.teamLeaderLine') }}
       </p>
     </section>
 
@@ -38,18 +38,18 @@
 
     <section v-if="isFirm && firmChecked && !firmHasOrg" class="firm">
       <p class="firm__hint">
-        {{ $t(‘dashboard.noOrg’) }}
+        {{ $t('dashboard.noOrg') }}
       </p>
       <router-link
         to="/app/org/register"
         class="firm__btn"
       >
-        {{ $t(‘dashboard.registerOrg’) }}
+        {{ $t('dashboard.registerOrg') }}
       </router-link>
     </section>
 
     <section v-if="rolesLine" class="meta">
-      <span class="meta__label">{{ $t(‘dashboard.yourRoles’) }}</span>
+      <span class="meta__label">{{ $t('dashboard.yourRoles') }}</span>
       {{ rolesLine }}
     </section>
   </div>

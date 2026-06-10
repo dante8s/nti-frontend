@@ -460,13 +460,13 @@ async function load() {
   } catch (e) {
     console.error(e)
     if (e.code === 'ECONNABORTED') {
-      error.value = ‘Request timed out. Check if the backend is running on port 8080.’
+      error.value = 'Request timed out. Check if the backend is running on port 8080.'
     } else if (!e.response) {
-      error.value = ‘No connection to the server. Start the backend and reload the page.’
+      error.value = 'No connection to the server. Start the backend and reload the page.'
     } else if (e.response?.status === 403) {
-      error.value = ‘No access to the application list. Log in as a student or reload the page.’
+      error.value = 'No access to the application list. Log in as a student or reload the page.'
     } else {
-      error.value = apiErrorMessage(e, ‘Failed to load applications.’)
+      error.value = apiErrorMessage(e, 'Failed to load applications.')
     }
     applications.value = []
     selectedId.value = null
