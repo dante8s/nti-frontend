@@ -1,5 +1,5 @@
 <template>
-  <section class="consultations">
+  <section v-if="isAuthorized" class="consultations">
     <div class="consultations__head">
       <h4 class="consultations__title">Consultations</h4>
       <button
@@ -122,6 +122,7 @@ const props = defineProps({
   },
 })
 
+
 const mentorshipStore = useMentorshipStore()
 const authStore = useAuthStore()
 const { consultationsByMentorship } = storeToRefs(mentorshipStore)
@@ -144,6 +145,10 @@ const canMentorWrite = computed(() => isMentor.value)
 
 const mentorshipKey = computed(() => String(props.mentorshipId))
 const userId = computed(() => authStore.user?.id ?? authStore.user?.userId ?? null)
+const authorizedRoles = ['MENTOR', 'ADMIN', 'SUPER_ADMIN', 'STUDENT'];
+const isAuthorized = computed(() =>
+  authStore.roles.some(role => authorizedRoles.includes(role))
+);
 
 const sortedConsultations = computed(() => {
   const raw = consultationsByMentorship.value?.[mentorshipKey.value] || []
@@ -156,15 +161,28 @@ onMounted(fetchConsultations)
 watch(() => props.mentorshipId, fetchConsultations)
 
 async function fetchConsultations() {
-  if (!props.mentorshipId) return
-  localLoading.value = true
-  localError.value = ''
+  // Pridaj túto kontrolu: ak nie je ID, ani sa nesnaž volať API
+
+  if (!isAuthorized.value) {
+    return;
+  }
+  if (!props.mentorshipId || props.mentorshipId === 'undefined') {
+    return;
+  }
+
+  localLoading.value = true;
+  localError.value = '';
+
   try {
-    await mentorshipStore.getConsultations(props.mentorshipId)
+    await mentorshipStore.getConsultations(props.mentorshipId);
   } catch (error) {
-    localError.value = error.response?.data?.message || 'Failed to load consultations.'
+    // Ak dostaneš 404, znamená to, že ID neexistuje, to je v poriadku,
+    // nemusíš to vypisovať ako chybu načítania
+    if (error.response?.status !== 404) {
+       localError.value = error.response?.data?.message || 'Failed to load consultations.';
+    }
   } finally {
-    localLoading.value = false
+    localLoading.value = false;
   }
 }
 
