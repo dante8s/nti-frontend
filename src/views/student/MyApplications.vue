@@ -330,6 +330,7 @@ import ConsultationsPanel from '@/components/ConsultationsPanel.vue'
 import DocumentUpload from '@/components/DocumentUpload.vue'
 import ResultDocumentUpload from '@/components/ResultDocumentUpload.vue'
 import StatusTimeline from '@/components/StatusTimeline.vue'
+import { isProgramATeamLeader } from '@/utils/applicationPermissions'
 
 const applications = ref([])
 /** ID of the selected application — more reliable than storing the full object from the array. */
@@ -377,11 +378,22 @@ const isProgramAReadOnly = computed(() =>
 )
 
 const canCreateMilestone = computed(() => {
+  // 0. GLOBAL: Block if application is completed
+  // Use optional chaining (?.) in case status is null/undefined
+  if (selected.value?.status === 'COMPLETED') return false
+
+  // 1. Global blocks and Admin override
   if (isProgramAReadOnly.value) return false
-  if (isProgramBTeamLeader(selected.value, authStore.user?.id, roles.value)) return false
-  return isAdmin.value
-    || isStudent.value
-    || ((isFirm.value || isFirmUser.value) && isProgramBApplication.value)
+  if (isAdmin.value) return true
+
+  // 2. Program-specific logic
+  if (isProgramBApplication.value) {
+    // PROGRAM B: Only Organizations (Firm / Firm User) can create
+    return isFirm.value || isFirmUser.value
+  } else {
+    // PROGRAM A: Only Students who are team leaders can create
+    return isStudent.value && isProgramATeamLeader(selected.value, authStore.user?.id)
+  }
 })
 
 const milestoneList = computed(() => {
