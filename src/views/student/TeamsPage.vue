@@ -178,8 +178,8 @@ const canSeeApplyInstructions = computed(
 
 async function loadMyTeam() {
   busy.value = true
+  const uid = auth.user?.id
   try {
-    const uid = auth.user?.id
     if (!uid) {
       message.value = 'Увійдіть у систему знову — у профілі бракує ідентифікатора користувача (userId).'
       return
