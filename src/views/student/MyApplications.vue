@@ -1,27 +1,27 @@
 <template>
   <div class="page">
-    <h1>Мої заявки</h1>
+    <h1>My applications</h1>
 
     <div v-if="loading" class="loading">
-      Завантаження...
+      Loading...
     </div>
 
     <div v-else-if="error" class="empty empty--error">
       <p>{{ error }}</p>
-      <p class="hint">Переконайтесь, що Spring-бекенд запущений на порту 8080, і увійдіть знову.</p>
-      <button type="button" class="btn-go" @click="load">Спробувати ще раз</button>
+      <p class="hint">Make sure the Spring backend is running on port 8080 and log in again.</p>
+      <button type="button" class="btn-go" @click="load">Try again</button>
     </div>
 
     <div v-else-if="applications.length === 0" class="empty">
-      <p>У вас поки немає заявок</p>
+      <p>You have no applications yet</p>
       <router-link to="/programs/a" class="btn-go">
-        Переглянути програми
+        Browse programs
       </router-link>
     </div>
 
     <div v-else class="layout">
 
-      <!-- Список заявок -->
+      <!-- Application list -->
       <div class="list">
         <div
           v-for="app in applications"
@@ -35,7 +35,7 @@
         >
           <div class="card-top">
             <span class="program-tag">
-              {{ app.programType === 'PROGRAM_A' ? 'Програма A' : 'Програма B' }}
+              {{ app.programType === 'PROGRAM_A' ? 'Program A' : 'Program B' }}
             </span>
             <span class="status-tag" :class="statusClass(app.status)">
               {{ statusLabel(app.status) }}
@@ -45,9 +45,9 @@
           <div class="card-sub">{{ app.programName }}</div>
           <div class="card-date">{{ formatDate(app.createdAt) }}</div>
 
-          <!-- Footer картки: кнопки з гілки Andrii -->
+          <!-- Card footer: buttons from Andrii branch -->
           <footer class="card__foot">
-            <span class="muted">Оновлено: {{ formatDate(app.updatedAt) }}</span>
+            <span class="muted">Updated: {{ formatDate(app.updatedAt) }}</span>
             <div class="card__foot-actions">
               <button
                 v-if="programDetailRoute(app)"
@@ -63,17 +63,17 @@
                 class="link-continue"
                 @click.stop
               >
-                Продовжити чернетку →
+                Continue draft →
               </router-link>
             </div>
           </footer>
         </div>
       </div>
 
-      <!-- Деталі -->
+      <!-- Details -->
       <div v-if="selected" class="detail">
 
-        <!-- Шапка -->
+        <!-- Header -->
         <div class="detail-head">
           <div>
             <h2>{{ selected.callTitle }}</h2>
@@ -84,13 +84,13 @@
           </span>
         </div>
 
-        <!-- Коментар адміна -->
+        <!-- Admin comment -->
         <div v-if="selected.adminComment" class="admin-comment">
-          <div class="comment-label">💬 Коментар від адміністратора</div>
+          <div class="comment-label">💬 Comment from administrator</div>
           <div class="comment-text">{{ selected.adminComment }}</div>
         </div>
 
-        <!-- Кнопка редагувати якщо DRAFT або NEEDS_REVISION -->
+        <!-- Edit button if DRAFT or NEEDS_REVISION -->
         <div
           v-if="selected.status === 'DRAFT' || selected.status === 'NEEDS_REVISION'"
           class="edit-section"
@@ -99,11 +99,11 @@
             :to="`/apply/${selected.programType === 'PROGRAM_A' ? 'a' : 'b'}/${selected.callId}`"
             class="btn-edit"
           >
-            ✏️ Редагувати заявку
+            ✏️ Edit application
           </router-link>
         </div>
 
-        <!-- Документи -->
+        <!-- Documents -->
         <DocumentUpload
           :key="selected.id"
           :application-id="selected.id"
@@ -111,7 +111,7 @@
           @change="refreshSelected"
         />
 
-        <!-- Результатні документи (тільки для APPROVED) -->
+        <!-- Result documents (APPROVED only) -->
         <ResultDocumentUpload
           v-if="selected.status === 'APPROVED'"
           :key="'result-' + selected.id"
@@ -119,7 +119,7 @@
           @change="onResultDocsChange"
         />
 
-        <!-- Кнопка відправити -->
+        <!-- Submit button -->
         <div
           v-if="canSubmitApplication"
           class="submit-section"
@@ -128,15 +128,15 @@
           <button class="btn-submit" :disabled="submitting" @click="submitApp">
             {{
               submitting
-                ? 'Відправка...'
+                ? 'Submitting...'
                 : selected.status === 'NEEDS_REVISION'
-                  ? '↩ Відправити виправлену заявку'
-                  : '📤 Відправити заявку'
+                  ? '↩ Submit revised application'
+                  : '📤 Submit application'
             }}
           </button>
         </div>
 
-        <!-- Кнопка завершити проект -->
+        <!-- Complete project button -->
         <div
           v-if="selected.status === 'APPROVED'"
           class="submit-section"
@@ -145,24 +145,24 @@
           <button
             class="btn-complete"
             :disabled="completing || !resultDocsReady"
-            :title="!resultDocsReady ? 'Завантажте обидва результатних документи' : ''"
+            :title="!resultDocsReady ? 'Upload both result documents' : ''"
             @click="completeProject"
           >
-            {{ completing ? 'Надсилання...' : '✅ Завершити проект' }}
+            {{ completing ? 'Sending...' : '✅ Complete project' }}
           </button>
           <p v-if="!resultDocsReady" class="complete-hint">
-            Щоб завершити проект, завантажте обидва результатних документи вище
+            To complete the project, upload both result documents above
           </p>
         </div>
 
-        <!-- Таймлайн -->
+        <!-- Timeline -->
         <StatusTimeline
           :key="'audit-' + selected.id"
           :application-id="selected.id"
           ref="timelineRef"
         />
 
-        <!-- Mentorship (з гілки Andrii) -->
+        <!-- Mentorship (from Andrii branch) -->
         <section class="mentorship">
           <h3 class="mentorship__title">Mentorship</h3>
           <div v-if="mentorshipsFor(selected.id).length === 0" class="mentorship__empty">
@@ -300,7 +300,7 @@
       </div>
 
       <div v-else class="detail empty-detail">
-        <p>Оберіть заявку зі списку</p>
+        <p>Select an application from the list</p>
       </div>
     </div>
 
@@ -332,7 +332,7 @@ import ResultDocumentUpload from '@/components/ResultDocumentUpload.vue'
 import StatusTimeline from '@/components/StatusTimeline.vue'
 
 const applications = ref([])
-/** ID обраної заявки — надійніше за збереження всього об'єкта з масиву. */
+/** ID of the selected application — more reliable than storing the full object from the array. */
 const selectedId = ref(null)
 const selected = computed(() => {
   const id = selectedId.value
@@ -460,13 +460,13 @@ async function load() {
   } catch (e) {
     console.error(e)
     if (e.code === 'ECONNABORTED') {
-      error.value = 'Час очікування вичерпано. Перевірте, чи запущений бекенд (порт 8080).'
+      error.value = ‘Request timed out. Check if the backend is running on port 8080.’
     } else if (!e.response) {
-      error.value = 'Немає з’єднання з сервером. Запустіть бекенд і перезавантажте сторінку.'
+      error.value = ‘No connection to the server. Start the backend and reload the page.’
     } else if (e.response?.status === 403) {
-      error.value = 'Немає доступу до списку заявок. Увійдіть як студент або перезавантажте сторінку.'
+      error.value = ‘No access to the application list. Log in as a student or reload the page.’
     } else {
-      error.value = apiErrorMessage(e, 'Не вдалося завантажити заявки.')
+      error.value = apiErrorMessage(e, ‘Failed to load applications.’)
     }
     applications.value = []
     selectedId.value = null
@@ -513,7 +513,7 @@ async function submitApp() {
     selectedId.value = Number(res.data.id)
     if (timelineRef.value) timelineRef.value.reload()
   } catch (e) {
-    submitError.value = apiErrorMessage(e, 'Помилка при відправці')
+    submitError.value = apiErrorMessage(e, 'Submission error')
   } finally {
     submitting.value = false
   }
@@ -539,7 +539,7 @@ async function completeProject() {
     selectedId.value = Number(res.data.id)
     if (timelineRef.value) timelineRef.value.reload()
   } catch (e) {
-    completeError.value = e.response?.data || e.response?.data?.message || 'Помилка при завершенні проекту'
+    completeError.value = e.response?.data || e.response?.data?.message || 'Project completion error'
   } finally {
     completing.value = false
   }
@@ -547,26 +547,26 @@ async function completeProject() {
 
 function statusLabel(status) {
   return {
-    DRAFT: 'Чернетка',
-    SUBMITTED: 'Відправлена',
-    IN_REVIEW: 'На розгляді',
-    NEEDS_REVISION: 'Потрібна правка',
-    APPROVED: 'Схвалена',
-    REJECTED: 'Відхилена',
-    COMPLETION_REQUESTED: 'Очікує підтвердження',
-    COMPLETION_PO_APPROVED: 'Підтверджено PO',
-    COMPLETED: 'Завершено'
+    DRAFT: 'Draft',
+    SUBMITTED: 'Submitted',
+    IN_REVIEW: 'In review',
+    NEEDS_REVISION: 'Needs revision',
+    APPROVED: 'Approved',
+    REJECTED: 'Rejected',
+    COMPLETION_REQUESTED: 'Awaiting confirmation',
+    COMPLETION_PO_APPROVED: 'PO confirmed',
+    COMPLETED: 'Completed'
   }[status] || status
 }
 
 function formatDate(date) {
   if (!date) return '—'
-  return new Date(date).toLocaleDateString('uk-UA', {
+  return new Date(date).toLocaleDateString('en-GB', {
     day: '2-digit', month: 'short', year: 'numeric'
   })
 }
 
-// Збережено з гілки Andrii — потрібно для кнопки "Open Program Proposal"
+// Saved from Andrii branch — needed for the "Open Program Proposal" button
 function programDetailRoute(app) {
   const programId = app?.call?.program?.id ?? app?.programId
   if (!programId) return null
@@ -585,7 +585,7 @@ function openProgramProposal(app) {
   router.push(route)
 }
 
-// Потрібно для router-link "Продовжити чернетку" — реалізуй відповідно до своєї маршрутизації
+// Needed for the router-link "Continue draft" — implement according to your routing
 function draftRoute(app) {
   return `/apply/${app.programType === 'PROGRAM_A' ? 'a' : 'b'}/${app.callId}`
 }
@@ -694,7 +694,7 @@ h1 {
   align-items: start;
 }
 
-/* ── Список (sticky лівий сайдбар) ── */
+/* ── List (sticky left sidebar) ── */
 .list {
   display: flex;
   flex-direction: column;
@@ -767,7 +767,7 @@ h1 {
   text-transform: uppercase;
 }
 
-/* Footer картки */
+/* Card footer */
 .card__foot {
   display: flex;
   justify-content: space-between;

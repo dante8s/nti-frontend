@@ -1,36 +1,36 @@
 <template>
   <div class="commission-page">
     <header class="commission-page__head">
-      <h1>Комісія</h1>
+      <h1>Commission</h1>
       <p class="commission-page__lead">
-        Оберіть програму, щоб переглянути учасників, команди та заявки на оцінювання.
+        Select a program to view participants, teams, and applications for evaluation.
       </p>
     </header>
 
     <div class="program-grid">
       <section class="panel panel--program panel--a">
-        <h2>Програма A</h2>
+        <h2>Program A</h2>
         <p class="panel__hint">
-          Інкубаційний трек: команди та заявки за відкритими викликами програми типу A.
+          Incubation track: teams and applications for open calls of program type A.
         </p>
         <router-link class="panel__action" :to="{ name: 'commission-participants', params: { programType: 'a' } }">
-          Усі учасники
+          All participants
         </router-link>
       </section>
 
       <section class="panel panel--program panel--b">
-        <h2>Програма B</h2>
+        <h2>Program B</h2>
         <p class="panel__hint">
-          Практичний трек: заявки та матеріали за викликами програми типу B.
+          Practical track: applications and materials for calls of program type B.
         </p>
         <router-link class="panel__action" :to="{ name: 'commission-participants', params: { programType: 'b' } }">
-          Усі учасники
+          All participants
         </router-link>
       </section>
     </div>
 
     <p class="commission-page__footer">
-      <router-link class="link-muted" :to="{ name: 'dashboard' }">← На дашборд</router-link>
+      <router-link class="link-muted" :to="{ name: 'dashboard' }">← Back to dashboard</router-link>
     </p>
   </div>
 </template>

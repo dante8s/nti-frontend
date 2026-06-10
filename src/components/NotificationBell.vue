@@ -30,10 +30,10 @@ async function clickNotification(n) {
 function formatTime(raw) {
   const d    = new Date(raw)
   const diff = Math.floor((Date.now() - d) / 1000)
-  if (diff < 60)    return 'щойно'
-  if (diff < 3600)  return Math.floor(diff / 60) + ' хв тому'
-  if (diff < 86400) return Math.floor(diff / 3600) + ' год тому'
-  return d.toLocaleDateString('uk-UA')
+  if (diff < 60)    return 'just now'
+  if (diff < 3600)  return Math.floor(diff / 60) + ' min ago'
+  if (diff < 86400) return Math.floor(diff / 3600) + ' hr ago'
+  return d.toLocaleDateString('en-GB')
 }
 
 onMounted(() => {
@@ -48,7 +48,7 @@ onUnmounted(() => {
 
 <template>
   <div class="bell" ref="panelRef">
-    <button class="bell__btn" :aria-label="'Сповіщення'" @click="toggle">
+    <button class="bell__btn" :aria-label="'Notifications'" @click="toggle">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
@@ -61,17 +61,17 @@ onUnmounted(() => {
 
     <div v-if="open" class="bell__panel">
       <div class="bell__header">
-        <span class="bell__panel-title">Сповіщення</span>
+        <span class="bell__panel-title">Notifications</span>
         <button
           v-if="notif.unreadCount > 0"
           class="bell__read-all"
           @click="notif.markAllRead()"
-        >Позначити всі прочитаними</button>
+        >Mark all as read</button>
       </div>
 
       <div class="bell__list">
         <p v-if="!notif.notifications.length" class="bell__empty">
-          Немає сповіщень
+          No notifications
         </p>
         <button
           v-for="n in notif.notifications"

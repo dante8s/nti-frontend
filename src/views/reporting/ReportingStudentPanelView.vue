@@ -12,9 +12,9 @@ async function load() {
   try {
     const res = await reportingApi.getStudentDashboard()
     studentDash.value = res.data
-    message.value = 'Дані оновлено.'
+    message.value = 'Data updated.'
   } catch {
-    message.value = 'Не вдалося завантажити панель студента.'
+    message.value = 'Failed to load the student panel.'
   } finally {
     busy.value = false
   }
@@ -24,12 +24,12 @@ onMounted(load)
 
 function statusLabel(s) {
   const map = {
-    DRAFT: 'Чернетка',
-    SUBMITTED: 'Подано',
-    IN_REVIEW: 'На оцінюванні',
-    NEEDS_REVISION: 'Потрібні правки',
-    APPROVED: 'Схвалено',
-    REJECTED: 'Відхилено',
+    DRAFT: 'Draft',
+    SUBMITTED: 'Submitted',
+    IN_REVIEW: 'In review',
+    NEEDS_REVISION: 'Needs revision',
+    APPROVED: 'Approved',
+    REJECTED: 'Rejected',
   }
   return map[s] || s
 }
@@ -37,47 +37,47 @@ function statusLabel(s) {
 
 <template>
   <div class="panel">
-    <nav class="back-row" aria-label="Навігація по звітності">
-      <RouterLink class="back-link" :to="{ name: 'reporting-admin' }">← Зведення та експорт</RouterLink>
-      <RouterLink class="back-link muted" :to="{ name: 'reporting-firm' }">Панель компанії →</RouterLink>
+    <nav class="back-row" aria-label="Reporting navigation">
+      <RouterLink class="back-link" :to="{ name: 'reporting-admin' }">← Summary and export</RouterLink>
+      <RouterLink class="back-link muted" :to="{ name: 'reporting-firm' }">Company panel →</RouterLink>
     </nav>
 
     <article class="card hero">
-      <h3>Панель студента / команди</h3>
+      <h3>Student / team panel</h3>
       <p class="hint lead">
-        Огляд статусів заявок, дедлайнів викликів, обов’язкових етапів (milestones) та ваших команд. Деталі заявок —
-        у розділі «Мої заявки».
+        Overview of application statuses, call deadlines, required milestones, and your teams. Application details —
+        in the My applications section.
       </p>
       <div class="quick-links">
-        <RouterLink class="link-pill" to="/app/my-applications">Мої заявки</RouterLink>
-        <RouterLink class="link-pill" to="/app/teams">Моя команда</RouterLink>
-        <RouterLink class="link-pill" to="/app/my-profile">Мій профіль</RouterLink>
+        <RouterLink class="link-pill" to="/app/my-applications">My applications</RouterLink>
+        <RouterLink class="link-pill" to="/app/teams">My team</RouterLink>
+        <RouterLink class="link-pill" to="/app/my-profile">My profile</RouterLink>
       </div>
       <div class="row">
-        <button type="button" :disabled="busy" @click="load">Оновити</button>
+        <button type="button" :disabled="busy" @click="load">Refresh</button>
       </div>
     </article>
 
     <template v-if="studentDash">
       <article v-if="studentDash.summary" class="card">
-        <h4 class="card-title">Зведення</h4>
+        <h4 class="card-title">Summary</h4>
         <div class="summary-strip">
-          <span>Заявок: <strong>{{ studentDash.summary.applicationCount }}</strong></span>
+          <span>Applications: <strong>{{ studentDash.summary.applicationCount }}</strong></span>
           <span
-            >На погодженні milestone:
+            >Milestones pending approval:
             <strong>{{ studentDash.summary.pendingApprovalMilestones }}</strong></span
           >
           <span
-            >Прострочено / у фокусі:
+            >Overdue / in focus:
             <strong>{{ studentDash.summary.overdueOrAttentionMilestones }}</strong></span
           >
-          <span>Команд: <strong>{{ studentDash.summary.teamCount }}</strong></span>
+          <span>Teams: <strong>{{ studentDash.summary.teamCount }}</strong></span>
         </div>
       </article>
 
       <article class="card">
-        <h4 class="card-title">Заявки та строки</h4>
-        <div v-if="!studentDash.applications?.length" class="hint">Немає заявок.</div>
+        <h4 class="card-title">Applications and deadlines</h4>
+        <div v-if="!studentDash.applications?.length" class="hint">No applications.</div>
         <div v-for="row in studentDash.applications" :key="row.applicationId" class="list-row">
           <div class="list-row__title">
             <strong>#{{ row.applicationId }}</strong>
@@ -85,23 +85,23 @@ function statusLabel(s) {
           </div>
           <div class="meta">
             <span class="badge">{{ statusLabel(row.status) }}</span>
-            <span v-if="row.callDeadline">Дедлайн виклику: {{ row.callDeadline }}</span>
+            <span v-if="row.callDeadline">Call deadline: {{ row.callDeadline }}</span>
             <span v-if="row.programName">{{ row.programName }} ({{ row.programType }})</span>
-            <span v-if="row.callStatus">Статус виклику: {{ row.callStatus }}</span>
+            <span v-if="row.callStatus">Call status: {{ row.callStatus }}</span>
           </div>
           <div class="hint small">
-            Обов’язкові етапи: на погодженні — {{ row.pendingApprovalMilestones }}, потребують уваги —
-            {{ row.overdueOrAttentionMilestones }}, усього milestone — {{ row.totalMilestones }}
+            Required milestones: pending approval — {{ row.pendingApprovalMilestones }}, need attention —
+            {{ row.overdueOrAttentionMilestones }}, total milestones — {{ row.totalMilestones }}
           </div>
         </div>
       </article>
 
       <article class="card">
-        <h4 class="card-title">Команди</h4>
-        <div v-if="!studentDash.teams?.length" class="hint">Немає прийнятих команд.</div>
+        <h4 class="card-title">Teams</h4>
+        <div v-if="!studentDash.teams?.length" class="hint">No accepted teams.</div>
         <div v-for="t in studentDash.teams" :key="t.teamId" class="list-row">
           <strong>{{ t.name }}</strong>
-          <span class="hint"> — {{ t.role }}, учасників: {{ t.acceptedMembers }}</span>
+          <span class="hint"> — {{ t.role }}, members: {{ t.acceptedMembers }}</span>
         </div>
       </article>
     </template>

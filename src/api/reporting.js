@@ -11,21 +11,21 @@ export const reportingApi = {
 
   getPrCheck: (callId) => api.get(`/api/reporting/pr-check/${callId}`),
 
-  /** Експорт заявок: reportType=applications (за замовчуванням) */
+  /** Export applications: reportType=applications (default) */
   exportApplications: (params, format) =>
     api.get('/api/reporting/export', {
       params: { ...params, format, reportType: 'applications' },
       responseType: 'blob',
     }),
 
-  /** Експорт команд та викликів */
+  /** Export teams and calls */
   exportTeams: (params, format) =>
     api.get('/api/reporting/export', {
       params: { ...params, format, reportType: 'teams' },
       responseType: 'blob',
     }),
 
-  /** Excel з оцінками по конкретному виклику. */
+  /** Excel with evaluation scores for a specific call. */
   exportEvaluationWorkbook: (callId) =>
     api.get(`/api/reporting/export/${callId}`, { responseType: 'blob' }),
 }

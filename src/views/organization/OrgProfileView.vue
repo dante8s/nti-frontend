@@ -418,7 +418,7 @@ async function submitAddMember() {
       return
     }
     await orgStore.inviteMember(org.value.id, email)
-    membersSuccess.value = 'Користувача успішно запрошено'
+    membersSuccess.value = 'User successfully invited'
     addMember.email = ''
     await refreshMembers()
   } catch (e) {

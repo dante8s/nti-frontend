@@ -2,9 +2,9 @@
   <div class="page">
     <div class="page-head">
       <div>
-        <h2>Мої програми B</h2>
+        <h2>My Program B proposals</h2>
         <p class="lead">
-          Створюйте, редагуйте та відстежуйте статус ваших пропозицій Program B.
+          Create, edit, and track the status of your Program B proposals.
         </p>
       </div>
       <button
@@ -14,7 +14,7 @@
         :title="!canCreateProposals ? proposalBlockedHint : ''"
         @click="openCreateForm"
       >
-        + Нова пропозиція
+        + New proposal
       </button>
     </div>
 
@@ -23,19 +23,19 @@
     </div>
 
     <section class="panel">
-      <h3>{{ form.editMode ? 'Редагувати пропозицію' : 'Нова пропозиція' }}</h3>
+      <h3>{{ form.editMode ? 'Edit proposal' : 'New proposal' }}</h3>
       <form class="form" @submit.prevent="saveProgram">
         <label class="field">
-          <span>Назва</span>
-          <input v-model.trim="form.name" type="text" placeholder="Вкажіть назву програми" />
+          <span>Name</span>
+          <input v-model.trim="form.name" type="text" placeholder="Enter program name" />
         </label>
 
         <label class="field">
-          <span>Опис</span>
+          <span>Description</span>
           <textarea
             v-model.trim="form.description"
             rows="4"
-            placeholder="Опишіть ідею, цілі та очікуваний результат"
+            placeholder="Describe the idea, goals, and expected outcome"
           />
         </label>
 
@@ -54,25 +54,25 @@
             :disabled="storeLoading || (!form.editMode && !canCreateProposals)"
             :title="!form.editMode && !canCreateProposals ? proposalBlockedHint : ''"
           >
-            {{ form.editMode ? 'Оновити' : 'Створити' }}
+            {{ form.editMode ? 'Update' : 'Create' }}
           </button>
           <button v-if="form.editMode" type="button" class="btn-ghost" :disabled="storeLoading" @click="resetForm">
-            Скасувати редагування
+            Cancel editing
           </button>
         </div>
       </form>
     </section>
 
     <section class="panel">
-      <h3>Програми організації</h3>
+      <h3>Organization programs</h3>
       <div v-if="loading" class="state">
-        Завантаження...
+        Loading...
       </div>
       <div v-else-if="loadError" class="state state--error">
         {{ loadError }}
       </div>
       <div v-else-if="programs.length === 0" class="state">
-        Пропозицій ще немає.
+        No proposals yet.
       </div>
       <div v-else class="program-list">
         <article v-for="program in programs" :key="program.id" class="program-card">
@@ -80,7 +80,7 @@
             <div>
               <h4>{{ program.name || '—' }}</h4>
               <p class="meta">
-                Створено: {{ formatDate(program.updatedAt || program.createdAt) }}
+                Created: {{ formatDate(program.updatedAt || program.createdAt) }}
               </p>
             </div>
             <ProgramStatusBadge :status="program.status" />
@@ -252,7 +252,7 @@
               :disabled="storeLoading"
               @click="openEditForm(program)"
             >
-              Редагувати
+              Edit
             </button>
 
             <button
@@ -354,7 +354,7 @@ async function loadPrograms() {
     await Promise.all(programRows.map((program) => loadProgramRequirements(program.id)))
     await Promise.all(programRows.map((program) => programStore.fetchCallsForProgram(program.id)))
   } catch (error) {
-    loadError.value = apiErrorMessage(error, 'Не вдалося завантажити програми')
+    loadError.value = apiErrorMessage(error, 'Failed to load programs')
   } finally {
     loading.value = false
   }
@@ -412,7 +412,7 @@ function openCreateForm() {
 
 function openEditForm(program) {
   if (!canEdit(program)) {
-    setFeedback('Редагування доступне лише для DRAFT або NEEDS_REVISION', 'error')
+    setFeedback('Editing is only available for DRAFT or NEEDS_REVISION', 'error')
     return
   }
   form.editMode = true
@@ -440,7 +440,7 @@ function canSubmit(program) {
 
 function validateForm() {
   if (!form.name.trim() || !form.description.trim()) {
-    formError.value = 'Поля "Назва" та "Опис" є обовʼязковими'
+    formError.value = 'The "Name" and "Description" fields are required'
     return false
   }
   formError.value = ''
@@ -461,18 +461,18 @@ async function saveProgram() {
     if (form.editMode && form.id != null) {
       const current = myPrograms.value.find((p) => p.id === form.id)
       if (!canEdit(current)) {
-        formError.value = 'Цю програму більше не можна редагувати'
+        formError.value = 'This program can no longer be edited'
         return
       }
       await programStore.updateProgramB(form.id, payload)
-      setFeedback('Пропозицію оновлено', 'success')
+      setFeedback('Proposal updated', 'success')
     } else {
       await programStore.submitProgramB(payload)
-      setFeedback('Пропозицію створено як чернетку', 'success')
+      setFeedback('Proposal created as draft', 'success')
     }
     resetForm()
   } catch (error) {
-    formError.value = apiErrorMessage(error, 'Не вдалося зберегти пропозицію')
+    formError.value = apiErrorMessage(error, 'Failed to save the proposal')
   }
 }
 
@@ -485,9 +485,9 @@ async function submitProgramForReview(program) {
 
   try {
     await programStore.submitForReview(program.id)
-    setFeedback('Програму надіслано на перевірку', 'success')
+    setFeedback('Program submitted for review', 'success')
   } catch (error) {
-    setFeedback(apiErrorMessage(error, 'Не вдалося надіслати на перевірку'), 'error')
+    setFeedback(apiErrorMessage(error, 'Failed to submit for review'), 'error')
   }
 }
 

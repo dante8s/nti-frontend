@@ -1,33 +1,33 @@
 <template>
   <div class="page">
-    <h1>Program B від компанії</h1>
+    <h1>Company Program B</h1>
     <p class="lead">
-      Створіть заявку компанії, додайте тему та цілі. Після submit вона піде супер-адміну на перевірку.
+      Create a company application, add a topic and goals. After submission, it will be sent to the super admin for review.
     </p>
 
     <div class="card">
-      <label>Назва програми</label>
+      <label>Program name</label>
       <input v-model="form.name" type="text">
 
-      <label>Тема</label>
+      <label>Topic</label>
       <input v-model="form.topic" type="text">
 
-      <label>Опис</label>
+      <label>Description</label>
       <textarea v-model="form.description" rows="3" />
 
-      <label>Цілі / opts</label>
+      <label>Goals / options</label>
       <textarea v-model="form.objectives" rows="3" />
 
       <div class="actions">
         <button class="btn" @click="saveDraft">
-          Зберегти чернетку
+          Save as draft
         </button>
         <button class="btn btn-primary" :disabled="!draftId" @click="submitDraft">
-          Надіслати супер-адміну
+          Submit to super admin
         </button>
       </div>
 
-      <h4>Файли компанії</h4>
+      <h4>Company files</h4>
       <div v-for="doc in requiredDocs" :key="doc.value" class="doc-row">
         <span>{{ doc.label }}</span>
         <input type="file" accept=".pdf,.docx" @change="onFilePicked(doc.value, $event)">
@@ -35,7 +35,7 @@
     </div>
 
     <div class="card">
-      <h3>Мої подачі Program B</h3>
+      <h3>My Program B submissions</h3>
       <ul v-if="rows.length" class="list">
         <li v-for="r in rows" :key="r.id">
           <strong>{{ r.name }}</strong> - {{ r.reviewStatus }}
@@ -43,7 +43,7 @@
         </li>
       </ul>
       <p v-else class="muted">
-        Поки що немає подач.
+        No submissions yet.
       </p>
     </div>
   </div>
@@ -64,9 +64,9 @@ const form = reactive({
 const rows = ref([])
 const draftId = ref(null)
 const requiredDocs = [
-  { value: 'COMPANY_TECHNICAL_SPECIFICATION', label: 'Технічні характеристики' },
-  { value: 'COMPANY_BUDGET_PLAN', label: 'Бюджет' },
-  { value: 'COMPANY_PRODUCT_OWNER_CONFIRMATION', label: 'Власник продукту' },
+  { value: 'COMPANY_TECHNICAL_SPECIFICATION', label: 'Technical specifications' },
+  { value: 'COMPANY_BUDGET_PLAN', label: 'Budget' },
+  { value: 'COMPANY_PRODUCT_OWNER_CONFIRMATION', label: 'Product owner' },
 ]
 
 onMounted(loadMy)
@@ -85,7 +85,7 @@ async function saveDraft() {
     draftId.value = res.data?.id || null
     await loadMy()
   } catch (e) {
-    alert(apiErrorMessage(e, 'Помилка збереження'))
+    alert(apiErrorMessage(e, 'Save error'))
   }
 }
 
@@ -94,7 +94,7 @@ async function submitDraft() {
     await programsApi.submitProgramBDraft(draftId.value)
     await loadMy()
   } catch (e) {
-    alert(apiErrorMessage(e, 'Не вдалося надіслати'))
+    alert(apiErrorMessage(e, 'Failed to submit'))
   }
 }
 
@@ -109,7 +109,7 @@ async function onFilePicked(docType, event) {
   try {
     await programsApi.uploadProgramBDocument(draftId.value, docType, file)
   } catch (e) {
-    alert(apiErrorMessage(e, 'Помилка завантаження файлу'))
+    alert(apiErrorMessage(e, 'File upload error'))
   }
 }
 </script>

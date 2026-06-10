@@ -268,7 +268,7 @@ async function downloadAttachment(attachment) {
 
 function formatDateTime(value) {
   if (!value) return '—'
-  return new Date(value).toLocaleString('uk-UA', {
+  return new Date(value).toLocaleString('en-GB', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',

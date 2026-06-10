@@ -22,7 +22,7 @@ async function handleView() {
     const res = await getMyData()
     myData.value = res.data
   } catch {
-    loadError.value = 'Не вдалося завантажити дані. Спробуйте ще раз.'
+    loadError.value = 'Failed to load data. Please try again.'
   } finally {
     loading.value = false
   }
@@ -80,16 +80,16 @@ function fmt(iso) {
 }
 
 const ROLE_LABELS = {
-  STUDENT: 'Студент', FIRM: 'Компанія', FIRM_USER: 'Представник фірми',
-  MENTOR: 'Ментор', EVALUATOR: 'Комісія', SUPER_EVALUATOR: 'Комісія (рішення)',
-  ADMIN: 'Адміністратор', SUPER_ADMIN: 'Супер-адміністратор',
+  STUDENT: 'Student', FIRM: 'Company', FIRM_USER: 'Company representative',
+  MENTOR: 'Mentor', EVALUATOR: 'Commission', SUPER_EVALUATOR: 'Commission (decision)',
+  ADMIN: 'Administrator', SUPER_ADMIN: 'Super administrator',
 }
 
 const STATUS_LABELS = {
-  DRAFT: 'Чернетка', SUBMITTED: 'Подано', FORMALLY_VERIFIED: 'Підтверджено',
-  IN_REVIEW: 'На оцінюванні', NEEDS_REVISION: 'Потрібні виправлення',
-  APPROVED: 'Схвалено', REJECTED: 'Відхилено', ONBOARDING: 'Онбординг',
-  ACTIVE: 'Активний', SUSPENDED: 'Відсторонено', ARCHIVED: 'Архів',
+  DRAFT: 'Draft', SUBMITTED: 'Submitted', FORMALLY_VERIFIED: 'Verified',
+  IN_REVIEW: 'In review', NEEDS_REVISION: 'Needs revision',
+  APPROVED: 'Approved', REJECTED: 'Rejected', ONBOARDING: 'Onboarding',
+  ACTIVE: 'Active', SUSPENDED: 'Suspended', ARCHIVED: 'Archived',
 }
 </script>
 
@@ -97,58 +97,58 @@ const STATUS_LABELS = {
   <div class="privacy">
     <h2 class="privacy__title">{{ t('gdpr.title') }}</h2>
 
-    <!-- ── Мої дані ── -->
+    <!-- ── My data ── -->
     <section class="privacy__section">
       <h3 class="privacy__section-title">{{ t('gdpr.exportTitle') }}</h3>
       <p class="privacy__desc">{{ t('gdpr.exportDesc') }}</p>
 
       <div class="privacy__actions">
         <button class="btn btn--primary" :disabled="loading" @click="handleView">
-          {{ loading ? 'Завантаження...' : myData ? 'Сховати дані' : 'Переглянути мої дані' }}
+          {{ loading ? 'Loading...' : myData ? 'Hide data' : 'View my data' }}
         </button>
         <button class="btn btn--outline" :disabled="exporting" @click="handleExport">
-          {{ exporting ? 'Збереження...' : 'Зберегти копію (JSON)' }}
+          {{ exporting ? 'Saving...' : 'Save a copy (JSON)' }}
         </button>
       </div>
       <p v-if="loadError" class="privacy__error">{{ loadError }}</p>
       <p v-if="exportError" class="privacy__error">{{ exportError }}</p>
 
-      <!-- Дані -->
+      <!-- Data -->
       <div v-if="myData" class="data-view">
 
-        <!-- Акаунт -->
+        <!-- Account -->
         <div class="data-block">
-          <p class="data-block__title">Акаунт</p>
+          <p class="data-block__title">Account</p>
           <div class="data-rows">
-            <div class="data-row"><span class="data-label">Ім'я</span><span>{{ myData.account?.name }}</span></div>
+            <div class="data-row"><span class="data-label">Name</span><span>{{ myData.account?.name }}</span></div>
             <div class="data-row"><span class="data-label">Email</span><span>{{ myData.account?.email }}</span></div>
             <div class="data-row">
-              <span class="data-label">Ролі</span>
+              <span class="data-label">Roles</span>
               <span>{{ (myData.account?.roles || []).map(r => ROLE_LABELS[r] || r).join(', ') }}</span>
             </div>
-            <div class="data-row"><span class="data-label">Реєстрація</span><span>{{ fmt(myData.account?.createdAt) }}</span></div>
-            <div class="data-row"><span class="data-label">Згода GDPR</span><span>{{ fmt(myData.account?.gdprConsentedAt) }}</span></div>
+            <div class="data-row"><span class="data-label">Registration</span><span>{{ fmt(myData.account?.createdAt) }}</span></div>
+            <div class="data-row"><span class="data-label">GDPR consent</span><span>{{ fmt(myData.account?.gdprConsentedAt) }}</span></div>
           </div>
         </div>
 
-        <!-- Студентський профіль -->
+        <!-- Student profile -->
         <div v-if="myData.studentProfile" class="data-block">
-          <p class="data-block__title">Студентський профіль</p>
+          <p class="data-block__title">Student profile</p>
           <div class="data-rows">
-            <div class="data-row"><span class="data-label">Програма навчання</span><span>{{ myData.studentProfile.studyProgram || '—' }}</span></div>
-            <div class="data-row"><span class="data-label">Курс</span><span>{{ myData.studentProfile.yearOfStudy || '—' }}</span></div>
-            <div class="data-row"><span class="data-label">Навички</span><span>{{ myData.studentProfile.skills || '—' }}</span></div>
-            <div class="data-row"><span class="data-label">Про себе</span><span>{{ myData.studentProfile.bio || '—' }}</span></div>
+            <div class="data-row"><span class="data-label">Study program</span><span>{{ myData.studentProfile.studyProgram || '—' }}</span></div>
+            <div class="data-row"><span class="data-label">Year</span><span>{{ myData.studentProfile.yearOfStudy || '—' }}</span></div>
+            <div class="data-row"><span class="data-label">Skills</span><span>{{ myData.studentProfile.skills || '—' }}</span></div>
+            <div class="data-row"><span class="data-label">About</span><span>{{ myData.studentProfile.bio || '—' }}</span></div>
           </div>
         </div>
 
-        <!-- Заявки -->
+        <!-- Applications -->
         <div class="data-block">
-          <p class="data-block__title">Заявки ({{ (myData.applications || []).length }})</p>
-          <p v-if="!myData.applications?.length" class="data-empty">Заявок немає</p>
+          <p class="data-block__title">Applications ({{ (myData.applications || []).length }})</p>
+          <p v-if="!myData.applications?.length" class="data-empty">No applications</p>
           <div v-else class="data-table-wrap">
             <table class="data-table">
-              <thead><tr><th>Виклик</th><th>Програма</th><th>Статус</th><th>Дата</th></tr></thead>
+              <thead><tr><th>Call</th><th>Program</th><th>Status</th><th>Date</th></tr></thead>
               <tbody>
                 <tr v-for="a in myData.applications" :key="a.id">
                   <td>{{ a.call }}</td>
@@ -165,13 +165,13 @@ const STATUS_LABELS = {
           </div>
         </div>
 
-        <!-- Сповіщення -->
+        <!-- Notifications -->
         <div class="data-block">
-          <p class="data-block__title">Сповіщення ({{ (myData.notifications || []).length }})</p>
-          <p v-if="!myData.notifications?.length" class="data-empty">Сповіщень немає</p>
+          <p class="data-block__title">Notifications ({{ (myData.notifications || []).length }})</p>
+          <p v-if="!myData.notifications?.length" class="data-empty">No notifications</p>
           <div v-else class="data-table-wrap">
             <table class="data-table">
-              <thead><tr><th>Тема</th><th>Дата</th></tr></thead>
+              <thead><tr><th>Subject</th><th>Date</th></tr></thead>
               <tbody>
                 <tr v-for="(n, i) in myData.notifications" :key="i">
                   <td>{{ n.title }}</td>
@@ -182,13 +182,13 @@ const STATUS_LABELS = {
           </div>
         </div>
 
-        <!-- Журнал дій -->
+        <!-- Action log -->
         <div class="data-block">
-          <p class="data-block__title">Журнал дій ({{ (myData.auditEvents || []).length }})</p>
-          <p v-if="!myData.auditEvents?.length" class="data-empty">Дій немає</p>
+          <p class="data-block__title">Action log ({{ (myData.auditEvents || []).length }})</p>
+          <p v-if="!myData.auditEvents?.length" class="data-empty">No actions</p>
           <div v-else class="data-table-wrap">
             <table class="data-table">
-              <thead><tr><th>Дія</th><th>Об'єкт</th><th>Дата</th></tr></thead>
+              <thead><tr><th>Action</th><th>Object</th><th>Date</th></tr></thead>
               <tbody>
                 <tr v-for="(e, i) in myData.auditEvents" :key="i">
                   <td>{{ e.action }}</td>
@@ -200,11 +200,11 @@ const STATUS_LABELS = {
           </div>
         </div>
 
-        <p class="data-exported-at">Дані актуальні на: {{ fmt(myData.exportedAt) }}</p>
+        <p class="data-exported-at">Data as of: {{ fmt(myData.exportedAt) }}</p>
       </div>
     </section>
 
-    <!-- ── Видалення акаунту ── -->
+    <!-- ── Account deletion ── -->
     <section class="privacy__section privacy__section--danger">
       <h3 class="privacy__section-title privacy__section-title--danger">{{ t('gdpr.deleteTitle') }}</h3>
       <p class="privacy__desc">{{ t('gdpr.deleteDesc') }}</p>

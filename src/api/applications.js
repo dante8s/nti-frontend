@@ -57,7 +57,7 @@ export const applicationsApi = {
     )
   },
 
-  // Для адміна — тільки не чернетки
+  // For admin — non-drafts only
   getAll: () =>
     api.get('/api/admin/applications'),
 
@@ -70,19 +70,19 @@ export const applicationsApi = {
   setProductOwner: (applicationId, userId) =>
     api.patch(`/api/applications/${applicationId}/product-owner`, null, { params: { userId } }),
 
-  // Завершити проект — лідер
+  // Complete project — leader
   completeProject: (id) =>
     api.patch(`/api/applications/${id}/complete`),
 
-  // Завершити проект — адмін
+  // Complete project — admin
   completeProjectAdmin: (id) =>
     api.patch(`/api/admin/applications/${id}/complete`),
 
-  // Історія проектів поточного користувача
+  // Project history of the current user
   getMyProjects: () =>
     api.get('/api/applications/my/projects'),
 
-  // Запити на завершення — для адміна
+  // Completion requests — for admin
   getCompletionRequests: () =>
     api.get('/api/admin/applications/completion-requests'),
 
@@ -92,7 +92,7 @@ export const applicationsApi = {
   rejectCompletion: (id) =>
     api.patch(`/api/admin/applications/${id}/reject-completion`),
 
-  // Product Owner — запити на завершення Program B
+  // Product Owner — Program B completion requests
   getPOCompletionRequests: () =>
     api.get('/api/product-owner/applications/completion-requests'),
 

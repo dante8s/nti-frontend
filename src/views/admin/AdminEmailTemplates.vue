@@ -10,22 +10,22 @@ const saved     = ref(false)
 const error     = ref('')
 
 const TYPE_LABELS = {
-  VERIFICATION:                'Підтвердження email',
-  RESET_PASSWORD:              'Скидання пароля',
-  WELCOME:                     'Вітальний лист',
-  APPLICATION_STATUS_CHANGED:  'Зміна статусу заявки',
-  NEW_USER_NOTIFICATION:       'Новий користувач (адмін)',
-  MENTOR_INVITE:               'Запрошення ментора',
-  ORG_MEMBER_INVITE:           'Запрошення до організації',
-  ACCOUNT_APPROVED:            'Акаунт схвалено',
-  ACCOUNT_REJECTED:            'Акаунт відхилено',
-  ACCOUNT_SUSPENDED:           'Акаунт заблоковано',
-  MENTOR_ASSIGNED:             'Ментор призначений',
-  DEADLINE_REMINDER:           'Нагадування дедлайну',
-  PROJECT_CLOSED:              'Проєкт завершено',
-  BULK_MESSAGE:                'Масова розсилка',
-  COMPLETION_REJECTED:         'Відхилення завершення проекту',
-  TEAM_INVITE_UNREGISTERED:    'Запрошення до команди (новий)',
+  VERIFICATION:                'Email verification',
+  RESET_PASSWORD:              'Password reset',
+  WELCOME:                     'Welcome email',
+  APPLICATION_STATUS_CHANGED:  'Application status changed',
+  NEW_USER_NOTIFICATION:       'New user (admin)',
+  MENTOR_INVITE:               'Mentor invitation',
+  ORG_MEMBER_INVITE:           'Organization invitation',
+  ACCOUNT_APPROVED:            'Account approved',
+  ACCOUNT_REJECTED:            'Account rejected',
+  ACCOUNT_SUSPENDED:           'Account suspended',
+  MENTOR_ASSIGNED:             'Mentor assigned',
+  DEADLINE_REMINDER:           'Deadline reminder',
+  PROJECT_CLOSED:              'Project completed',
+  BULK_MESSAGE:                'Bulk message',
+  COMPLETION_REJECTED:         'Project completion rejected',
+  TEAM_INVITE_UNREGISTERED:    'Team invitation (new user)',
 }
 
 onMounted(async () => {
@@ -52,7 +52,7 @@ async function save() {
     saved.value = true
     setTimeout(() => (saved.value = false), 3000)
   } catch {
-    error.value = 'Помилка збереження. Спробуйте ще раз.'
+    error.value = 'Save error. Please try again.'
   } finally {
     saving.value = false
   }
@@ -62,7 +62,7 @@ async function save() {
 <template>
   <div class="et">
     <div class="et__sidebar">
-      <p class="et__sidebar-title">Шаблони листів</p>
+      <p class="et__sidebar-title">Email templates</p>
       <button
         v-for="tpl in templates"
         :key="tpl.id"
@@ -76,30 +76,30 @@ async function save() {
 
     <div class="et__editor">
       <template v-if="!selected">
-        <p class="et__placeholder">Оберіть шаблон зі списку зліва</p>
+        <p class="et__placeholder">Select a template from the list on the left</p>
       </template>
 
       <template v-else>
         <h2 class="et__title">{{ TYPE_LABELS[selected.type] || selected.type }}</h2>
 
         <div class="et__vars" v-if="selected.variables?.length">
-          <span class="et__vars-label">Доступні змінні:</span>
+          <span class="et__vars-label">Available variables:</span>
           <code v-for="v in selected.variables" :key="v" class="et__var">{{ v }}</code>
         </div>
 
-        <label class="et__label">Тема листа
+        <label class="et__label">Email subject
           <input v-model="form.subject" class="et__input" type="text"/>
         </label>
 
-        <label class="et__label">Текст листа
+        <label class="et__label">Email body
           <textarea v-model="form.body" class="et__textarea" rows="14"/>
         </label>
 
         <div class="et__actions">
           <button class="et__save" :disabled="saving" @click="save">
-            {{ saving ? 'Збереження...' : 'Зберегти' }}
+            {{ saving ? 'Saving...' : 'Save' }}
           </button>
-          <span v-if="saved" class="et__ok">✓ Збережено</span>
+          <span v-if="saved" class="et__ok">✓ Saved</span>
           <span v-if="error" class="et__err">{{ error }}</span>
         </div>
       </template>

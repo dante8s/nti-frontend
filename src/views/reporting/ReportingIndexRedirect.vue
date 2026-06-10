@@ -10,7 +10,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <p class="hint">Перенаправлення…</p>
+  <p class="hint">Redirecting…</p>
 </template>
 
 <style scoped>

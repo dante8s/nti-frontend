@@ -1,25 +1,25 @@
 <template>
   <div class="evaluate">
     <header class="evaluate__head">
-      <router-link class="back" :to="listBack">← До учасників</router-link>
-      <h1>Оцінювання заявки</h1>
+      <router-link class="back" :to="listBack">← Back to participants</router-link>
+      <h1>Application evaluation</h1>
       <p v-if="isReadOnlyCommission" class="evaluate__hint">
-        Режим перегляду: критерії та бали без збереження оцінок і без рішення по статусу.
+        View mode: criteria and scores without saving evaluations or making a status decision.
       </p>
       <p v-else class="evaluate__hint">
-        Критерії, бали та рішення комісії (лише для SUPER_EVALUATOR / адміністратора).
+        Criteria, scores, and commission decision (SUPER_EVALUATOR / administrator only).
       </p>
     </header>
 
     <section class="panel panel--meta">
       <p v-if="loadedApplication" class="status-line">
-        Заявка <span class="mono">#{{ loadedApplication.id }}</span> ·
+        Application <span class="mono">#{{ loadedApplication.id }}</span> ·
         <strong>{{ statusLabel(loadedApplication.status) }}</strong>
       </p>
-      <p v-else-if="loadingApplication" class="muted">Завантаження заявки…</p>
-      <p v-else class="muted">Заявку не знайдено.</p>
+      <p v-else-if="loadingApplication" class="muted">Loading application…</p>
+      <p v-else class="muted">Application not found.</p>
       <div class="row">
-        <button type="button" :disabled="busy" @click="refreshSummary">Оновити підсумок</button>
+        <button type="button" :disabled="busy" @click="refreshSummary">Refresh summary</button>
       </div>
     </section>
 
@@ -29,11 +29,11 @@
     />
 
     <section v-if="isReadOnlyCommission && criteria.length" class="panel">
-      <h2>Критерії (перегляд)</h2>
+      <h2>Criteria (view)</h2>
       <div v-for="item in criteria" :key="item.id" class="rowline rowline--readonly">
         <div>
           <strong>{{ item.name }}</strong>
-          <p class="hint">Вага: {{ item.weightPercent }}% · Бал за шкалою 1–100</p>
+          <p class="hint">Weight: {{ item.weightPercent }}% · Score on a scale of 1–100</p>
           <p v-if="item.description" class="hint criteria-desc-inline">
             {{ item.description }}
           </p>
@@ -42,26 +42,26 @@
     </section>
 
     <section v-if="canScoreAndDecide" class="panel panel--criteria">
-      <h2>Критерії</h2>
+      <h2>Criteria</h2>
       <p v-if="isDecisionFinal" class="hint hint--locked">
-        Рішення по заявці вже прийнято. Оцінки заблоковано для редагування.
+        A decision on the application has already been made. Scores are locked for editing.
       </p>
       <p v-if="!criteria.length && !busy" class="hint">
-        Для цього виклику немає критеріїв або виклик не знайдено. Перезавантажте сторінку після запуску
-        бекенда (можливе автоматичне створення стандартного набору) або зверніться до адміністратора.
+        No criteria for this call, or the call was not found. Reload the page after starting
+        the backend (default criteria may be created automatically) or contact the administrator.
       </p>
       <ul v-else class="criteria-list">
         <li v-for="item in criteria" :key="item.id" class="criteria-card">
           <div class="criteria-card__head">
             <strong class="criteria-name">{{ item.name }}</strong>
-            <span class="criteria-meta">Вага: {{ item.weightPercent ?? '—' }}%</span>
+            <span class="criteria-meta">Weight: {{ item.weightPercent ?? '—' }}%</span>
           </div>
           <p v-if="item.description" class="criteria-desc">
             {{ item.description }}
           </p>
           <div class="criteria-grid">
             <div class="criteria-field criteria-field--score">
-              <label class="field-label" :for="`score-${item.id}`">Оцінка (1–100) *</label>
+              <label class="field-label" :for="`score-${item.id}`">Score (1–100) *</label>
               <input
                 :id="`score-${item.id}`"
                 v-model.number="scores[item.id]"
@@ -75,20 +75,20 @@
               >
             </div>
             <div class="criteria-field criteria-field--comment">
-              <label class="field-label" :for="`comment-${item.id}`">Коментар</label>
+              <label class="field-label" :for="`comment-${item.id}`">Comment</label>
               <textarea
                 :id="`comment-${item.id}`"
                 v-model="comments[item.id]"
                 rows="2"
                 class="comment-input"
-                placeholder="Примітка щодо цього критерію…"
+                placeholder="Note about this criterion…"
                 :disabled="isDecisionFinal"
               />
             </div>
           </div>
           <div class="criteria-actions">
             <button type="button" class="btn-row-save" :disabled="savingId === item.id || busy || isDecisionFinal" @click="saveScore(item.id)">
-              {{ savingId === item.id ? 'Збереження...' : 'Зберегти пункт' }}
+              {{ savingId === item.id ? 'Saving...' : 'Save item' }}
             </button>
           </div>
         </li>
@@ -96,13 +96,13 @@
     </section>
 
     <section v-if="canScoreAndDecide" class="panel panel--decision">
-      <h2>Рішення по заявці</h2>
+      <h2>Application decision</h2>
       <p class="hint">
-        Якщо заявка «Подана», спочатку переведіть у «На розгляді». Далі — схвалення, відхилення або доопрацювання.
+        If the application is "Submitted", first move it to "In review". Then approve, reject, or request revision.
       </p>
       <template v-if="loadedApplication">
         <div v-if="!commissionNextStatuses.length" class="hint muted">
-          З цієї стадії зміна статусу недоступна.
+          Status change is not available from this stage.
         </div>
         <div v-else class="decision-actions">
           <button
@@ -120,14 +120,14 @@
     </section>
 
     <section v-if="average || complete" class="panel">
-      <h2>Підсумок</h2>
+      <h2>Summary</h2>
       <p v-if="average">
-        Середній: <strong>{{ average.simpleAverage ?? '—' }}</strong> · Зважений:
+        Average: <strong>{{ average.simpleAverage ?? '—' }}</strong> · Weighted:
         <strong>{{ average.weightedAverage ?? '—' }}</strong>
       </p>
       <p v-if="complete && complete.totalCriteria != null">
-        Критерії: <strong>{{ complete.complete ? 'повністю' : 'не завершено' }}</strong>
-        (усього {{ complete.totalCriteria }})
+        Criteria: <strong>{{ complete.complete ? 'complete' : 'incomplete' }}</strong>
+        (total {{ complete.totalCriteria }})
       </p>
     </section>
 
@@ -160,14 +160,14 @@ const average = ref(null)
 const complete = ref(null)
 const message = ref('')
 const busy = ref(false)
-const savingId = ref(null)   // id критерію що зараз зберігається
+const savingId = ref(null)   // id of the criterion currently being saved
 const decisionComment = ref('')
 const loadedApplication = ref(null)
 const loadingApplication = ref(false)
 const decisionBusy = ref(false)
 const evaluatorId = ref('')
 
-/** Спочатку callId з заявки (джерело істини); інакше з маршруту — усуває порожній список критеріїв при гонці watch. */
+/** First callId from the application (source of truth); otherwise from route — eliminates empty criteria list on watch race condition. */
 const effectiveCallId = computed(() => {
   const fromApp = loadedApplication.value?.callId
   const nApp = fromApp != null && fromApp !== '' ? Number(fromApp) : NaN
@@ -211,7 +211,7 @@ const commissionNextStatuses = computed(() => {
   const st = loadedApplication.value?.status
   if (!st) return []
   const statuses = adminAllowedNextStatuses(st)
-  // SUPER_EVALUATOR не може напряму завершувати проект
+  // SUPER_EVALUATOR cannot directly complete the project
   if (isSuperEvaluatorOnly.value) {
     return statuses.filter(s => s !== 'COMPLETED')
   }
@@ -240,8 +240,8 @@ async function loadCriteria() {
   if (!call) {
     criteria.value = []
     message.value = loadedApplication.value
-      ? 'Не вдалося визначити виклик для цієї заявки (немає callId).'
-      : 'Некоректний ID виклику — спочатку дочекайтесь завантаження заявки.'
+      ? 'Failed to determine the call for this application (no callId).'
+      : 'Invalid call ID — wait for the application to load first.'
     return
   }
   busy.value = true
@@ -258,11 +258,11 @@ async function loadCriteria() {
       await prefetchMyScores()
     }
     message.value = list.length
-      ? `Завантажено критеріїв: ${list.length}.`
-      : `Для виклику №${call} сервер повернув порожній список критеріїв.`
+      ? `Criteria loaded: ${list.length}.`
+      : `The server returned an empty criteria list for call #${call}.`
   } catch {
     criteria.value = []
-    message.value = 'Не вдалося завантажити критерії.'
+    message.value = 'Failed to load criteria.'
   } finally {
     busy.value = false
   }
@@ -301,12 +301,12 @@ async function saveScore(criteriaId) {
   const app = asPositiveInt(applicationId.value)
   const evaluator = asPositiveInt(Number(evaluatorId.value))
   if (!app || !evaluator) {
-    message.value = 'Немає ID оцінювача.'
+    message.value = 'No evaluator ID found.'
     return
   }
   const valid = clampScore(scores[criteriaId])
   if (valid == null) {
-    message.value = 'Вкажіть бал від 1 до 100.'
+    message.value = 'Please enter a score from 1 to 100.'
     return
   }
   savingId.value = criteriaId
@@ -318,9 +318,9 @@ async function saveScore(criteriaId) {
       score: valid,
       comment: String(comments[criteriaId] ?? '').trim() || null,
     })
-    message.value = `Збережено критерій "${criteria.value.find((c) => c.id === criteriaId)?.name ?? criteriaId}".`
+    message.value = `Criterion "${criteria.value.find((c) => c.id === criteriaId)?.name ?? criteriaId}" saved.`
   } catch {
-    message.value = 'Не вдалося зберегти оцінку.'
+    message.value = 'Failed to save the score.'
   } finally {
     savingId.value = null
   }
@@ -331,7 +331,7 @@ async function refreshSummary() {
   const app = asPositiveInt(applicationId.value)
   const call = asPositiveInt(effectiveCallId.value)
   if (!app || !call) {
-    message.value = 'Некоректні параметри заявки або виклику.'
+    message.value = 'Invalid application or call parameters.'
     return
   }
   busy.value = true
@@ -349,9 +349,9 @@ async function refreshSummary() {
     } else {
       complete.value = null
     }
-    message.value = 'Підсумок оновлено.'
+    message.value = 'Summary updated.'
   } catch {
-    message.value = 'Не вдалося оновити підсумок.'
+    message.value = 'Failed to update summary.'
   } finally {
     busy.value = false
   }
@@ -362,17 +362,17 @@ async function submitCommissionDecision(nextStatus) {
   const id = asPositiveInt(applicationId.value)
   if (!id || !nextStatus) return
   if (!commissionNextStatuses.value.includes(nextStatus)) {
-    message.value = 'Цей перехід статусу зараз недоступний.'
+    message.value = 'This status transition is not currently available.'
     return
   }
   decisionBusy.value = true
   try {
     await applicationsApi.changeStatus(id, nextStatus, decisionComment.value.trim() || null)
-    message.value = `Статус оновлено: ${statusLabel(nextStatus)}.`
+    message.value = `Status updated: ${statusLabel(nextStatus)}.`
     decisionComment.value = ''
     await loadApplication()
   } catch (e) {
-    message.value = e.response?.data?.message || e.response?.data || 'Не вдалося змінити статус.'
+    message.value = e.response?.data?.message || e.response?.data || 'Failed to change the status.'
   } finally {
     decisionBusy.value = false
   }

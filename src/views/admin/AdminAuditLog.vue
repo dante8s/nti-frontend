@@ -1,74 +1,74 @@
 <template>
   <div class="page">
     <div class="page-header">
-      <h1>Журнал аудиту</h1>
-      <p class="subtitle">Всі адміністративні дії в системі</p>
+      <h1>Audit Log</h1>
+      <p class="subtitle">All administrative actions in the system</p>
     </div>
 
-    <!-- Фільтри -->
+    <!-- Filters -->
     <div class="filters">
       <select v-model="filterEntityType" class="filter-select" @change="load">
-        <option value="">Всі типи</option>
-        <option value="USER">Користувачі</option>
-        <option value="APPLICATION">Заявки</option>
-        <option value="PROGRAM">Програми</option>
-        <option value="CALL">Виклики</option>
+        <option value="">All types</option>
+        <option value="USER">Users</option>
+        <option value="APPLICATION">Applications</option>
+        <option value="PROGRAM">Programs</option>
+        <option value="CALL">Calls</option>
       </select>
 
       <select v-model="filterAction" class="filter-select" @change="load">
-        <option value="">Всі дії</option>
-        <optgroup label="Користувачі">
-          <option value="USER_APPROVED">Схвалення акаунта</option>
-          <option value="USER_REJECTED">Відхилення акаунта</option>
-          <option value="USER_SUSPENDED">Блокування акаунта</option>
-          <option value="USER_ROLE_ADDED">Додавання ролі</option>
-          <option value="USER_ROLE_REMOVED">Видалення ролі</option>
+        <option value="">All actions</option>
+        <optgroup label="Users">
+          <option value="USER_APPROVED">Account approved</option>
+          <option value="USER_REJECTED">Account rejected</option>
+          <option value="USER_SUSPENDED">Account suspended</option>
+          <option value="USER_ROLE_ADDED">Role added</option>
+          <option value="USER_ROLE_REMOVED">Role removed</option>
         </optgroup>
-        <optgroup label="Заявки">
-          <option value="APPLICATION_CREATED">Створення заявки</option>
-          <option value="APPLICATION_UPDATED">Оновлення заявки</option>
-          <option value="STATUS_CHANGED">Зміна статусу</option>
+        <optgroup label="Applications">
+          <option value="APPLICATION_CREATED">Application created</option>
+          <option value="APPLICATION_UPDATED">Application updated</option>
+          <option value="STATUS_CHANGED">Status changed</option>
         </optgroup>
-        <optgroup label="Комісія">
-          <option value="EVALUATION_SUBMITTED">Оцінка комісії</option>
+        <optgroup label="Commission">
+          <option value="EVALUATION_SUBMITTED">Commission evaluation</option>
         </optgroup>
-        <optgroup label="Програми та виклики">
-          <option value="PROGRAM_CREATED">Створення програми</option>
-          <option value="PROGRAM_REVIEWED">Рішення по програмі</option>
-          <option value="PROGRAM_DEACTIVATED">Деактивація програми</option>
-          <option value="CALL_CREATED">Створення виклику</option>
-          <option value="CALL_CLOSED">Закриття виклику</option>
+        <optgroup label="Programs and calls">
+          <option value="PROGRAM_CREATED">Program created</option>
+          <option value="PROGRAM_REVIEWED">Program decision</option>
+          <option value="PROGRAM_DEACTIVATED">Program deactivated</option>
+          <option value="CALL_CREATED">Call created</option>
+          <option value="CALL_CLOSED">Call closed</option>
         </optgroup>
-        <optgroup label="Розсилка">
-          <option value="BULK_MESSAGE_SENT">Масова розсилка</option>
+        <optgroup label="Bulk messaging">
+          <option value="BULK_MESSAGE_SENT">Bulk message sent</option>
         </optgroup>
-        <optgroup label="Експорт">
-          <option value="EXPORT">Експорт даних</option>
+        <optgroup label="Export">
+          <option value="EXPORT">Data export</option>
         </optgroup>
       </select>
 
-      <button class="btn-reset" :disabled="!hasFilters" @click="resetFilters">Скинути</button>
+      <button class="btn-reset" :disabled="!hasFilters" @click="resetFilters">Reset</button>
 
-      <span class="count">{{ events.length }} записів</span>
+      <span class="count">{{ events.length }} records</span>
     </div>
 
-    <!-- Таблиця -->
-    <div v-if="loading" class="loading">Завантаження...</div>
+    <!-- Table -->
+    <div v-if="loading" class="loading">Loading...</div>
 
     <div v-else-if="events.length === 0" class="empty">
-      Записів не знайдено
+      No records found
     </div>
 
     <div v-else class="table-wrapper">
       <table class="audit-table">
         <thead>
           <tr>
-            <th>Дата і час</th>
-            <th>Хто</th>
-            <th>Дія</th>
-            <th>Тип об'єкта</th>
-            <th>ID об'єкта</th>
-            <th>Опис</th>
+            <th>Date and time</th>
+            <th>Who</th>
+            <th>Action</th>
+            <th>Object type</th>
+            <th>Object ID</th>
+            <th>Description</th>
           </tr>
         </thead>
         <tbody>
@@ -109,7 +109,7 @@ async function load() {
     })
     events.value = res.data || []
   } catch (e) {
-    console.error('Помилка завантаження аудиту', e)
+    console.error('Failed to load audit log', e)
   } finally {
     loading.value = false
   }
@@ -130,22 +130,22 @@ function formatDate(iso) {
 }
 
 const ACTION_LABELS = {
-  USER_APPROVED:       'Схвалено акаунт',
-  USER_REJECTED:       'Відхилено акаунт',
-  USER_SUSPENDED:      'Заблоковано акаунт',
-  USER_ROLE_ADDED:     'Роль додано',
-  USER_ROLE_REMOVED:   'Роль видалено',
-  APPLICATION_CREATED: 'Заявку створено',
-  APPLICATION_UPDATED: 'Заявку оновлено',
-  STATUS_CHANGED:      'Статус змінено',
-  EVALUATION_SUBMITTED:'Оцінка виставлена',
-  PROGRAM_CREATED:     'Програму створено',
-  PROGRAM_REVIEWED:    'Рішення по програмі',
-  PROGRAM_DEACTIVATED: 'Програму деактивовано',
-  CALL_CREATED:        'Виклик створено',
-  CALL_CLOSED:          'Виклик закрито',
-  BULK_MESSAGE_SENT:    'Масова розсилка',
-  EXPORT:               'Експорт даних',
+  USER_APPROVED:       'Account approved',
+  USER_REJECTED:       'Account rejected',
+  USER_SUSPENDED:      'Account suspended',
+  USER_ROLE_ADDED:     'Role added',
+  USER_ROLE_REMOVED:   'Role removed',
+  APPLICATION_CREATED: 'Application created',
+  APPLICATION_UPDATED: 'Application updated',
+  STATUS_CHANGED:      'Status changed',
+  EVALUATION_SUBMITTED:'Evaluation submitted',
+  PROGRAM_CREATED:     'Program created',
+  PROGRAM_REVIEWED:    'Program decision',
+  PROGRAM_DEACTIVATED: 'Program deactivated',
+  CALL_CREATED:        'Call created',
+  CALL_CLOSED:          'Call closed',
+  BULK_MESSAGE_SENT:    'Bulk message sent',
+  EXPORT:               'Data export',
 }
 
 function formatAction(action) {

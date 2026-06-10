@@ -128,7 +128,7 @@ const poNav = computed(() => {
   if (!isOrgMember.value && !hasPORequests.value) return []
   return [{
     to: '/app/product-owner/completion-requests',
-    label: 'Запити на завершення',
+    label: 'Completion requests',
     icon: '✦',
     badge: hasPORequests.value
   }]

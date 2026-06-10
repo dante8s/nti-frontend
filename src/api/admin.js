@@ -1,38 +1,38 @@
 import api from './axios'
 
 export const adminApi = {
-  // Всі юзери що чекають схвалення
+  // All users awaiting approval
   getPendingUsers: () => api.get('/api/auth/admin/users/pending'),
 
-  // Всі юзери
+  // All users
   getAllUsers: () => api.get('/api/auth/admin/users'),
 
-  // Схвалити юзера
+  // Approve user
   approveUser: (id) => api.post(`/api/auth/admin/users/${id}/approve`),
 
-  // Відхилити юзера
+  // Reject user
   rejectUser: (id, reason) =>
     api.post(`/api/auth/admin/users/${id}/reject`, null, { params: { reason } }),
 
-  // Заблокувати юзера
+  // Suspend user
   suspendUser: (id, reason) =>
     api.post(`/api/auth/admin/users/${id}/suspend`, null, { params: { reason } }),
 
-  // Додати роль
+  // Add role
   addRole: (id, role) =>
     api.post(`/api/auth/admin/users/${id}/roles/add`, null, { params: { role } }),
 
-  // Забрати роль
+  // Remove role
   removeRole: (id, role) =>
     api.post(`/api/auth/admin/users/${id}/roles/remove`, null, { params: { role } }),
 
-  // Запросити ментора
+  // Invite mentor
   inviteMentor: (email) => api.post('/api/auth/admin/invite-mentor', { email }),
 
-  // Всі юзери для призначення Product Owner (ADMIN або SUPER_ADMIN)
+  // All users for Product Owner assignment (ADMIN or SUPER_ADMIN)
   getUsersForPO: () => api.get('/api/admin/users/for-po-assignment'),
 
-  // Звіти завершених проектів
+  // Completed project reports
   getReports: () => api.get('/api/admin/reports'),
   exportReportCsv: (id) => api.get(`/api/admin/reports/${id}/export`, { responseType: 'blob' }),
   exportAllReportsCsv: () => api.get('/api/admin/reports/export', { responseType: 'blob' }),

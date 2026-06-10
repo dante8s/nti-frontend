@@ -1,12 +1,12 @@
 <template>
   <div class="page">
     <section class="page__head">
-      <p class="eyebrow">Студент</p>
-      <h2 class="page__title">Мій профіль</h2>
-      <p class="page__sub">Заповніть профіль, щоб подати заявку на програму</p>
+      <p class="eyebrow">Student</p>
+      <h2 class="page__title">My profile</h2>
+      <p class="page__sub">Fill in your profile to apply for a program</p>
     </section>
 
-    <div v-if="loading" class="state-msg">Завантаження...</div>
+    <div v-if="loading" class="state-msg">Loading...</div>
     <div v-else-if="loadError" class="alert alert--error">{{ loadError }}</div>
 
     <div v-else class="content">
@@ -14,7 +14,7 @@
       <div v-if="eligibility" class="elig-banner" :class="eligibility.profileComplete ? 'elig-banner--ok' : 'elig-banner--warn'">
         <span class="elig-banner__icon">{{ eligibility.profileComplete ? '✓' : '!' }}</span>
         <div>
-          <strong>{{ eligibility.profileComplete ? 'Профіль повний — можна подавати заявку' : 'Профіль неповний' }}</strong>
+          <strong>{{ eligibility.profileComplete ? 'Profile complete — you can submit an application' : 'Profile incomplete' }}</strong>
           <ul v-if="eligibility.remindersUk?.length" class="elig-banner__list">
             <li v-for="r in eligibility.remindersUk" :key="r">{{ r }}</li>
           </ul>
@@ -24,35 +24,35 @@
       <!-- Profile card -->
       <div class="card">
         <div class="card__head">
-          <h3 class="card__title">Інформація про студента</h3>
+          <h3 class="card__title">Student information</h3>
           <button v-if="!editing" type="button" class="btn btn--ghost" @click="startEdit">
-            ✏️ Редагувати
+            ✏️ Edit
           </button>
           <div v-else class="card__head-actions">
             <button type="button" class="btn btn--primary" :disabled="saving" @click="save">
-              {{ saving ? 'Збереження...' : 'Зберегти' }}
+              {{ saving ? 'Saving...' : 'Save' }}
             </button>
-            <button type="button" class="btn btn--ghost" @click="cancelEdit">Скасувати</button>
+            <button type="button" class="btn btn--ghost" @click="cancelEdit">Cancel</button>
           </div>
         </div>
 
         <div v-if="saveError" class="alert alert--error">{{ saveError }}</div>
-        <div v-if="saveSuccess" class="alert alert--ok">Профіль оновлено успішно</div>
+        <div v-if="saveSuccess" class="alert alert--ok">Profile updated successfully</div>
 
         <div class="form">
           <div class="form__row">
             <div class="field">
-              <label class="field__label">Програма навчання</label>
+              <label class="field__label">Study program</label>
               <input
                 v-if="editing"
                 v-model="form.studyProgram"
                 class="field__input"
-                placeholder="Наприклад: Комп'ютерна інженерія"
+                placeholder="E.g.: Computer Engineering"
               />
               <p v-else class="field__value">{{ profile?.studyProgram || '—' }}</p>
             </div>
             <div class="field">
-              <label class="field__label">Рік навчання</label>
+              <label class="field__label">Year of study</label>
               <input
                 v-if="editing"
                 v-model.number="form.yearOfStudy"
@@ -68,7 +68,7 @@
 
           <div class="form__row">
             <div class="field">
-              <label class="field__label">Середній бал</label>
+              <label class="field__label">Average grade</label>
               <input
                 v-if="editing"
                 v-model.number="form.profileAverageGrade"
@@ -82,35 +82,35 @@
               <p v-else class="field__value">{{ profile?.profileAverageGrade ?? '—' }}</p>
             </div>
             <div class="field">
-              <label class="field__label">Академічна заборгованість</label>
+              <label class="field__label">Academic retakes</label>
               <label v-if="editing" class="toggle">
                 <input v-model="form.hasRepeatedSubjects" type="checkbox" class="toggle__input" />
                 <span class="toggle__track" />
-                <span class="toggle__label">{{ form.hasRepeatedSubjects ? 'Так' : 'Ні' }}</span>
+                <span class="toggle__label">{{ form.hasRepeatedSubjects ? 'Yes' : 'No' }}</span>
               </label>
-              <p v-else class="field__value">{{ profile?.hasRepeatedSubjects ? 'Так' : 'Ні' }}</p>
+              <p v-else class="field__value">{{ profile?.hasRepeatedSubjects ? 'Yes' : 'No' }}</p>
             </div>
           </div>
 
           <div class="field field--full">
-            <label class="field__label">Навички</label>
+            <label class="field__label">Skills</label>
             <input
               v-if="editing"
               v-model="form.skills"
               class="field__input"
-              placeholder="Наприклад: Python, Vue.js, Machine Learning"
+              placeholder="E.g.: Python, Vue.js, Machine Learning"
             />
             <p v-else class="field__value">{{ profile?.skills || '—' }}</p>
           </div>
 
           <div class="field field--full">
-            <label class="field__label">Про себе</label>
+            <label class="field__label">About me</label>
             <textarea
               v-if="editing"
               v-model="form.bio"
               class="field__input field__textarea"
               rows="4"
-              placeholder="Розкажіть про себе, свої інтереси та цілі"
+              placeholder="Tell us about yourself, your interests and goals"
             />
             <p v-else class="field__value">{{ profile?.bio || '—' }}</p>
           </div>
@@ -120,7 +120,7 @@
       <!-- CV card -->
       <div class="card">
         <div class="card__head">
-          <h3 class="card__title">Резюме (CV)</h3>
+          <h3 class="card__title">Resume (CV)</h3>
         </div>
 
         <div v-if="cvError" class="alert alert--error">{{ cvError }}</div>
@@ -129,15 +129,15 @@
           <span class="cv-row__icon">📄</span>
           <div class="cv-row__info">
             <span class="cv-row__name">{{ profile.cvOriginalName }}</span>
-            <span class="cv-row__date">Завантажено: {{ formatDate(profile.cvUploadedAt) }}</span>
+            <span class="cv-row__date">Uploaded: {{ formatDate(profile.cvUploadedAt) }}</span>
           </div>
-          <a :href="cvDownloadUrl" target="_blank" class="btn btn--ghost">Переглянути</a>
+          <a :href="cvDownloadUrl" target="_blank" class="btn btn--ghost">View</a>
           <button type="button" class="btn btn--danger" :disabled="cvLoading" @click="removeCv">
-            {{ cvLoading ? '...' : 'Видалити' }}
+            {{ cvLoading ? '...' : 'Delete' }}
           </button>
         </div>
         <div v-else class="cv-empty">
-          <p>CV ще не завантажено</p>
+          <p>CV not yet uploaded</p>
         </div>
 
         <div class="cv-upload">
@@ -150,10 +150,10 @@
               @change="uploadCv"
             />
             <span class="btn btn--primary" :class="{ 'btn--disabled': cvLoading }">
-              {{ cvLoading ? 'Завантаження...' : '+ Завантажити CV (PDF)' }}
+              {{ cvLoading ? 'Uploading...' : '+ Upload CV (PDF)' }}
             </span>
           </label>
-          <p class="cv-hint">Лише PDF, до 5 МБ</p>
+          <p class="cv-hint">PDF only, up to 5 MB</p>
         </div>
       </div>
     </div>
@@ -206,7 +206,7 @@ async function load() {
       eligibility.value = eligRes.value.data
     }
   } catch (e) {
-    loadError.value = 'Не вдалося завантажити профіль'
+    loadError.value = 'Failed to load profile'
   } finally {
     loading.value = false
   }
@@ -247,7 +247,7 @@ async function save() {
     const eligRes = await profileApi.getEligibility()
     eligibility.value = eligRes.data
   } catch (e) {
-    saveError.value = e.response?.data?.message || e.response?.data || 'Помилка при збереженні'
+    saveError.value = e.response?.data?.message || e.response?.data || 'Save error'
   } finally {
     saving.value = false
   }
@@ -262,7 +262,7 @@ async function uploadCv(e) {
     await profileApi.uploadCv(file)
     await load()
   } catch (err) {
-    cvError.value = err.response?.data?.message || 'Помилка завантаження CV'
+    cvError.value = err.response?.data?.message || 'CV upload error'
   } finally {
     cvLoading.value = false
     if (cvInput.value) cvInput.value.value = ''
@@ -276,7 +276,7 @@ async function removeCv() {
     await profileApi.deleteCv()
     profile.value = { ...profile.value, cvFilePath: null, cvOriginalName: null, cvUploadedAt: null }
   } catch (err) {
-    cvError.value = err.response?.data?.message || 'Помилка видалення CV'
+    cvError.value = err.response?.data?.message || 'CV deletion error'
   } finally {
     cvLoading.value = false
   }

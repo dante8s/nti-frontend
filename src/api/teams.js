@@ -3,7 +3,7 @@ import api from './axios'
 export const teamsApi = {
   getMyTeam: (userId) => api.get(`/api/teams/user/${userId}`),
 
-  /** Команда, в якій користувач лідер або учасник (для комісії / адміна). */
+  /** The team in which the user is a leader or member (for commission / admin). */
   getTeamForUser: (userId) => api.get(`/api/teams/user/${userId}`),
 
   create: (payload) => api.post('/api/teams', payload),
@@ -16,7 +16,7 @@ export const teamsApi = {
     return api.post(`/api/teams/${teamId}/invite`, null, { params })
   },
 
-  /** Запрошення поточного користувача (id з JWT). */
+  /** Invitations for the current user (id from JWT). */
   getMyPendingInvites: () => api.get('/api/teams/me/invites'),
 
   getPendingInvites: (userId) => api.get(`/api/teams/invites/${userId}`),

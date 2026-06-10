@@ -1,12 +1,12 @@
 import axios from 'axios'
 
-/** Порожній baseURL → запити на той самий origin (5173), Vite проксує /api → Spring :8080 */
+/** Empty baseURL → requests to the same origin (5173), Vite proxies /api → Spring :8080 */
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL ?? '',
   timeout: 20_000,
 })
 
-// Автоматично додає токен до кожного запиту
+// Automatically adds the token to every request
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token')
   if (token) {
@@ -15,7 +15,7 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// Якщо 401 — виганяємо на логін
+// If 401 — redirect to login
 api.interceptors.response.use(
   (response) => response,
   (error) => {

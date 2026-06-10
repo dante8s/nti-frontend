@@ -1,17 +1,17 @@
 <template>
   <div class="page">
     <p class="lead">
-      Програма A: заявки зі статусом "Очікує підтвердження". Програма B: заявки підтверджені Product Owner.
-      Підтвердіть або відхиліть кожен запит.
+      Program A: applications with status "Awaiting confirmation". Program B: applications confirmed by Product Owner.
+      Confirm or reject each request.
     </p>
 
     <div class="toolbar">
-      <button type="button" class="btn-refresh" @click="load">Оновити</button>
+      <button type="button" class="btn-refresh" @click="load">Refresh</button>
     </div>
 
-    <div v-if="loading" class="state">Завантаження...</div>
+    <div v-if="loading" class="state">Loading...</div>
     <div v-else-if="error" class="state state--error">{{ error }}</div>
-    <div v-else-if="!requests.length" class="state">Немає запитів на завершення проекту.</div>
+    <div v-else-if="!requests.length" class="state">No project completion requests.</div>
 
     <div v-else class="requests-list">
       <article v-for="app in requests" :key="app.id" class="request-card">
@@ -27,22 +27,22 @@
             class="request-card__badge"
             :class="app.status === 'COMPLETION_PO_APPROVED' ? 'request-card__badge--po' : ''"
           >
-            {{ app.status === 'COMPLETION_PO_APPROVED' ? 'Підтверджено PO' : 'Запит на завершення' }}
+            {{ app.status === 'COMPLETION_PO_APPROVED' ? 'PO Confirmed' : 'Completion request' }}
           </span>
         </div>
 
-        <!-- Учасники команди -->
+        <!-- Team members -->
         <div class="request-card__team">
-          <p class="request-card__team-label">Учасники команди</p>
-          <div v-if="teamsLoading[app.id]" class="request-card__team-loading">Завантаження...</div>
-          <div v-else-if="!teams[app.id]" class="request-card__team-empty">Команду не знайдено</div>
+          <p class="request-card__team-label">Team members</p>
+          <div v-if="teamsLoading[app.id]" class="request-card__team-loading">Loading...</div>
+          <div v-else-if="!teams[app.id]" class="request-card__team-empty">Team not found</div>
           <table v-else class="team-table">
             <thead>
               <tr>
-                <th>Ім'я</th>
+                <th>Name</th>
                 <th>Email</th>
-                <th>Роль</th>
-                <th>Статус</th>
+                <th>Role</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody>
@@ -66,21 +66,21 @@
           </table>
         </div>
 
-        <!-- Дії -->
+        <!-- Actions -->
         <div class="request-card__actions">
           <button
             class="btn-approve"
             :disabled="busy[app.id]"
             @click="approve(app)"
           >
-            ✓ Підтвердити завершення
+            ✓ Confirm completion
           </button>
           <button
             class="btn-reject"
             :disabled="busy[app.id]"
             @click="reject(app)"
           >
-            ✕ Відхилити запит
+            ✕ Reject request
           </button>
         </div>
 
@@ -111,7 +111,7 @@ async function load() {
   try {
     const res = await applicationsApi.getCompletionRequests()
     requests.value = res.data || []
-    // Завантажуємо команди для кожної заявки
+    // Load teams for each application
     for (const app of requests.value) {
       if (app.applicantId) {
         teamsLoading[app.id] = true
@@ -122,7 +122,7 @@ async function load() {
       }
     }
   } catch (e) {
-    error.value = e.response?.data?.message || 'Не вдалося завантажити запити.'
+    error.value = e.response?.data?.message || 'Failed to load requests.'
   } finally {
     loading.value = false
   }
@@ -133,13 +133,13 @@ async function approve(app) {
   messages[app.id] = ''
   try {
     await applicationsApi.approveCompletion(app.id)
-    messages[app.id] = '✓ Проект завершено.'
-    // Прибираємо зі списку після затримки
+    messages[app.id] = '✓ Project completed.'
+    // Remove from list after a delay
     setTimeout(() => {
       requests.value = requests.value.filter(r => r.id !== app.id)
     }, 1200)
   } catch (e) {
-    messages[app.id] = e.response?.data?.message || 'Помилка підтвердження.'
+    messages[app.id] = e.response?.data?.message || 'Confirmation error.'
   } finally {
     busy[app.id] = false
   }
@@ -150,12 +150,12 @@ async function reject(app) {
   messages[app.id] = ''
   try {
     await applicationsApi.rejectCompletion(app.id)
-    messages[app.id] = '✕ Запит відхилено. Лідер отримав повідомлення.'
+    messages[app.id] = '✕ Request rejected. The team leader has been notified.'
     setTimeout(() => {
       requests.value = requests.value.filter(r => r.id !== app.id)
     }, 1500)
   } catch (e) {
-    messages[app.id] = e.response?.data?.message || 'Помилка відхилення.'
+    messages[app.id] = e.response?.data?.message || 'Rejection error.'
   } finally {
     busy[app.id] = false
   }

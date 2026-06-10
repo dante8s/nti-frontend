@@ -1,8 +1,8 @@
 /**
- * Текст помилки з відповіді Spring (GlobalExceptionHandler: { error: "..." })
- * або інших форматів.
+ * Error text from the Spring response (GlobalExceptionHandler: { error: "..." })
+ * or other formats.
  */
-export function apiErrorMessage(error, fallback = 'Помилка запиту') {
+export function apiErrorMessage(error, fallback = 'Request error') {
   const d = error?.response?.data
   if (d == null) return error?.message || fallback
   if (typeof d === 'string') return d

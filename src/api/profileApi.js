@@ -37,7 +37,7 @@ export async function deleteCv(userId) {
   return data
 }
 
-/** JPEG / PNG / WebP, до 3 MB (обмеження бекенду). */
+/** JPEG / PNG / WebP, up to 3 MB (backend limit). */
 export async function uploadProfilePhoto(userId, file) {
   const form = new FormData()
   form.append('file', file)
@@ -57,7 +57,7 @@ export function fetchProfilePhotoBlob(userId) {
   return api.get(endpoint, { responseType: 'blob' })
 }
 
-/** Підказка з бекенду: профіль + лідерство для переходу до заявки на виклик. */
+/** Hint from backend: profile + leadership for navigating to call application. */
 export async function getCallApplicationEligibility() {
   const { data } = await api.get('/api/profile/me/call-application-eligibility')
   return data

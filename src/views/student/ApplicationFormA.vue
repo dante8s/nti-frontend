@@ -1,48 +1,48 @@
 <template>
     <div class="page">
         <div class="back">
-            <router-link to="/programs/a">← Назад до програми А</router-link>
+            <router-link to="/programs/a">← Back to Program A</router-link>
         </div>
 
         <div class="form-box">
-            <h1>Заявка — Програма A</h1>
-            <p class="subtitle">Grантовий інкубаційний програм</p>
+            <h1>Application — Program A</h1>
+            <p class="subtitle">Grant incubation program</p>
 
             <div v-if="callInfo" class="call-info">
-                <span class="call-label">Виклик:</span>
+                <span class="call-label">Call:</span>
                 <strong>{{ callInfo.title }}</strong>
-                <span class="deadline">Дедлайн: {{ formatDate(callInfo.deadline) }}</span>
+                <span class="deadline">Deadline: {{ formatDate(callInfo.deadline) }}</span>
             </div>
 
             <div v-if="isDeadlinePassed" class="deadline-banner">
-                Термін подачі заявок для цього виклику закінчився
+                The application deadline for this call has passed
             </div>
 
-            <div v-if="initialLoading" class="loading">Завантаження...</div>
+            <div v-if="initialLoading" class="loading">Loading...</div>
 
             <template v-else-if="!isDeadlinePassed">
-                <!-- Крок 1 — форма (нова або редагування) -->
+                <!-- Step 1 — form (new or edit) -->
                 <div v-if="!application">
                     <div v-if="error" class="error">{{ error }}</div>
 
                     <form @submit.prevent="saveForm">
                         <div class="field">
-                            <label>Назва проекту *</label>
-                            <input v-model="form.projectName" type="text" placeholder="Назва вашого проекту" required />
+                            <label>Project name *</label>
+                            <input v-model="form.projectName" type="text" placeholder="Your project name" required />
                         </div>
                         <div class="field">
-                            <label>Короткий опис *</label>
-                            <textarea v-model="form.description" rows="4" placeholder="Опишіть вашу ідею..." required />
+                            <label>Short description *</label>
+                            <textarea v-model="form.description" rows="4" placeholder="Describe your idea..." required />
                         </div>
                         <div class="field">
-                            <label>Тематична категорія *</label>
+                            <label>Topic category *</label>
                             <select v-model="form.category" required>
-                                <option value="">Оберіть категорію</option>
-                                <option value="software">Розробка ПЗ</option>
-                                <option value="ai">AI та дані</option>
-                                <option value="web">Веб-застосунки</option>
-                                <option value="game">Геймдев</option>
-                                <option value="iot">IoT та embedded</option>
+                                <option value="">Select a category</option>
+                                <option value="software">Software development</option>
+                                <option value="ai">AI and data</option>
+                                <option value="web">Web applications</option>
+                                <option value="game">Game development</option>
+                                <option value="iot">IoT and embedded</option>
                             </select>
                         </div>
                         <div v-if="stackSubjects.length" class="field stack-subjects">
@@ -53,33 +53,33 @@
                         </div>
 
                         <div class="field">
-                            <label>Технологічний стек *</label>
+                            <label>Technology stack *</label>
                             <input v-model="form.techStack" type="text" placeholder="React, Spring Boot..." required />
                         </div>
                         <div class="field">
-                            <label>Склад команди *</label>
+                            <label>Team composition *</label>
                             <textarea v-model="form.teamDescription" rows="3" required />
                         </div>
 
                         <button type="submit" :disabled="loading" class="btn-primary">
-                            {{ loading ? 'Збереження...' : 'Зберегти і перейти до документів' }}
+                            {{ loading ? 'Saving...' : 'Save and proceed to documents' }}
                         </button>
                     </form>
                 </div>
 
-                <!-- Крок 2 — документи -->
+                <!-- Step 2 — documents -->
                 <div v-else>
                     <div class="step-header">
-                        <div class="step-done">✓ Інформація збережена</div>
-                        <!-- Показуємо збережені дані -->
+                        <div class="step-done">✓ Information saved</div>
+                        <!-- Show saved data -->
                         <div v-if="savedFormData" class="saved-summary">
                             <strong>{{ savedFormData.projectName }}</strong>
                             <span class="muted"> · {{ savedFormData.category }}</span>
                         </div>
-                        <!-- Кнопка повернутись до редагування форми -->
+                        <!-- Button to return to form editing -->
                         <button v-if="application.status === 'DRAFT' || application.status === 'NEEDS_REVISION'"
                             type="button" class="btn-back-form" @click="application = null">
-                            Редагувати дані ↩
+                            Edit data ↩
                         </button>
                     </div>
 
@@ -88,14 +88,14 @@
 
                     <div class="submit-section">
                         <div v-if="!canSubmit" class="submit-hint">
-                            Завантажте всі обов'язкові документи щоб відправити заявку
+                            Upload all required documents to submit your application
                         </div>
                         <div class="submit-actions">
                             <button class="btn-draft" @click="$router.push('/app/my-applications')">
-                                Зберегти як чернетку
+                                Save as draft
                             </button>
                             <button class="btn-submit" :disabled="!canSubmit || submitting" @click="submitApplication">
-                                {{ submitting ? 'Відправка...' : 'Відправити заявку' }}
+                                {{ submitting ? 'Submitting...' : 'Submit application' }}
                             </button>
                         </div>
                     </div>
@@ -103,9 +103,9 @@
                     <div v-if="submitError" class="error">{{ submitError }}</div>
 
                     <div v-if="submitted" class="success">
-                        <h3>Заявку відправлено!</h3>
-                        <p>Ви можете відстежувати статус у кабінеті.</p>
-                        <router-link to="/app/my-applications">Перейти до моїх заявок</router-link>
+                        <h3>Application submitted!</h3>
+                        <p>You can track the status in your dashboard.</p>
+                        <router-link to="/app/my-applications">Go to my applications</router-link>
                     </div>
                 </div>
             </template>
@@ -129,7 +129,7 @@ const auth = useAuthStore()
 const callId = Number(route.params.callId)
 
 const callInfo = ref(null)
-const application = ref(null)   // null = ще не збережена / показати форму
+const application = ref(null)   // null = not yet saved / show form
 const initialLoading = ref(true)
 const loading = ref(false)
 const submitting = ref(false)
@@ -184,17 +184,17 @@ onMounted(async () => {
             const eligibility = await getCallApplicationEligibility()
             if (!eligibility?.teamLeader) {
                 error.value =
-                    'Подавати заявку на виклик може лише лідер команди. Зверніться до лідера вашої команди.'
+                    'Only the team leader can submit an application for a call. Contact your team leader.'
                 return
             }
             if (!eligibility?.teamFull) {
                 error.value =
-                    'Команда ще не укомплектована. Для подачі заявки потрібно максимально заповнити команду (3 учасники).'
+                    'The team is not yet complete. To submit an application, the team must be at full capacity (3 members).'
                 return
             }
         }
 
-        // Паралельно завантажуємо інфо про call і перевіряємо чи є вже заявка
+        // Simultaneously load call info and check if an application already exists
         const [callRes, existingRes] = await Promise.allSettled([
             programsApi.getCall(callId),
             applicationsApi.getMyByCall(callId),
@@ -205,10 +205,10 @@ onMounted(async () => {
         }
 
         if (existingRes.status === 'fulfilled') {
-            // Заявка вже є — підтягуємо дані і переходимо на крок 2
+            // Application already exists — load data and proceed to step 2
             application.value = existingRes.value.data
 
-            // Заповнюємо форму збереженими даними (на випадок якщо повернуться до кроку 1)
+            // Fill the form with saved data (in case user returns to step 1)
             const saved = savedFormData.value
             if (saved) {
                 form.projectName = saved.projectName || ''
@@ -220,7 +220,7 @@ onMounted(async () => {
 
             await checkReadyToSubmit()
         }
-        // якщо 404 — existingRes.status === 'rejected', application залишається null → показуємо форму
+        // if 404 — existingRes.status === 'rejected', application remains null → show form
     } catch (e) {
         console.error(e)
     } finally {
@@ -229,9 +229,9 @@ onMounted(async () => {
 })
 
 /**
- * saveForm — викликається при Submit форми (крок 1).
- * Якщо заявки ще немає — створюємо, потім зберігаємо formData.
- * Якщо заявка вже є (редагування) — тільки оновлюємо formData.
+ * saveForm — called on form submit (step 1).
+ * If no application exists yet — create one, then save formData.
+ * If application already exists (editing) — only update formData.
  */
 async function saveForm() {
     error.value = ''
@@ -264,7 +264,7 @@ async function saveForm() {
 
         await checkReadyToSubmit()
     } catch (e) {
-        error.value = apiErrorMessage(e, 'Помилка при збереженні')
+        error.value = apiErrorMessage(e, 'Save error')
     } finally {
         loading.value = false
     }
@@ -287,7 +287,7 @@ async function submitApplication() {
         await applicationsApi.submit(application.value.id)
         submitted.value = true
     } catch (e) {
-        submitError.value = apiErrorMessage(e, 'Помилка при відправці')
+        submitError.value = apiErrorMessage(e, 'Submission error')
     } finally {
         submitting.value = false
     }
@@ -436,7 +436,7 @@ textarea {
     cursor: not-allowed;
 }
 
-/* Крок 2 */
+/* Step 2 */
 .step-header {
     margin-bottom: 1rem;
 }

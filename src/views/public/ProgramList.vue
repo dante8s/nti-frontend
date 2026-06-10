@@ -2,11 +2,11 @@
     <div class="page">
         <div class="hero">
             <h1>{{ programLabel }}</h1>
-            <p>Оберіть {{ programLabel.toLowerCase() }} яка підходить саме вам</p>
+            <p>Choose the {{ programLabel.toLowerCase() }} that suits you best</p>
         </div>
 
         <div v-if="loading" class="loading">
-            Завантаження...
+            Loading...
         </div>
 
         <div v-else class="programs-grid">
@@ -27,7 +27,7 @@
                 <p>{{ program.description }}</p>
                 <div class="card-footer">
                     <router-link :to="`/programs/${route.params.type}/${program.id}`" class="btn-primary">
-                        Дізнатись більше
+                        Learn more
                     </router-link>
                 </div>
             </div>
@@ -51,7 +51,7 @@ const approvedPrograms = computed(() =>
 )
 
 const type = computed(() => route.params.type?.toUpperCase() || 'A')
-const programLabel = computed(() => type.value === 'A' ? 'Програма A' : 'Програма B')
+const programLabel = computed(() => type.value === 'A' ? 'Program A' : 'Program B')
 
 function showPresentedBy(program) {
     return program?.type === 'PROGRAM_B'
@@ -65,7 +65,7 @@ async function fetchPrograms() {
         const res = await programsApi.getAllByType(type.value)
         programs.value = res.data || []
     } catch (e) {
-        console.error('Помилка завантаження програм', e)
+        console.error('Failed to load programs', e)
     } finally {
         loading.value = false
     }
@@ -73,7 +73,7 @@ async function fetchPrograms() {
 
 onMounted(fetchPrograms)
 
-// Спостерігати за змінами параметрів маршруту
+// Watch for route parameter changes
 watch(() => route.params.type, () => {
     fetchPrograms()
 })

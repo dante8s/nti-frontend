@@ -1,15 +1,15 @@
 <template>
   <div class="result-docs-section">
     <div class="section-title">
-      <span>Документи результатів проекту</span>
-      <span class="progress-text">{{ uploadedCount }}/2 завантажено</span>
+      <span>Project result documents</span>
+      <span class="progress-text">{{ uploadedCount }}/2 uploaded</span>
     </div>
     <p class="section-desc">
-      Завантажте два документи з результатами проекту (Word, PDF або PPTX, до 10 МБ).
-      Обидва файли обов'язкові для завершення проекту.
+      Upload two project result documents (Word, PDF or PPTX, up to 10 MB).
+      Both files are required to complete the project.
     </p>
 
-    <div v-if="loading" class="loading">Завантаження...</div>
+    <div v-if="loading" class="loading">Loading...</div>
 
     <div v-else class="docs-list">
       <div
@@ -40,10 +40,10 @@
             :disabled="previewing[doc.documentType]"
             @click="viewDoc(doc)"
           >
-            👁 Переглянути
+            👁 View
           </button>
           <label class="btn-upload">
-            {{ doc.uploaded ? '↻ Замінити' : '↑ Завантажити' }}
+            {{ doc.uploaded ? '↻ Replace' : '↑ Upload' }}
             <input
               type="file"
               accept=".pdf,.doc,.docx,.ppt,.pptx"
@@ -75,8 +75,8 @@ const previewing = reactive({})
 const errors = reactive({})
 
 const RESULT_TYPES = [
-  { documentType: 'RESULT_1', label: 'Результатний документ 1' },
-  { documentType: 'RESULT_2', label: 'Результатний документ 2' },
+  { documentType: 'RESULT_1', label: 'Result document 1' },
+  { documentType: 'RESULT_2', label: 'Result document 2' },
 ]
 
 const resultDocs = computed(() =>
@@ -100,7 +100,7 @@ async function loadDocs() {
     const res = await applicationsApi.getDocumentStatus(props.applicationId)
     allDocs.value = res.data
   } catch (e) {
-    console.error('Помилка завантаження статусу документів:', e)
+    console.error('Failed to load document status:', e)
   } finally {
     loading.value = false
   }
@@ -121,10 +121,10 @@ async function viewDoc(doc) {
     const blob = new Blob([res.data], { type: res.data.type })
     const url = URL.createObjectURL(blob)
     window.open(url, '_blank')
-    // Звільняємо пам'ять після відкриття
+    // Free memory after opening
     setTimeout(() => URL.revokeObjectURL(url), 10000)
   } catch (e) {
-    errors[doc.documentType] = 'Не вдалося відкрити файл'
+    errors[doc.documentType] = 'Failed to open the file'
   } finally {
     previewing[doc.documentType] = false
   }
@@ -140,13 +140,13 @@ async function onFileSelect(event, doc) {
   const validExt = name.endsWith('.pdf') || name.endsWith('.docx')
     || name.endsWith('.doc') || name.endsWith('.pptx') || name.endsWith('.ppt')
   if (!validExt) {
-    errors[doc.documentType] = 'Дозволені тільки PDF, DOCX та PPTX файли'
+    errors[doc.documentType] = 'Only PDF, DOCX and PPTX files are allowed'
     event.target.value = ''
     return
   }
 
   if (file.size > 10 * 1024 * 1024) {
-    errors[doc.documentType] = 'Файл не може бути більше 10MB'
+    errors[doc.documentType] = 'File cannot exceed 10 MB'
     event.target.value = ''
     return
   }
@@ -162,7 +162,7 @@ async function onFileSelect(event, doc) {
     )
     await loadDocs()
   } catch (e) {
-    errors[doc.documentType] = e.response?.data || 'Помилка завантаження'
+    errors[doc.documentType] = e.response?.data || 'Upload error'
   } finally {
     delete uploading[doc.documentType]
     event.target.value = ''

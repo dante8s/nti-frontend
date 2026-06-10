@@ -2,17 +2,17 @@
   <div class="dash">
     <section class="welcome">
       <p class="welcome__eyebrow">
-        Вітаємо
+        {{ $t(‘dashboard.welcome’) }}
       </p>
       <h2 class="welcome__title">
-        {{ auth.user?.name || 'Користувач' }}
+        {{ auth.user?.name || ‘User’ }}
       </h2>
       <p class="welcome__text">
-        Це ваш кабінет NTI: швидкі дії та розділи залежно від ролі.
+        {{ $t(‘dashboard.welcomeText’) }}
       </p>
-      <p v-if="leaderWelcomeLine" class="welcome__pill-line">
-        <span class="welcome__pill">Лідер команди</span>
-        {{ leaderWelcomeLine }}
+      <p v-if="isTeamLeader" class="welcome__pill-line">
+        <span class="welcome__pill">{{ $t(‘dashboard.teamLeader’) }}</span>
+        {{ $t(‘dashboard.teamLeaderLine’) }}
       </p>
     </section>
 
@@ -38,18 +38,18 @@
 
     <section v-if="isFirm && firmChecked && !firmHasOrg" class="firm">
       <p class="firm__hint">
-        You haven’t registered an organization yet.
+        {{ $t(‘dashboard.noOrg’) }}
       </p>
       <router-link
         to="/app/org/register"
         class="firm__btn"
       >
-        Register Organization
+        {{ $t(‘dashboard.registerOrg’) }}
       </router-link>
     </section>
 
     <section v-if="rolesLine" class="meta">
-      <span class="meta__label">Ваші ролі:</span>
+      <span class="meta__label">{{ $t(‘dashboard.yourRoles’) }}</span>
       {{ rolesLine }}
     </section>
   </div>
@@ -60,7 +60,9 @@ import { computed, onMounted, ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useOrganizationStore } from '@/stores/organization'
 import { hasStudentPortalAccess, hasTeamLeaderRole } from '@/utils/roles'
+import { useI18n } from 'vue-i18n'
 
+const { t } = useI18n()
 const auth = useAuthStore()
 const orgStore = useOrganizationStore()
 
@@ -76,32 +78,16 @@ const isCommissionMember = computed(() =>
 const isFirm = computed(() => auth.roles?.includes('FIRM'))
 const isOrgUser = computed(() => auth.roles?.some((r) => r === 'FIRM' || r === 'FIRM_USER'))
 const isMentor = computed(() => auth.roles?.includes('MENTOR'))
+const isTeamLeader = computed(() => hasTeamLeaderRole(auth.user?.roles))
 
 const firmChecked = ref(false)
 const firmHasOrg = ref(false)
 
-const roleLabels = {
-  STUDENT: 'Студент',
-  TEAM_LEADER: 'Лідер команди',
-  FIRM: 'Компанія',
-  FIRM_USER: 'Представник фірми',
-  MENTOR: 'Ментор',
-  EVALUATOR: 'Комісія (перегляд)',
-  SUPER_EVALUATOR: 'Комісія — рішення',
-  ADMIN: 'Адмін',
-  SUPER_ADMIN: 'Супер-адмін',
-}
-
 const rolesLine = computed(() =>
   (auth.user?.roles || [])
-    .map((r) => roleLabels[r] || r)
+    .map((r) => t(`dashboard.roles.${r}`, r))
     .join(', '),
 )
-
-const leaderWelcomeLine = computed(() => {
-  if (!hasTeamLeaderRole(auth.user?.roles)) return ''
-  return 'У вашому профілі активна роль лідера: запросіть учасників у «Моїй команді» та подайте заявку на програму від команди.'
-})
 
 const cards = computed(() => {
   const out = []
@@ -109,8 +95,8 @@ const cards = computed(() => {
   if (isSuperAdmin.value) {
     out.push({
       to: '/app/admin/users',
-      title: 'Користувачі',
-      desc: 'Схвалення акаунтів, ролі, блокування',
+      title: t('dashboard.cards.users'),
+      desc: t('dashboard.cards.usersDesc'),
       icon: '◎',
     })
   }
@@ -118,8 +104,8 @@ const cards = computed(() => {
   if (isSuperAdmin.value || isAdmin.value) {
     out.push({
       to: '/app/admin/mentorships',
-      title: 'Mentorships',
-      desc: 'Managing mentorships',
+      title: t('dashboard.cards.mentorships'),
+      desc: t('dashboard.cards.mentorshipsDesc'),
       icon: '✦',
     })
   }
@@ -128,38 +114,38 @@ const cards = computed(() => {
     out.push(
       {
         to: '/app/admin/applications',
-        title: 'Заявки',
-        desc: 'Усі подання та зміна статусів',
+        title: t('dashboard.cards.applications'),
+        desc: t('dashboard.cards.applicationsDesc'),
         icon: '◆',
       },
       {
         to: '/app/admin/milestone-approvals',
-        title: 'Milestone approvals',
-        desc: 'Review and approve pending milestones',
+        title: t('dashboard.cards.milestoneApprovals'),
+        desc: t('dashboard.cards.milestoneApprovalsDesc'),
         icon: '✓',
       },
       {
         to: '/app/admin/programs',
-        title: 'Програми та виклики',
-        desc: 'Редагування програм і дедлайнів',
+        title: t('dashboard.cards.programs'),
+        desc: t('dashboard.cards.programsDesc'),
         icon: '◇',
       },
       {
         to: '/app/admin/program-review-queue',
-        title: 'Черга Program B',
-        desc: 'Перегляд нових пропозицій програми B',
+        title: t('dashboard.cards.programBQueue'),
+        desc: t('dashboard.cards.programBQueueDesc'),
         icon: '◬',
       },
       {
         to: '/app/admin/organizations',
-        title: 'Організації',
-        desc: 'Каталог організацій-партнерів',
+        title: t('dashboard.cards.organizations'),
+        desc: t('dashboard.cards.organizationsDesc'),
         icon: '◈',
       },
       {
         to: '/app/admin/bulk-message',
-        title: 'Масова розсилка',
-        desc: 'Надіслати повідомлення групі користувачів за фільтром',
+        title: t('dashboard.cards.bulkMessage'),
+        desc: t('dashboard.cards.bulkMessageDesc'),
         icon: '✉',
       },
     )
@@ -169,20 +155,20 @@ const cards = computed(() => {
     out.push(
       {
         to: '/app/my-applications',
-        title: 'Мої заявки',
-        desc: 'Статуси подань та коментарі комісії',
+        title: t('dashboard.cards.myApplications'),
+        desc: t('dashboard.cards.myApplicationsDesc'),
         icon: '▸',
       },
       {
         to: '/app/my-profile',
-        title: 'Мій профіль',
-        desc: 'Редагування даних профілю та CV',
+        title: t('dashboard.cards.myProfile'),
+        desc: t('dashboard.cards.myProfileDesc'),
         icon: '◉',
       },
       {
         to: '/app/teams',
-        title: 'Моя команда',
-        desc: 'Створення команди та керування інвайтами',
+        title: t('dashboard.cards.myTeam'),
+        desc: t('dashboard.cards.myTeamDesc'),
         icon: '◍',
       },
     )
@@ -192,8 +178,8 @@ const cards = computed(() => {
     out.push(
       {
         to: '/app/commission',
-        title: 'Комісія',
-        desc: 'Черга заявок і матеріали; скоринг і рішення — лише для SUPER_EVALUATOR / адмінів',
+        title: t('dashboard.cards.commission'),
+        desc: t('dashboard.cards.commissionDesc'),
         icon: '◌',
       },
     )
@@ -202,8 +188,8 @@ const cards = computed(() => {
   if (isAdmin.value) {
     out.push({
       to: '/app/reporting',
-      title: 'Звітність',
-      desc: 'Зведення, команди та виклики, експорт CSV/XLSX/PDF/DOCX',
+      title: t('dashboard.cards.reporting'),
+      desc: t('dashboard.cards.reportingDesc'),
       icon: '⬒',
     })
   }
@@ -211,8 +197,8 @@ const cards = computed(() => {
   if (isMentor.value) {
     out.push({
       to: '/app/mentor/my-mentorships',
-      title: 'My Mentorships',
-      desc: 'Track your active mentorships',
+      title: t('dashboard.cards.myMentorships'),
+      desc: t('dashboard.cards.myMentorshipsDesc'),
       icon: '◷',
     })
   }
@@ -220,8 +206,8 @@ const cards = computed(() => {
   if (isOrgUser.value && firmChecked.value && firmHasOrg.value) {
     out.push({
       to: '/app/org/profile',
-      title: 'My Organization',
-      desc: 'Manage organization profile and members',
+      title: t('dashboard.cards.myOrganization'),
+      desc: t('dashboard.cards.myOrganizationDesc'),
       icon: '◉',
     })
   }
@@ -229,14 +215,14 @@ const cards = computed(() => {
   out.push(
     {
       to: '/programs/a',
-      title: 'Каталог програми A',
-      desc: 'Переглянути програми та виклики',
+      title: t('dashboard.cards.catalogA'),
+      desc: t('dashboard.cards.catalogADesc'),
       icon: 'A',
     },
     {
       to: '/programs/b',
-      title: 'Каталог програми B',
-      desc: 'Переглянути програми та виклики',
+      title: t('dashboard.cards.catalogB'),
+      desc: t('dashboard.cards.catalogBDesc'),
       icon: 'B',
     },
   )

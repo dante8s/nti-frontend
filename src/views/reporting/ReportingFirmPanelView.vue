@@ -12,9 +12,9 @@ async function load() {
   try {
     const res = await reportingApi.getFirmDashboard()
     firmDash.value = res.data
-    message.value = 'Дані оновлено.'
+    message.value = 'Data updated.'
   } catch {
-    message.value = 'Не вдалося завантажити панель компанії.'
+    message.value = 'Failed to load the company panel.'
   } finally {
     busy.value = false
   }
@@ -25,38 +25,38 @@ onMounted(load)
 
 <template>
   <div class="panel">
-    <nav class="back-row" aria-label="Навігація по звітності">
-      <RouterLink class="back-link" :to="{ name: 'reporting-admin' }">← Зведення та експорт</RouterLink>
-      <RouterLink class="back-link muted" :to="{ name: 'reporting-student' }">Панель студента / команди →</RouterLink>
+    <nav class="back-row" aria-label="Reporting navigation">
+      <RouterLink class="back-link" :to="{ name: 'reporting-admin' }">← Summary and export</RouterLink>
+      <RouterLink class="back-link muted" :to="{ name: 'reporting-student' }">Student / team panel →</RouterLink>
     </nav>
 
     <article class="card hero">
-      <h3>Панель компанії</h3>
+      <h3>Company panel</h3>
       <p class="hint lead">
-        Завдання (виклики та дедлайни), навантаження по заявках, призначені менторства та команди на заявках. Поле
-        «бюджет» з’явиться після додавання відповідних даних у модель програм — зараз показуємо доступні зведення з API.
+        Tasks (calls and deadlines), application load, assigned mentorships, and teams on applications. The
+        The ‘budget’ will appear after adding relevant data to the program model — currently showing available summaries from the API.
       </p>
       <div class="quick-links">
-        <RouterLink class="link-pill" to="/app/programs/my">Мої програми B</RouterLink>
-        <RouterLink class="link-pill" to="/app/org/profile">Профіль організації</RouterLink>
+        <RouterLink class="link-pill" to="/app/programs/my">My Program B proposals</RouterLink>
+        <RouterLink class="link-pill" to="/app/org/profile">Organization profile</RouterLink>
       </div>
       <div class="row">
-        <button type="button" :disabled="busy" @click="load">Оновити</button>
+        <button type="button" :disabled="busy" @click="load">Refresh</button>
       </div>
     </article>
 
     <template v-if="firmDash">
       <article v-if="firmDash.summary" class="card">
-        <h4 class="card-title">Зведення</h4>
+        <h4 class="card-title">Summary</h4>
         <div class="summary-strip">
-          <span>Програм: <strong>{{ firmDash.summary.programCount }}</strong></span>
-          <span>Заявок (орг.): <strong>{{ firmDash.summary.applicationCount }}</strong></span>
-          <span>Менторств (призначень): <strong>{{ firmDash.summary.mentorshipCount }}</strong></span>
-          <span>Відкритих викликів: <strong>{{ firmDash.summary.openCallCount }}</strong></span>
+          <span>Programs: <strong>{{ firmDash.summary.programCount }}</strong></span>
+          <span>Applications (org.): <strong>{{ firmDash.summary.applicationCount }}</strong></span>
+          <span>Mentorships (assignments): <strong>{{ firmDash.summary.mentorshipCount }}</strong></span>
+          <span>Open calls: <strong>{{ firmDash.summary.openCallCount }}</strong></span>
         </div>
         <p class="hint note">
-          Бюджети: планується окремий облік у програмі — після появи полів у бекенді їх можна вивести тут у тій самій
-          структурі підрозділу.
+          Budgets: separate tracking is planned in the program — once fields appear in the backend, they can be displayed here in the same
+          section structure.
         </p>
       </article>
 
@@ -67,35 +67,35 @@ onMounted(load)
       >
         <h4 class="org-name">{{ org.organizationName }}</h4>
         <p class="hint org-meta">
-          Заявок по програмах організації: {{ org.applicationCount }} · Менторств: {{ org.mentorshipCount }}
+          Applications for org programs: {{ org.applicationCount }} · Mentorships: {{ org.mentorshipCount }}
         </p>
 
-        <h5 class="sub">Програми та навантаження</h5>
+        <h5 class="sub">Programs and load</h5>
         <ul class="program-list">
           <li v-for="pr in org.programs" :key="pr.programId">
             <span class="pr-name">{{ pr.name }}</span>
             <span class="hint">({{ pr.type }}, {{ pr.status }})</span>
-            — заявок на програму: <strong>{{ pr.applicationsOnProgram }}</strong>
+            — applications on program: <strong>{{ pr.applicationsOnProgram }}</strong>
           </li>
         </ul>
 
-        <h5 class="sub">Виклики (завдання) та заявки</h5>
-        <div v-if="!org.calls?.length" class="hint">Немає викликів по програмах.</div>
+        <h5 class="sub">Calls (tasks) and applications</h5>
+        <div v-if="!org.calls?.length" class="hint">No calls for programs.</div>
         <div v-for="c in org.calls" :key="c.callId" class="list-row">
           <div class="list-row__title">
             <strong>{{ c.title }}</strong>
           </div>
           <div class="meta">
-            <span>Дедлайн: {{ c.deadline }}</span>
-            <span>Статус виклику: {{ c.status }}</span>
-            <span>Програма: {{ c.programName }}</span>
-            <span>Заявок: <strong>{{ c.applicationsOnCall }}</strong></span>
+            <span>Deadline: {{ c.deadline }}</span>
+            <span>Call status: {{ c.status }}</span>
+            <span>Program: {{ c.programName }}</span>
+            <span>Applications: <strong>{{ c.applicationsOnCall }}</strong></span>
           </div>
         </div>
       </article>
 
       <article v-if="!firmDash.organizations?.length" class="card">
-        <p class="hint">Немає прив’язаних організацій. Перевірте членство в організації або зареєструйте компанію.</p>
+        <p class="hint">No linked organizations. Check your organization membership or register a company.</p>
       </article>
     </template>
 

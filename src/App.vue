@@ -26,8 +26,8 @@ function logout() {
         <span class="brand-subtitle">Slovensko · programy A/B</span>
       </div>
       <nav class="app-nav">
-        <router-link to="/programs/a" class="nav-link">Програма A</router-link>
-        <router-link to="/programs/b" class="nav-link">Програма B</router-link>
+        <router-link to="/programs/a" class="nav-link">Program A</router-link>
+        <router-link to="/programs/b" class="nav-link">Program B</router-link>
         <router-link to="/organizations" class="nav-link">Organizations</router-link>
         <router-link to="/mentors" class="nav-link">Mentors</router-link>
         <router-link to="/news" class="nav-link">Novinky</router-link>

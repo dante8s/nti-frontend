@@ -1,18 +1,18 @@
 <template>
     <div class="timeline">
         <div class="timeline-header">
-            <span class="timeline-title">Історія заявки</span>
-            <button class="btn-refresh" :disabled="loading" @click="load" title="Оновити">
+            <span class="timeline-title">Application history</span>
+            <button class="btn-refresh" :disabled="loading" @click="load" title="Refresh">
                 {{ loading ? '...' : '↻' }}
             </button>
         </div>
 
         <div v-if="loading" class="loading">
-            Завантаження...
+            Loading...
         </div>
 
         <div v-else-if="events.length === 0" class="empty">
-            Поки немає подій
+            No events yet
         </div>
 
         <div v-else class="events">
@@ -51,7 +51,7 @@ const loading = ref(false)
 
 onMounted(load)
 
-// Публічний метод — викликається з батьківського компонента
+// Public method — called from the parent component
 async function load() {
     loading.value = true
     try {
@@ -78,7 +78,7 @@ function dotClass(action) {
 }
 
 function formatDate(date) {
-    return new Date(date).toLocaleDateString('uk-UA', {
+    return new Date(date).toLocaleDateString('en-GB', {
         day: '2-digit', month: 'short',
         year: 'numeric', hour: '2-digit', minute: '2-digit'
     })

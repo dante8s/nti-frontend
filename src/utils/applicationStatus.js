@@ -1,26 +1,26 @@
-/** Відповідає переходам ApplicationService.ALLOWED (бекенд). */
+/** Corresponds to ApplicationService.ALLOWED transitions (backend). */
 export const STATUS_LABELS_UK = {
-  DRAFT:                'Чернетка',
-  SUBMITTED:            'Подано',
-  FORMALLY_VERIFIED:    'Формально перевірено',
-  IN_REVIEW:            'На розгляді',
-  NEEDS_REVISION:       'Потрібні зміни',
-  APPROVED:             'Схвалено',
-  REJECTED:             'Відхилено',
-  ONBOARDING:           'Онбординг',
-  ACTIVE:               'Активний',
-  SUSPENDED:            'Призупинено',
-  COMPLETION_REQUESTED:   'Запит на завершення',
-  COMPLETION_PO_APPROVED: 'Завершення схвалено (PO)',
-  COMPLETED:              'Завершено',
-  ARCHIVED:               'Архівовано',
+  DRAFT:                'Draft',
+  SUBMITTED:            'Submitted',
+  FORMALLY_VERIFIED:    'Formally verified',
+  IN_REVIEW:            'Under review',
+  NEEDS_REVISION:       'Needs revision',
+  APPROVED:             'Approved',
+  REJECTED:             'Rejected',
+  ONBOARDING:           'Onboarding',
+  ACTIVE:               'Active',
+  SUSPENDED:            'Suspended',
+  COMPLETION_REQUESTED:   'Completion requested',
+  COMPLETION_PO_APPROVED: 'Completion approved (PO)',
+  COMPLETED:              'Completed',
+  ARCHIVED:               'Archived',
 }
 
 export function statusLabel(status) {
   return STATUS_LABELS_UK[status] || status
 }
 
-/** Наступні статуси для зміни адміном (точно відповідає ALLOWED на бекенді). */
+/** Next statuses for admin transition (exactly matches ALLOWED on the backend). */
 export function adminAllowedNextStatuses(current) {
   const ALLOWED = {
     DRAFT:                ['SUBMITTED'],

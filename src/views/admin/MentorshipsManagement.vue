@@ -1,7 +1,7 @@
 <template>
   <div class="page">
     <p class="lead">
-      Усі менторства (для адміністраторів). Тут можна закривати активні менторства.
+      All mentorships (for administrators). Active mentorships can be closed here.
     </p>
 
     <div class="toolbar">
@@ -9,25 +9,25 @@
         v-model="search"
         type="search"
         class="search"
-        placeholder="Пошук за ментором, статусом, заявкою…"
-        aria-label="Пошук"
+        placeholder="Search by mentor, status, application…"
+        aria-label="Search"
       >
       <button type="button" class="btn-sm" :disabled="loading" @click="openAssign">
         Assign Mentorship
       </button>
       <button type="button" class="btn-refresh" :disabled="loading" @click="load">
-        Оновити
+        Refresh
       </button>
     </div>
 
     <div v-if="loading" class="state">
-      Завантаження…
+      Loading…
     </div>
     <div v-else-if="error" class="state state--error">
       {{ error }}
     </div>
     <div v-else-if="filtered.length === 0" class="state">
-      Нічого не знайдено.
+      Nothing found.
     </div>
 
     <div v-else class="table-wrap">
@@ -82,7 +82,7 @@
                   :disabled="row.status !== MentorshipStatus.ACTIVE || !nextStatus[row.id] || savingRowId === row.id"
                   @click="close(row)"
                 >
-                  {{ savingRowId === row.id ? 'Збереження…' : 'Change Status' }}
+                  {{ savingRowId === row.id ? 'Saving…' : 'Change Status' }}
                 </button>
                 <button
                   v-if="isSuperAdminUser"
@@ -243,7 +243,7 @@ async function load() {
       if (m?.id && nextStatus[m.id] === undefined) nextStatus[m.id] = ''
     }
   } catch (e) {
-    error.value = e.response?.data?.message || 'Не вдалося завантажити менторства'
+    error.value = e.response?.data?.message || 'Failed to load mentorships'
   } finally {
     loading.value = false
   }
@@ -271,12 +271,12 @@ async function close(row) {
   savingRowId.value = row.id
   try {
     await mentorshipStore.closeMentorship(row.id, status)
-    showToast('Статус оновлено', 'success')
+    showToast('Status updated', 'success')
     nextStatus[row.id] = ''
   } catch (e) {
     const msg = e.response?.data?.message
       || (typeof e.response?.data === 'string' ? e.response.data : null)
-      || 'Помилка оновлення статусу'
+      || 'Failed to update status'
     showToast(msg, 'error')
   } finally {
     savingRowId.value = null
@@ -327,10 +327,10 @@ async function submitAssign() {
       mentorUserId: Number(assign.mentorUserId),
     })
     assign.show = false
-    showToast('Менторство призначено', 'success')
+    showToast('Mentorship assigned', 'success')
     await load()
   } catch (e) {
-    assign.error = mentorshipAssignErrorMessage(e, 'Не вдалося призначити менторство')
+    assign.error = mentorshipAssignErrorMessage(e, 'Failed to assign mentorship')
   } finally {
     assign.saving = false
   }

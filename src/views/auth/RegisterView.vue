@@ -50,7 +50,7 @@
                     </label>
                 </div>
 
-                <div class="field">
+                <div v-if="SITE_KEY" class="field">
                     <div id="recaptcha-register" class="g-recaptcha"></div>
                     <span v-if="captchaError" class="error-text">
                         {{ t('auth.captchaErrorReg') }}
@@ -109,6 +109,8 @@ function checkEmailDomain() {
 }
 
 onMounted(() => {
+    if (!SITE_KEY) return
+
     captchaInterval = setInterval(() => {
         if (window.grecaptcha?.render) {
             clearInterval(captchaInterval)
@@ -146,7 +148,7 @@ async function handleRegister() {
     checkEmailDomain()
     if (emailDomainInvalid.value) return
 
-    if (!form.captchaToken) {
+    if (SITE_KEY && !form.captchaToken) {
         captchaError.value = true
         return
     }

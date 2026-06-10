@@ -1,24 +1,24 @@
 <template>
   <div class="commission-page">
     <header class="commission-page__head">
-      <router-link class="back" :to="{ name: 'commission-hub' }">← Програми</router-link>
+      <router-link class="back" :to="{ name: 'commission-hub' }">← Programs</router-link>
       <h1>{{ title }}</h1>
       <p v-if="callSummary" class="commission-page__lead">
         {{ callSummary }}
         <span v-if="program"> · {{ program.name }}</span>
       </p>
       <p v-else-if="!loading" class="commission-page__lead commission-page__lead--warn">
-        Не знайдено відкритого виклику для цієї програми. Створіть виклик у адмінці або перевірте каталог.
+        No open call found for this program. Create a call in the admin panel or check the catalog.
       </p>
     </header>
 
-    <div v-if="loading" class="state">Завантаження…</div>
+    <div v-if="loading" class="state">Loading…</div>
     <div v-else-if="error" class="state state--err">{{ error }}</div>
-    <div v-else-if="!trackedCalls.length" class="state">Немає даних для відображення.</div>
+    <div v-else-if="!trackedCalls.length" class="state">No data to display.</div>
 
     <section v-else class="panel panel--list">
-      <h2 class="panel__title">Команди та заявки</h2>
-      <p v-if="!rows.length" class="hint">Поки немає заявок по цьому виклику.</p>
+      <h2 class="panel__title">Teams and applications</h2>
+      <p v-if="!rows.length" class="hint">No applications for this call yet.</p>
 
       <article v-for="row in rows" :key="row.applicationId" class="team-block">
         <div class="team-block__head">
@@ -35,13 +35,13 @@
               query: { program: programLetter },
             }"
           >
-            Оцінити
+            Evaluate
           </router-link>
         </div>
         <p class="hint">
-          Заявка №{{ row.applicationId }} · {{ statusLabel(row.status) }}
+          Application #{{ row.applicationId }} · {{ statusLabel(row.status) }}
           <span v-if="row.callTitle"> · {{ row.callTitle }}</span>
-          <span v-else-if="row.callId"> · виклик №{{ row.callId }}</span>
+          <span v-else-if="row.callId"> · call #{{ row.callId }}</span>
           <span v-if="row.programName"> · {{ row.programName }}</span>
         </p>
         <div class="members">
@@ -82,7 +82,7 @@ const applications = ref([])
 const programLetter = computed(() => String(route.params.programType || 'a').toLowerCase())
 
 const title = computed(() =>
-  programLetter.value === 'b' ? 'Програма B — учасники' : 'Програма A — учасники',
+  programLetter.value === 'b' ? 'Program B — participants' : 'Program A — participants',
 )
 
 const backToParticipants = computed(() => route.fullPath)
@@ -92,17 +92,17 @@ const callSummary = computed(() => {
   if (!list.length) return ''
   if (list.length === 1) {
     const c = list[0]
-    return `Виклик: ${c.title || `№${c.id}`}`
+    return `Call: ${c.title || `#${c.id}`}`
   }
   const titles = list.map((c) => c.title || `№${c.id}`).join(', ')
-  return `Виклики (${list.length}): ${titles}`
+  return `Calls (${list.length}): ${titles}`
 })
 
 function normalizeProgramType(letter) {
   return letter === 'b' ? 'B' : 'A'
 }
 
-/** Усі виклики всіх схвалених програм типу A/B (не лише перший виклик першої програми). */
+/** All calls for all approved programs of type A/B (not just the first call of the first program). */
 async function resolveAllCallsForProgram(letter) {
   const type = normalizeProgramType(letter)
   const { data: programs } = await programsApi.getAllByType(type)
@@ -131,13 +131,13 @@ const rows = computed(() => {
       for (const m of app.teamMembers) {
         members.push({
           userId: m.userId,
-          label: m.email || `Учасник #${m.userId}`,
+          label: m.email || `Participant #${m.userId}`,
         })
       }
     } else if (applicantId) {
       members.push({
         userId: applicantId,
-        label: app.applicantEmail || `Учасник #${applicantId}`,
+        label: app.applicantEmail || `Participant #${applicantId}`,
       })
     }
 
@@ -147,7 +147,7 @@ const rows = computed(() => {
       status: app.status,
       programName: app.programName,
       callTitle: app.callTitle,
-      title: app.teamName || `Заявка №${app.id}`,
+      title: app.teamName || `Application #${app.id}`,
       members,
     })
   }
@@ -185,7 +185,7 @@ async function load() {
           applicantId: a.applicantId,
           applicantEmail: a.applicantEmail?.trim(),
           callId: c.id,
-          callTitle: c.title || `Виклик №${c.id}`,
+          callTitle: c.title || `Call #${c.id}`,
           programName: a.programName || prog?.name,
         })
       }
@@ -193,7 +193,7 @@ async function load() {
     applications.value = merged
   } catch (e) {
     error.value =
-      e?.response?.data?.error || e?.response?.data?.message || 'Не вдалося завантажити список учасників.'
+      e?.response?.data?.error || e?.response?.data?.message || 'Failed to load the participants list.'
   } finally {
     loading.value = false
   }

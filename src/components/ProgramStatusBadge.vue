@@ -14,12 +14,12 @@ const props = defineProps({
 })
 
 const STATUS_LABELS = Object.freeze({
-  DRAFT: 'Чернетка',
-  SUBMITTED: 'Надіслано',
-  IN_REVIEW: 'На розгляді',
-  NEEDS_REVISION: 'Потрібне доопрацювання',
-  APPROVED: 'Схвалено',
-  REJECTED: 'Відхилено',
+  DRAFT: 'Draft',
+  SUBMITTED: 'Submitted',
+  IN_REVIEW: 'In review',
+  NEEDS_REVISION: 'Needs revision',
+  APPROVED: 'Approved',
+  REJECTED: 'Rejected',
 })
 
 const labelText = computed(() => STATUS_LABELS[props.status] || props.status || '—')

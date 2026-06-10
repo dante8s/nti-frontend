@@ -31,7 +31,7 @@
               to="/app/teams"
               @click="close"
             >
-              Моя команда
+              My team
             </router-link>
             <button
               type="button"
@@ -52,14 +52,14 @@ import { computed, watch } from 'vue'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
-  title: { type: String, default: 'Повідомлення' },
+  title: { type: String, default: 'Message' },
   message: { type: String, default: '' },
   variant: {
     type: String,
     default: 'info',
     validator: (v) => ['info', 'warning', 'error'].includes(v),
   },
-  confirmLabel: { type: String, default: 'Зрозуміло' },
+  confirmLabel: { type: String, default: 'Got it' },
   showTeamsLink: { type: Boolean, default: false },
 })
 

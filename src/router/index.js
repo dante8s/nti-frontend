@@ -115,25 +115,25 @@ const router = createRouter({
         {
           path: 'dashboard',
           name: 'dashboard',
-          meta: { title: 'Дашборд' },
+          meta: { title: 'Dashboard' },
           component: () => import('@/views/DashboardView.vue'),
         },
         {
           path: 'my-applications',
           name: 'my-applications',
-          meta: { title: 'Мої заявки', requiresAnyRole: ['STUDENT', 'SUPER_ADMIN'] },
+          meta: { title: 'My applications', requiresAnyRole: ['STUDENT', 'SUPER_ADMIN'] },
           component: () => import('@/views/student/MyApplications.vue'),
         },
         {
           path: 'my-profile',
           name: 'my-profile',
-          meta: { title: 'Мій профіль', requiresAnyRole: ['STUDENT', 'SUPER_ADMIN'] },
+          meta: { title: 'My profile', requiresAnyRole: ['STUDENT', 'SUPER_ADMIN'] },
           component: () => import('@/views/student/StudentProfilePage.vue'),
         },
         {
           path: 'teams',
           name: 'teams',
-          meta: { title: 'Моя команда', requiresAnyRole: ['STUDENT', 'SUPER_ADMIN'] },
+          meta: { title: 'My team', requiresAnyRole: ['STUDENT', 'SUPER_ADMIN'] },
           component: () => import('@/views/student/TeamsPage.vue'),
         },
         {
@@ -148,43 +148,43 @@ const router = createRouter({
         {
           path: 'apply/a/:callId',
           name: 'apply-a',
-          meta: { title: 'Заявка — програма A', requiresAnyRole: ['STUDENT', 'SUPER_ADMIN'] },
+          meta: { title: 'Application — Program A', requiresAnyRole: ['STUDENT', 'SUPER_ADMIN'] },
           component: () => import('@/views/student/ApplicationFormA.vue'),
         },
         {
           path: 'apply/b/:callId',
           name: 'apply-b',
-          meta: { title: 'Заявка — програма B', requiresAnyRole: ['STUDENT', 'SUPER_ADMIN'] },
+          meta: { title: 'Application — Program B', requiresAnyRole: ['STUDENT', 'SUPER_ADMIN'] },
           component: () => import('@/views/student/ApplicationFormB.vue'),
         },
         {
           path: 'admin/users',
           name: 'admin-users',
-          meta: { title: 'Користувачі', requiresSuperAdmin: true },
+          meta: { title: 'Users', requiresSuperAdmin: true },
           component: () => import('@/views/admin/AdminUsers.vue'),
         },
         {
           path: 'admin/applications',
           name: 'admin-applications',
-          meta: { title: 'Заявки', requiresAdmin: true },
+          meta: { title: 'Applications', requiresAdmin: true },
           component: () => import('@/views/admin/AdminApplications.vue'),
         },
         {
           path: 'admin/completion-requests',
           name: 'admin-completion-requests',
-          meta: { title: 'Запити на завершення', requiresAdmin: true },
+          meta: { title: 'Completion requests', requiresAdmin: true },
           component: () => import('@/views/admin/CompletionRequests.vue'),
         },
         {
           path: 'admin/project-reports',
           name: 'admin-project-reports',
-          meta: { title: 'Звіти проектів', requiresAdmin: true },
+          meta: { title: 'Project reports', requiresAdmin: true },
           component: () => import('@/views/admin/ProjectReports.vue'),
         },
         {
           path: 'product-owner/completion-requests',
           name: 'po-completion-requests',
-          meta: { title: 'Підтвердження завершення' },
+          meta: { title: 'Completion confirmation' },
           component: () => import('@/views/product-owner/ProductOwnerCompletionRequests.vue'),
         },
         {
@@ -196,7 +196,7 @@ const router = createRouter({
         {
           path: 'admin/programs',
           name: 'admin-programs',
-          meta: { title: 'Програми та виклики', requiresAdmin: true },
+          meta: { title: 'Programs & calls', requiresAdmin: true },
           component: () => import('@/views/admin/AdminPrograms.vue'),
         },
         {
@@ -208,13 +208,13 @@ const router = createRouter({
         {
           path: 'admin/program-review-queue',
           name: 'admin-program-review-queue',
-          meta: { title: 'Черга Program B', requiresAdmin: true },
+          meta: { title: 'Program B review queue', requiresAdmin: true },
           component: () => import('@/views/admin/ProgramReviewQueue.vue'),
         },
         {
           path: 'admin/organizations',
           name: 'admin-organizations',
-          meta: { title: 'Організації', requiresAdmin: true },
+          meta: { title: 'Organizations', requiresAdmin: true },
           component: () => import('@/views/admin/Organizations.vue'),
         },
         {
@@ -232,19 +232,19 @@ const router = createRouter({
         {
           path: 'admin/audit',
           name: 'admin-audit',
-          meta: { title: 'Журнал аудиту', requiresSuperAdmin: true },
+          meta: { title: 'Audit log', requiresSuperAdmin: true },
           component: () => import('@/views/admin/AdminAuditLog.vue'),
         },
         {
           path: 'admin/email-templates',
           name: 'admin-email-templates',
-          meta: { title: 'Шаблони листів', requiresAdmin: true },
+          meta: { title: 'Email templates', requiresAdmin: true },
           component: () => import('@/views/admin/AdminEmailTemplates.vue'),
         },
         {
           path: 'admin/bulk-message',
           name: 'admin-bulk-message',
-          meta: { title: 'Масова розсилка', requiresAdmin: true },
+          meta: { title: 'Bulk message', requiresAdmin: true },
           component: () => import('@/views/admin/BulkMessage.vue'),
         },
         {
@@ -274,25 +274,25 @@ const router = createRouter({
         {
           path: 'privacy',
           name: 'privacy-settings',
-          meta: { title: 'Налаштування приватності' },
+          meta: { title: 'Privacy settings' },
           component: () => import('@/views/PrivacySettings.vue'),
         },
         {
           path: 'org/register',
           name: 'org-register',
-          meta: { title: 'Реєстрація організації', requiresRole: 'FIRM' },
+          meta: { title: 'Organization registration', requiresRole: 'FIRM' },
           component: () => import('@/views/organization/OrgRegisterView.vue'),
         },
         {
           path: 'org/profile',
           name: 'org-profile',
-          meta: { title: 'Профіль організації', requiresAnyRole: ['FIRM', 'FIRM_USER'] },
+          meta: { title: 'Organization profile', requiresAnyRole: ['FIRM', 'FIRM_USER'] },
           component: () => import('@/views/organization/OrgProfileView.vue'),
         },
         {
           path: 'programs/my',
           name: 'my-programs',
-          meta: { title: 'Мої програми B', requiresRole: 'FIRM' },
+          meta: { title: 'My Program B proposals', requiresRole: 'FIRM' },
           component: () => import('@/views/programs/MyPrograms.vue'),
         },
         {
@@ -305,7 +305,7 @@ const router = createRouter({
           path: 'commission',
           name: 'commission-hub',
           meta: {
-            title: 'Комісія',
+            title: 'Commission',
             requiresAnyRole: ['EVALUATOR', 'SUPER_EVALUATOR', 'ADMIN', 'SUPER_ADMIN'],
           },
           component: () => import('@/views/commission/CommissionProgramHub.vue'),
@@ -314,7 +314,7 @@ const router = createRouter({
           path: 'commission/:programType',
           name: 'commission-participants',
           meta: {
-            title: 'Комісія — учасники',
+            title: 'Commission — participants',
             requiresAnyRole: ['EVALUATOR', 'SUPER_EVALUATOR', 'ADMIN', 'SUPER_ADMIN'],
           },
           component: () => import('@/views/commission/CommissionParticipantsView.vue'),
@@ -323,7 +323,7 @@ const router = createRouter({
           path: 'commission/:programType/call/:callId/application/:applicationId',
           name: 'commission-evaluate',
           meta: {
-            title: 'Оцінювання заявки',
+            title: 'Application evaluation',
             requiresAnyRole: ['EVALUATOR', 'SUPER_EVALUATOR', 'ADMIN', 'SUPER_ADMIN'],
           },
           component: () => import('@/views/commission/CommissionApplicationEvaluateView.vue'),
@@ -332,7 +332,7 @@ const router = createRouter({
           path: 'members/:userId',
           name: 'member-profile',
           meta: {
-            title: 'Профіль учасника',
+            title: 'Member profile',
             requiresAnyRole: [
               'STUDENT',
               'MENTOR',
@@ -348,7 +348,7 @@ const router = createRouter({
           path: 'reporting',
           component: () => import('@/views/reporting/ReportingLayout.vue'),
           meta: {
-            title: 'Звітність',
+            title: 'Reporting',
             requiresAnyRole: ['ADMIN', 'SUPER_ADMIN'],
           },
           children: [
@@ -360,19 +360,19 @@ const router = createRouter({
             {
               path: 'admin',
               name: 'reporting-admin',
-              meta: { title: 'Звітність — зведення та експорт' },
+              meta: { title: 'Reporting — summary and export' },
               component: () => import('@/views/reporting/ReportingAdminView.vue'),
             },
             {
               path: 'student',
               name: 'reporting-student',
-              meta: { title: 'Панель студента' },
+              meta: { title: 'Student dashboard' },
               component: () => import('@/views/reporting/ReportingStudentPanelView.vue'),
             },
             {
               path: 'firm',
               name: 'reporting-firm',
-              meta: { title: 'Панель компанії' },
+              meta: { title: 'Company dashboard' },
               component: () => import('@/views/reporting/ReportingFirmPanelView.vue'),
             },
           ],

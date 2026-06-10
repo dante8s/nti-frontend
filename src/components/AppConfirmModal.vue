@@ -69,7 +69,7 @@ import { computed, watch } from 'vue'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
-  title: { type: String, default: 'Підтвердити дію' },
+  title: { type: String, default: 'Confirm action' },
   message: { type: String, default: '' },
   highlight: { type: String, default: '' },
   profileLink: { type: [Object, String], default: null },
@@ -78,9 +78,9 @@ const props = defineProps({
     default: 'danger',
     validator: (v) => ['danger', 'warning'].includes(v),
   },
-  confirmLabel: { type: String, default: 'Підтвердити' },
-  cancelLabel: { type: String, default: 'Закрити' },
-  loadingLabel: { type: String, default: 'Зачекайте…' },
+  confirmLabel: { type: String, default: 'Confirm' },
+  cancelLabel: { type: String, default: 'Close' },
+  loadingLabel: { type: String, default: 'Please wait…' },
   loading: { type: Boolean, default: false },
 })
 

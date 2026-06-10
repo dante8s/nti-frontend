@@ -27,23 +27,23 @@ const busy = ref(false)
 const formats = ['csv', 'xlsx', 'pdf', 'docx']
 
 const statLabels = {
-  openCalls: 'Відкриті виклики',
-  totalApplications: 'Усього заявок',
-  applicationsDraft: 'Чернетки',
-  applicationsSubmitted: 'Подано',
-  applicationsInReview: 'На оцінюванні',
-  applicationsNeedsRevision: 'Потрібні правки',
-  applicationsApproved: 'Схвалені заявки',
-  applicationsRejected: 'Відхилені',
-  callsWithWinningTeam: 'Виклики з обраною командою',
-  activePartnerOrganizations: 'Активні партнери',
-  totalOrganizations: 'Усього організацій',
-  totalStudentProfiles: 'Студентські профілі',
-  profileWithCv: 'Профілі з CV',
-  completeProfiles: 'Завершені профілі',
-  averageGrade: 'Середній бал профілів',
-  totalTeams: 'Усього команд',
-  eligibleTeams: 'Команди ≥ 3 учасники',
+  openCalls: 'Open calls',
+  totalApplications: 'Total applications',
+  applicationsDraft: 'Drafts',
+  applicationsSubmitted: 'Submitted',
+  applicationsInReview: 'In review',
+  applicationsNeedsRevision: 'Needs revision',
+  applicationsApproved: 'Approved applications',
+  applicationsRejected: 'Rejected',
+  callsWithWinningTeam: 'Calls with winning team',
+  activePartnerOrganizations: 'Active partners',
+  totalOrganizations: 'Total organizations',
+  totalStudentProfiles: 'Student profiles',
+  profileWithCv: 'Profiles with CV',
+  completeProfiles: 'Complete profiles',
+  averageGrade: 'Average profile score',
+  totalTeams: 'Total teams',
+  eligibleTeams: 'Teams with ≥ 3 members',
 }
 
 function buildApplicationExportParams() {
@@ -95,9 +95,9 @@ async function loadAdminStats() {
   try {
     const res = await reportingApi.getStats()
     adminStats.value = res.data
-    message.value = 'Зведення оновлено.'
+    message.value = 'Summary updated.'
   } catch {
-    message.value = 'Не вдалося завантажити зведення.'
+    message.value = 'Failed to load summary.'
   } finally {
     busy.value = false
   }
@@ -109,9 +109,9 @@ async function loadTeams() {
     const res = await reportingApi.getTeams(buildTeamQueryParams())
     teamItems.value = res.data?.items || []
     teamTotal.value = res.data?.total ?? 0
-    message.value = 'Звіт по командах оновлено.'
+    message.value = 'Team report updated.'
   } catch {
-    message.value = 'Не вдалося завантажити команди.'
+    message.value = 'Failed to load teams.'
     teamItems.value = []
     teamTotal.value = 0
   } finally {
@@ -126,9 +126,9 @@ async function exportApplications(format) {
     const res = await reportingApi.exportApplications(params, format)
     const suffix = `${role.value || 'all'}_${program.value || 'all'}_${status.value || 'all'}`
     downloadBlob(res.data, `nti_zvit_zayavky_${suffix}.${format}`)
-    message.value = `Експорт заявок (${format.toUpperCase()}) згенеровано.`
+    message.value = `Applications export (${format.toUpperCase()}) generated.`
   } catch {
-    message.value = `Не вдалося експортувати заявки (${format.toUpperCase()}).`
+    message.value = `Failed to export applications (${format.toUpperCase()}).`
   } finally {
     busy.value = false
   }
@@ -139,9 +139,9 @@ async function exportTeams(format) {
   try {
     const res = await reportingApi.exportTeams(buildTeamExportParams(), format)
     downloadBlob(res.data, `nti_zvit_komandy_${format}.${format}`)
-    message.value = `Експорт команд (${format.toUpperCase()}) згенеровано.`
+    message.value = `Teams export (${format.toUpperCase()}) generated.`
   } catch {
-    message.value = `Не вдалося експортувати команди (${format.toUpperCase()}).`
+    message.value = `Failed to export teams (${format.toUpperCase()}).`
   } finally {
     busy.value = false
   }
@@ -149,16 +149,16 @@ async function exportTeams(format) {
 
 async function exportEvaluationExcel() {
   if (!evalCallId.value) {
-    message.value = 'Вкажіть ID виклику для Excel оцінювання.'
+    message.value = 'Please specify the call ID for the Excel evaluation.'
     return
   }
   busy.value = true
   try {
     const res = await reportingApi.exportEvaluationWorkbook(Number(evalCallId.value))
     downloadBlob(res.data, `evaluation_report_call_${evalCallId.value}.xlsx`)
-    message.value = 'Excel-звіт оцінювання завантажено.'
+    message.value = 'Excel evaluation report downloaded.'
   } catch {
-    message.value = 'Не вдалося згенерувати Excel оцінювання.'
+    message.value = 'Failed to generate Excel evaluation.'
   } finally {
     busy.value = false
   }
@@ -185,21 +185,21 @@ function teamNextPage() {
 
 function statusLabel(s) {
   const map = {
-    DRAFT: 'Чернетка',
-    SUBMITTED: 'Подано',
-    IN_REVIEW: 'На оцінюванні',
-    NEEDS_REVISION: 'Потрібні правки',
-    APPROVED: 'Схвалено',
-    REJECTED: 'Відхилено',
+    DRAFT: 'Draft',
+    SUBMITTED: 'Submitted',
+    IN_REVIEW: 'In review',
+    NEEDS_REVISION: 'Needs revision',
+    APPROVED: 'Approved',
+    REJECTED: 'Rejected',
   }
   return map[s] || s || '—'
 }
 
 const teamPageLabel = computed(() => {
-  if (!teamTotal.value) return '0 записів'
+  if (!teamTotal.value) return '0 records'
   const from = teamPage.value * teamPageSize + 1
   const to = Math.min((teamPage.value + 1) * teamPageSize, teamTotal.value)
-  return `${from}–${to} з ${teamTotal.value}`
+  return `${from}–${to} of ${teamTotal.value}`
 })
 
 onMounted(async () => {
@@ -211,12 +211,12 @@ onMounted(async () => {
 <template>
   <div class="panel">
     <article v-if="adminStats" class="card">
-      <h3>Зведення</h3>
+      <h3>Summary</h3>
       <p class="hint">
-        Огляд конкурсів, заявок і команд. Детальні реєстри —
-        <RouterLink class="inline-link" to="/app/admin/applications">Заявки</RouterLink>,
-        <RouterLink class="inline-link" to="/app/admin/organizations">Організації</RouterLink>,
-        <RouterLink class="inline-link" to="/app/admin/users">Користувачі</RouterLink>.
+        Overview of competitions, applications, and teams. Detailed lists —
+        <RouterLink class="inline-link" to="/app/admin/applications">Applications</RouterLink>,
+        <RouterLink class="inline-link" to="/app/admin/organizations">Organizations</RouterLink>,
+        <RouterLink class="inline-link" to="/app/admin/users">Users</RouterLink>.
       </p>
       <div class="stats">
         <div v-for="(value, key) in adminStats" :key="key" class="stat">
@@ -225,60 +225,60 @@ onMounted(async () => {
         </div>
       </div>
       <div class="row">
-        <button type="button" :disabled="busy" @click="loadAdminStats">Оновити зведення</button>
+        <button type="button" :disabled="busy" @click="loadAdminStats">Refresh summary</button>
       </div>
     </article>
 
     <article class="card">
-      <h3>Команди та виклики</h3>
+      <h3>Teams and calls</h3>
       <p class="hint">
-        Зв’язок команди з call через заявку лідера (будь-який статус). «Без call» — лідер не подавав заявку.
+        Team-to-call link via the leader’s application (any status). ‘No call’ — the leader has not submitted an application.
       </p>
       <div class="grid">
         <div>
-          <label class="label">ID виклику</label>
-          <input v-model="teamCallId" type="number" min="1" placeholder="Усі" />
+          <label class="label">Call ID</label>
+          <input v-model="teamCallId" type="number" min="1" placeholder="All" />
         </div>
         <div>
-          <label class="label">Програма</label>
+          <label class="label">Program</label>
           <select v-model="teamProgram">
-            <option value="">Усі</option>
-            <option value="A">Програма A</option>
-            <option value="B">Програма B</option>
+            <option value="">All</option>
+            <option value="A">Program A</option>
+            <option value="B">Program B</option>
           </select>
         </div>
         <div>
-          <label class="label">Статус заявки</label>
+          <label class="label">Application status</label>
           <select v-model="teamStatus">
-            <option value="">Усі</option>
-            <option value="DRAFT">Чернетка</option>
-            <option value="SUBMITTED">Подано</option>
-            <option value="IN_REVIEW">На оцінюванні</option>
-            <option value="NEEDS_REVISION">Потрібні правки</option>
-            <option value="APPROVED">Схвалено</option>
-            <option value="REJECTED">Відхилено</option>
+            <option value="">All</option>
+            <option value="DRAFT">Draft</option>
+            <option value="SUBMITTED">Submitted</option>
+            <option value="IN_REVIEW">In review</option>
+            <option value="NEEDS_REVISION">Needs revision</option>
+            <option value="APPROVED">Approved</option>
+            <option value="REJECTED">Rejected</option>
           </select>
         </div>
         <div>
-          <label class="label">Прив’язка до call</label>
+          <label class="label">Call link</label>
           <select v-model="teamLinked">
-            <option value="">Усі</option>
-            <option value="yes">Є заявка (на call)</option>
-            <option value="no">Без call</option>
+            <option value="">All</option>
+            <option value="yes">Has application (on call)</option>
+            <option value="no">No call</option>
           </select>
         </div>
         <div>
-          <label class="label">Мін. учасників</label>
-          <input v-model="teamMinMembers" type="number" min="1" max="10" placeholder="Напр. 3" />
+          <label class="label">Min. members</label>
+          <input v-model="teamMinMembers" type="number" min="1" max="10" placeholder="E.g. 3" />
         </div>
         <label class="check-inline">
           <input v-model="teamWinnerOnly" type="checkbox" />
-          <span>Лише переможці (APPROVED)</span>
+          <span>Winners only (APPROVED)</span>
         </label>
       </div>
 
       <div class="row">
-        <button type="button" :disabled="busy" @click="onTeamFilterSubmit">Застосувати фільтри</button>
+        <button type="button" :disabled="busy" @click="onTeamFilterSubmit">Apply filters</button>
         <button
           v-for="fmt in formats"
           :key="'team-' + fmt"
@@ -287,20 +287,20 @@ onMounted(async () => {
           :disabled="busy"
           @click="exportTeams(fmt)"
         >
-          Експорт команд {{ fmt.toUpperCase() }}
+          Export teams {{ fmt.toUpperCase() }}
         </button>
       </div>
 
-      <div v-if="!teamItems.length" class="hint table-empty">За фільтром команд не знайдено.</div>
+      <div v-if="!teamItems.length" class="hint table-empty">No teams found for the selected filter.</div>
       <div v-else class="table-wrap">
         <table class="data-table">
           <thead>
             <tr>
-              <th>Команда</th>
-              <th>Лідер</th>
-              <th>Учасники</th>
+              <th>Team</th>
+              <th>Leader</th>
+              <th>Members</th>
               <th>Call</th>
-              <th>Статус</th>
+              <th>Status</th>
               <th>Milestones</th>
             </tr>
           </thead>
@@ -323,19 +323,19 @@ onMounted(async () => {
                     +{{ row.additionalCallsCount }} call
                   </span>
                 </template>
-                <span v-else class="muted-cell">Без call</span>
+                <span v-else class="muted-cell">No call</span>
               </td>
               <td>
                 <template v-if="row.applicationStatus">
                   {{ statusLabel(row.applicationStatus) }}
-                  <span v-if="row.isWinner" class="badge badge--win">Переможець</span>
+                  <span v-if="row.isWinner" class="badge badge--win">Winner</span>
                 </template>
                 <span v-else>—</span>
               </td>
               <td class="milestones-cell">
                 <span>⏳ {{ row.pendingApprovalMilestones }}</span>
                 <span>⚠ {{ row.overdueOrAttentionMilestones }}</span>
-                <span class="sub">всього {{ row.totalMilestones }}</span>
+                <span class="sub">total {{ row.totalMilestones }}</span>
               </td>
             </tr>
           </tbody>
@@ -343,52 +343,52 @@ onMounted(async () => {
       </div>
 
       <div v-if="teamTotal > teamPageSize" class="pager">
-        <button type="button" :disabled="busy || teamPage === 0" @click="teamPrevPage">← Назад</button>
+        <button type="button" :disabled="busy || teamPage === 0" @click="teamPrevPage">← Back</button>
         <span class="hint">{{ teamPageLabel }}</span>
         <button
           type="button"
           :disabled="busy || (teamPage + 1) * teamPageSize >= teamTotal"
           @click="teamNextPage"
         >
-          Далі →
+          Next →
         </button>
       </div>
     </article>
 
     <article class="card">
-      <h3>Експорт заявок</h3>
+      <h3>Application export</h3>
       <div class="grid">
         <div>
-          <label class="label">ID виклику</label>
-          <input v-model="callId" type="number" min="1" placeholder="Напр. 1" />
+          <label class="label">Call ID</label>
+          <input v-model="callId" type="number" min="1" placeholder="E.g. 1" />
         </div>
         <div>
-          <label class="label">Програма</label>
+          <label class="label">Program</label>
           <select v-model="program">
-            <option value="">Усі</option>
-            <option value="A">Програма A</option>
-            <option value="B">Програма B</option>
+            <option value="">All</option>
+            <option value="A">Program A</option>
+            <option value="B">Program B</option>
           </select>
         </div>
         <div>
-          <label class="label">Статус заявки</label>
+          <label class="label">Application status</label>
           <select v-model="status">
-            <option value="">Усі</option>
-            <option value="DRAFT">Чернетка</option>
-            <option value="SUBMITTED">Подано</option>
-            <option value="IN_REVIEW">На оцінюванні</option>
-            <option value="NEEDS_REVISION">Потрібні правки</option>
-            <option value="APPROVED">Схвалено</option>
-            <option value="REJECTED">Відхилено</option>
+            <option value="">All</option>
+            <option value="DRAFT">Draft</option>
+            <option value="SUBMITTED">Submitted</option>
+            <option value="IN_REVIEW">In review</option>
+            <option value="NEEDS_REVISION">Needs revision</option>
+            <option value="APPROVED">Approved</option>
+            <option value="REJECTED">Rejected</option>
           </select>
         </div>
         <div>
-          <label class="label">Роль заявника</label>
+          <label class="label">Applicant role</label>
           <select v-model="role">
-            <option value="">Усі</option>
-            <option value="student">Студенти</option>
-            <option value="company">Компанії</option>
-            <option value="evaluator">Комісія</option>
+            <option value="">All</option>
+            <option value="student">Students</option>
+            <option value="company">Companies</option>
+            <option value="evaluator">Commission</option>
           </select>
         </div>
       </div>
@@ -400,24 +400,24 @@ onMounted(async () => {
           :disabled="busy"
           @click="exportApplications(fmt)"
         >
-          Експорт заявок {{ fmt.toUpperCase() }}
+          Export applications {{ fmt.toUpperCase() }}
         </button>
       </div>
     </article>
 
     <article class="card">
-      <h3>Звіт оцінювання (Excel по виклику)</h3>
-      <p class="hint">Критерії та середні бали по виклику.</p>
+      <h3>Evaluation report (Excel by call)</h3>
+      <p class="hint">Criteria and average scores by call.</p>
       <div class="row tight">
         <input
           v-model="evalCallId"
           type="number"
           min="1"
           class="narrow"
-          placeholder="ID виклику"
+          placeholder="Call ID"
         />
         <button type="button" :disabled="busy" @click="exportEvaluationExcel">
-          Завантажити evaluation_report.xlsx
+          Download evaluation_report.xlsx
         </button>
       </div>
     </article>

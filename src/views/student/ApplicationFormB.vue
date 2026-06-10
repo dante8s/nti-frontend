@@ -1,82 +1,82 @@
 <template>
     <div class="page">
         <div class="back">
-            <router-link to="/programs/b">← Назад до програми B</router-link>
+            <router-link to="/programs/b">← Back to Program B</router-link>
         </div>
 
         <div class="form-box">
-            <h1>Заявка — Програма B</h1>
-            <p class="subtitle">Živá prax — реальні проекти від фірм</p>
+            <h1>Application — Program B</h1>
+            <p class="subtitle">Živá prax — real projects from companies</p>
 
             <div v-if="callInfo" class="call-info green">
-                <span class="call-label">Завдання:</span>
+                <span class="call-label">Task:</span>
                 <strong>{{ callInfo.title }}</strong>
-                <span class="deadline">Дедлайн: {{ formatDate(callInfo.deadline) }}</span>
+                <span class="deadline">Deadline: {{ formatDate(callInfo.deadline) }}</span>
             </div>
 
             <div v-if="isDeadlinePassed" class="deadline-banner">
-                Термін подачі заявок для цього виклику закінчився
+                The application deadline for this call has passed
             </div>
 
-            <div v-if="initialLoading" class="loading">Завантаження...</div>
+            <div v-if="initialLoading" class="loading">Loading...</div>
 
             <template v-else-if="!isDeadlinePassed">
-                <!-- Крок 1 — форма -->
+                <!-- Step 1 — form -->
                 <div v-if="!application">
                     <div v-if="error" class="error">{{ error }}</div>
 
                     <form @submit.prevent="saveForm">
-                        <div class="section-title">Команда</div>
+                        <div class="section-title">Team</div>
 
                         <div class="field">
-                            <label>Назва команди *</label>
-                            <input v-model="form.teamName" type="text" placeholder="Назва вашої команди" required />
+                            <label>Team name *</label>
+                            <input v-model="form.teamName" type="text" placeholder="Your team name" required />
                         </div>
                         <div class="field">
-                            <label>Склад команди *</label>
+                            <label>Team composition *</label>
                             <textarea v-model="form.teamDescription" rows="3"
-                                placeholder="Перерахуйте учасників і їх ролі..." required />
+                                placeholder="List the members and their roles..." required />
                         </div>
                         <div class="field">
-                            <label>Технічні навички команди *</label>
+                            <label>Team technical skills *</label>
                             <input v-model="form.skills" type="text" placeholder="Java, Vue.js, Docker, PostgreSQL..."
                                 required />
                         </div>
 
-                        <div class="section-title" style="margin-top:1.5rem">Пропозиція рішення</div>
+                        <div class="section-title" style="margin-top:1.5rem">Solution proposal</div>
 
                         <div class="field">
-                            <label>Як ви вирішите завдання? *</label>
-                            <textarea v-model="form.solution" rows="4" placeholder="Опишіть ваш підхід..." required />
+                            <label>How will you solve the task? *</label>
+                            <textarea v-model="form.solution" rows="4" placeholder="Describe your approach..." required />
                         </div>
                         <div class="field">
-                            <label>Очікувані результати *</label>
+                            <label>Expected results *</label>
                             <textarea v-model="form.expectedResults" rows="3"
-                                placeholder="Що буде результатом вашої роботи?" required />
+                                placeholder="What will be the outcome of your work?" required />
                         </div>
                         <div class="field">
-                            <label>Мотивація команди *</label>
-                            <textarea v-model="form.motivation" rows="3" placeholder="Чому ваша команда підходить?"
+                            <label>Team motivation *</label>
+                            <textarea v-model="form.motivation" rows="3" placeholder="Why is your team the right fit?"
                                 required />
                         </div>
 
                         <button type="submit" :disabled="loading" class="btn-primary green">
-                            {{ loading ? 'Збереження...' : 'Зберегти і перейти до документів' }}
+                            {{ loading ? 'Saving...' : 'Save and proceed to documents' }}
                         </button>
                     </form>
                 </div>
 
-                <!-- Крок 2 — документи -->
+                <!-- Step 2 — documents -->
                 <div v-else>
                     <div class="step-header">
-                        <div class="step-done">✓ Інформація збережена</div>
+                        <div class="step-done">✓ Information saved</div>
                         <div v-if="savedFormData" class="saved-summary">
                             <strong>{{ savedFormData.teamName }}</strong>
                             <span class="muted"> · {{ savedFormData.skills }}</span>
                         </div>
                         <button v-if="application.status === 'DRAFT' || application.status === 'NEEDS_REVISION'"
                             type="button" class="btn-back-form" @click="application = null">
-                            Редагувати дані ↩
+                            Edit data ↩
                         </button>
                     </div>
 
@@ -85,14 +85,14 @@
 
                     <div class="submit-section">
                         <div v-if="!canSubmit" class="submit-hint">
-                            Завантажте всі 4 обов'язкові документи
+                            Upload all 4 required documents
                         </div>
                         <div class="submit-actions">
                             <button class="btn-draft" @click="$router.push('/app/my-applications')">
-                                Зберегти як чернетку
+                                Save as draft
                             </button>
                             <button class="btn-submit" :disabled="!canSubmit || submitting" @click="submitApplication">
-                                {{ submitting ? 'Відправка...' : 'Відправити заявку' }}
+                                {{ submitting ? 'Submitting...' : 'Submit application' }}
                             </button>
                         </div>
                     </div>
@@ -100,9 +100,9 @@
                     <div v-if="submitError" class="error">{{ submitError }}</div>
 
                     <div v-if="submitted" class="success">
-                        <h3>Заявку відправлено!</h3>
-                        <p>Відстежуйте статус у кабінеті.</p>
-                        <router-link to="/app/my-applications">Мої заявки</router-link>
+                        <h3>Application submitted!</h3>
+                        <p>Track the status in your dashboard.</p>
+                        <router-link to="/app/my-applications">My applications</router-link>
                     </div>
                 </div>
             </template>
@@ -168,12 +168,12 @@ onMounted(async () => {
             const eligibility = await getCallApplicationEligibility()
             if (!eligibility?.teamLeader) {
                 error.value =
-                    'Подавати заявку на виклик може лише лідер команди. Зверніться до лідера вашої команди.'
+                    'Only the team leader can submit an application for a call. Contact your team leader.'
                 return
             }
             if (!eligibility?.teamFull) {
                 error.value =
-                    'Команда ще не укомплектована. Для подачі заявки потрібно максимально заповнити команду (3 учасники).'
+                    'The team is not yet complete. To submit an application, the team must be at full capacity (3 members).'
                 return
             }
         }
@@ -241,7 +241,7 @@ async function saveForm() {
 
         await checkReadyToSubmit()
     } catch (e) {
-        error.value = apiErrorMessage(e, 'Помилка при збереженні')
+        error.value = apiErrorMessage(e, 'Save error')
     } finally {
         loading.value = false
     }
@@ -264,14 +264,14 @@ async function submitApplication() {
         await applicationsApi.submit(application.value.id)
         submitted.value = true
     } catch (e) {
-        submitError.value = apiErrorMessage(e, 'Помилка при відправці')
+        submitError.value = apiErrorMessage(e, 'Submission error')
     } finally {
         submitting.value = false
     }
 }
 
 function formatDate(date) {
-    return new Date(date).toLocaleDateString('uk-UA', {
+    return new Date(date).toLocaleDateString('en-GB', {
         day: '2-digit', month: 'long', year: 'numeric',
     })
 }

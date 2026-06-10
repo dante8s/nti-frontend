@@ -1,12 +1,12 @@
 <template>
   <div class="page">
     <section class="page__head">
-      <p class="eyebrow">Студент</p>
-      <h2 class="page__title">Моя команда</h2>
-      <p class="page__sub">Створіть команду або приєднайтесь до існуючої</p>
+      <p class="eyebrow">Student</p>
+      <h2 class="page__title">My team</h2>
+      <p class="page__sub">Create a team or join an existing one</p>
     </section>
 
-    <div v-if="loading" class="state-msg">Завантаження...</div>
+    <div v-if="loading" class="state-msg">Loading...</div>
     <div v-else-if="loadError" class="alert alert--error">{{ loadError }}</div>
 
     <div v-else class="content">
@@ -15,13 +15,13 @@
         <div class="card__head">
           <h3 class="card__title">
             <span class="badge badge--warn">{{ invites.length }}</span>
-            Запрошення до команди
+            Team invitations
           </h3>
         </div>
         <div class="invites-list">
           <div v-for="inv in invites" :key="inv.id" class="invite-row">
             <div class="invite-row__info">
-              <span class="invite-row__team">Команда: <strong>{{ inv.teamId }}</strong></span>
+              <span class="invite-row__team">Team: <strong>{{ inv.teamId }}</strong></span>
               <span class="invite-row__date">{{ formatDate(inv.invitedAt) }}</span>
             </div>
             <div class="invite-row__actions">
@@ -31,7 +31,7 @@
                 :disabled="respondingId === inv.id"
                 @click="respond(inv, true)"
               >
-                Прийняти
+                Accept
               </button>
               <button
                 type="button"
@@ -39,7 +39,7 @@
                 :disabled="respondingId === inv.id"
                 @click="respond(inv, false)"
               >
-                Відхилити
+                Decline
               </button>
             </div>
           </div>
@@ -50,13 +50,13 @@
       <!-- No team: create form -->
       <div v-if="!team" class="card">
         <div class="card__head">
-          <h3 class="card__title">У вас ще немає команди</h3>
+          <h3 class="card__title">You don't have a team yet</h3>
         </div>
-        <p class="hint-text">Створіть нову команду або дочекайтесь запрошення від лідера.</p>
+        <p class="hint-text">Create a new team or wait for an invitation from a leader.</p>
 
         <div v-if="!showCreateForm" class="create-trigger">
           <button type="button" class="btn btn--primary" @click="showCreateForm = true">
-            + Створити команду
+            + Create team
           </button>
         </div>
 
@@ -65,11 +65,11 @@
           <div class="form">
             <div class="form__row">
               <div class="field">
-                <label class="field__label">Назва команди *</label>
-                <input v-model="createForm.name" class="field__input" placeholder="Наприклад: Innovators" />
+                <label class="field__label">Team name *</label>
+                <input v-model="createForm.name" class="field__input" placeholder="E.g.: Innovators" />
               </div>
               <div class="field">
-                <label class="field__label">Максимум учасників</label>
+                <label class="field__label">Max members</label>
                 <input
                   v-model.number="createForm.maxCapacity"
                   class="field__input"
@@ -81,28 +81,28 @@
               </div>
             </div>
             <div class="field field--full">
-              <label class="field__label">Компетенції</label>
+              <label class="field__label">Competencies</label>
               <input
                 v-model="createForm.competencies"
                 class="field__input"
-                placeholder="Наприклад: Backend, ML, Design"
+                placeholder="E.g.: Backend, ML, Design"
               />
             </div>
             <div class="field field--full">
-              <label class="field__label">Опис</label>
+              <label class="field__label">Description</label>
               <textarea
                 v-model="createForm.description"
                 class="field__input field__textarea"
                 rows="3"
-                placeholder="Короткий опис команди"
+                placeholder="Brief team description"
               />
             </div>
           </div>
           <div class="form__actions">
             <button type="button" class="btn btn--primary" :disabled="creating" @click="createTeam">
-              {{ creating ? 'Створення...' : 'Створити' }}
+              {{ creating ? 'Creating...' : 'Create' }}
             </button>
-            <button type="button" class="btn btn--ghost" @click="showCreateForm = false">Скасувати</button>
+            <button type="button" class="btn btn--ghost" @click="showCreateForm = false">Cancel</button>
           </div>
         </div>
       </div>
@@ -112,13 +112,13 @@
         <div class="card__head">
           <div>
             <h3 class="card__title">{{ team.name }}</h3>
-            <p class="card__sub-text">{{ team.description || 'Немає опису' }}</p>
+            <p class="card__sub-text">{{ team.description || 'No description' }}</p>
           </div>
-          <span class="badge badge--info">{{ memberCount }}/{{ team.maxCapacity }} учасників</span>
+          <span class="badge badge--info">{{ memberCount }}/{{ team.maxCapacity }} members</span>
         </div>
 
         <div v-if="team.competencies" class="competencies">
-          <span class="field__label">Компетенції:</span>
+          <span class="field__label">Competencies:</span>
           <span class="competency-tag" v-for="c in competencyList" :key="c">{{ c }}</span>
         </div>
 
@@ -127,10 +127,10 @@
           <table class="members-table">
             <thead>
               <tr>
-                <th>Учасник</th>
-                <th>Роль</th>
-                <th>Статус</th>
-                <th>Дата вступу</th>
+                <th>Member</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Join date</th>
               </tr>
             </thead>
             <tbody>
@@ -138,7 +138,7 @@
                 <td class="cell-name">{{ m.memberDisplayName || m.userId }}</td>
                 <td>
                   <span class="pill" :class="m.role === 'LEADER' ? 'pill--leader' : 'pill--member'">
-                    {{ m.role === 'LEADER' ? 'Лідер' : 'Учасник' }}
+                    {{ m.role === 'LEADER' ? 'Leader' : 'Member' }}
                   </span>
                 </td>
                 <td>
@@ -154,14 +154,14 @@
 
         <!-- Invite member (leader only) -->
         <div v-if="isLeader" class="invite-section">
-          <h4 class="invite-section__title">Запросити учасника</h4>
+          <h4 class="invite-section__title">Invite member</h4>
           <div v-if="inviteError" class="alert alert--error">{{ inviteError }}</div>
-          <div v-if="inviteSuccess" class="alert alert--ok">Запрошення надіслано</div>
+          <div v-if="inviteSuccess" class="alert alert--ok">Invitation sent</div>
           <div class="invite-input-row">
             <input
               v-model="inviteUserId"
               class="field__input"
-              placeholder="ID користувача"
+              placeholder="User ID"
               @keyup.enter="inviteMember"
             />
             <button
@@ -170,7 +170,7 @@
               :disabled="inviting || !inviteUserId.trim()"
               @click="inviteMember"
             >
-              {{ inviting ? '...' : 'Запросити' }}
+              {{ inviting ? '...' : 'Invite' }}
             </button>
           </div>
         </div>
@@ -242,7 +242,7 @@ async function load() {
       invites.value = Array.isArray(invitesRes.value.data) ? invitesRes.value.data : []
     }
   } catch (e) {
-    loadError.value = 'Не вдалося завантажити дані команди'
+    loadError.value = 'Failed to load team data'
   } finally {
     loading.value = false
   }
@@ -257,7 +257,7 @@ async function createTeam() {
     team.value = res.data
     showCreateForm.value = false
   } catch (e) {
-    createError.value = e.response?.data?.message || e.response?.data || 'Помилка створення команди'
+    createError.value = e.response?.data?.message || e.response?.data || 'Failed to create team'
   } finally {
     creating.value = false
   }
@@ -271,7 +271,7 @@ async function respond(invite, accepted) {
     invites.value = invites.value.filter((i) => i.id !== invite.id)
     if (accepted) await load()
   } catch (e) {
-    respondError.value = e.response?.data?.message || 'Помилка при відповіді на запрошення'
+    respondError.value = e.response?.data?.message || 'Failed to respond to invitation'
   } finally {
     respondingId.value = null
   }
@@ -289,14 +289,14 @@ async function inviteMember() {
     const res = await teamsApi.getById(team.value.id)
     team.value = res.data
   } catch (e) {
-    inviteError.value = e.response?.data?.message || e.response?.data || 'Помилка при запрошенні'
+    inviteError.value = e.response?.data?.message || e.response?.data || 'Failed to send invitation'
   } finally {
     inviting.value = false
   }
 }
 
 function statusLabel(s) {
-  return { PENDING: 'Очікує', ACCEPTED: 'Прийнято', DECLINED: 'Відхилено', REMOVED: 'Видалено' }[s] || s
+  return { PENDING: 'Pending', ACCEPTED: 'Accepted', DECLINED: 'Declined', REMOVED: 'Removed' }[s] || s
 }
 
 function statusPillClass(s) {
@@ -310,7 +310,7 @@ function statusPillClass(s) {
 
 function formatDate(date) {
   if (!date) return '—'
-  return new Date(date).toLocaleDateString('uk-UA', { day: '2-digit', month: 'short', year: 'numeric' })
+  return new Date(date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 </script>
 
