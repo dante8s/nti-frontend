@@ -14,7 +14,7 @@
 
     <div v-else-if="applications.length === 0" class="empty">
       <p>У вас поки немає заявок</p>
-      <router-link to="/programs" class="btn-go">
+      <router-link to="/programs/a" class="btn-go">
         Переглянути програми
       </router-link>
     </div>
