@@ -231,8 +231,8 @@ const isInviting = ref(false)
 const inviteError = ref('')
 
 const allRoles = [
-    'STUDENT', 'FIRM',
-    'MENTOR', 'EVALUATOR', 'ADMIN', 'SUPER_ADMIN'
+    'STUDENT', 'FIRM', 'FIRM_USER',
+    'MENTOR', 'EVALUATOR', 'CONTENT_EDITOR', 'ADMIN', 'SUPER_ADMIN'
 ]
 
 const rejectModal = reactive({
@@ -427,9 +427,10 @@ function roleLabel(role) {
     const labels = {
         STUDENT: 'Студент',
         FIRM: 'Компанія',
-        //FIRM_USER: 'Представник фірми',
+        FIRM_USER: 'Представник фірми',
         MENTOR: 'Ментор',
         EVALUATOR: 'Комісія',
+        CONTENT_EDITOR: 'Редактор контенту',
         ADMIN: 'Адмін',
         SUPER_ADMIN: 'Супер адмін'
     }

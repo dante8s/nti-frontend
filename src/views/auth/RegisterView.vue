@@ -51,8 +51,7 @@
                 </div>
 
                 <div class="field">
-                    <div id="recaptcha-register" class="g-recaptcha"
-                        data-sitekey="6Lfl56gsAAAAAOBIsD-BT1Krdd9aGvTz7iWIZnDL"></div>
+                    <div id="recaptcha-register" class="g-recaptcha"></div>
                     <span v-if="captchaError" class="error-text">
                         {{ t('auth.captchaErrorReg') }}
                     </span>
@@ -81,7 +80,7 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 
 const { t } = useI18n()
-const SITE_KEY = '6Lfl56gsAAAAAOBIsD-BT1Krdd9aGvTz7iWIZnDL'
+const SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY
 
 const router = useRouter()
 const auth = useAuthStore()

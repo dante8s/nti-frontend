@@ -20,6 +20,7 @@ const isSuperAdmin = computed(() => auth.roles?.includes('SUPER_ADMIN'))
 const isAdmin = computed(() =>
   auth.roles?.some((r) => r === 'ADMIN' || r === 'SUPER_ADMIN'),
 )
+const isContentEditor = computed(() => auth.roles?.includes('CONTENT_EDITOR'))
 const isStudent = computed(() => auth.roles?.includes('STUDENT'))
 const showStudentNav = computed(() =>
   isStudent.value || auth.roles?.includes('SUPER_ADMIN'),
@@ -49,7 +50,7 @@ const adminNav = computed(() => {
       { to: '/app/admin/organizations', label: t('nav.organizations'), icon: '◈' },
       { to: '/app/admin/mentorships', label: t('nav.mentorships'), icon: '✦' },
       { to: '/app/admin/email-templates', label: t('nav.emailTemplates'), icon: '✉' },
-      { to: '/app/admin/project-reports', label: 'Звіти проектів', icon: '📊' },
+      { to: '/app/admin/project-reports', label: t('nav.projectReports'), icon: '📊' },
       { to: '/app/admin/bulk-message', label: t('nav.bulkMessage'), icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg>' },
 
     )
@@ -64,7 +65,7 @@ const adminNav = computed(() => {
 })
 
 const contentEditorNav = computed(() => {
-  if (!isAdmin.value) return []
+  if (!isAdmin.value && !isContentEditor.value) return []
   return [
     { to: '/app/admin/about-page', label: 'Stránka O NTI', icon: '◫' },
     { to: '/app/admin/news', label: 'Správa noviniek', icon: '◰' },

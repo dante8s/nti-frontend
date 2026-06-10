@@ -10,9 +10,10 @@ export const STATUS_LABELS_UK = {
   ONBOARDING:           'Онбординг',
   ACTIVE:               'Активний',
   SUSPENDED:            'Призупинено',
-  COMPLETION_REQUESTED: 'Запит на завершення',
-  COMPLETED:            'Завершено',
-  ARCHIVED:             'Архівовано',
+  COMPLETION_REQUESTED:   'Запит на завершення',
+  COMPLETION_PO_APPROVED: 'Завершення схвалено (PO)',
+  COMPLETED:              'Завершено',
+  ARCHIVED:               'Архівовано',
 }
 
 export function statusLabel(status) {
@@ -29,9 +30,10 @@ export function adminAllowedNextStatuses(current) {
     NEEDS_REVISION:       ['SUBMITTED'],
     APPROVED:             ['ONBOARDING', 'COMPLETION_REQUESTED'],
     ONBOARDING:           ['ACTIVE'],
-    ACTIVE:               ['SUSPENDED', 'ARCHIVED'],
-    SUSPENDED:            ['ACTIVE', 'ARCHIVED'],
-    COMPLETION_REQUESTED: ['COMPLETED', 'APPROVED'],
+    ACTIVE:                 ['SUSPENDED', 'ARCHIVED'],
+    SUSPENDED:              ['ACTIVE', 'ARCHIVED'],
+    COMPLETION_REQUESTED:   ['COMPLETED', 'APPROVED'],
+    COMPLETION_PO_APPROVED: ['COMPLETED', 'APPROVED'],
   }
   return ALLOWED[current] ?? []
 }

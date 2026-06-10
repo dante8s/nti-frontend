@@ -23,6 +23,7 @@ export default {
     programBReview: 'Fronta na posúdenie programu B',
     organizations: 'Organizácie',
     mentorships: 'Mentorstvá',
+    projectReports: 'Správy projektov',
     privacySettings: 'Nastavenia súkromia',
     emailTemplates:'E-mailové šablóny',
     bulkMessage: 'Hromadná správa',

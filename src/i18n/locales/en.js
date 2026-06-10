@@ -23,6 +23,7 @@ export default {
     programBReview: 'Program B Review Queue',
     organizations: 'Organizations',
     mentorships: 'Mentorships',
+    projectReports: 'Project Reports',
     emailTemplates: 'Email Templates',
     bulkMessage: 'Bulk Message',
     completionRequests: 'Completion Requests',

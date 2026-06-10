@@ -23,6 +23,7 @@ export default {
     programBReview: 'Черга перевірки програми B',
     organizations: 'Організації',
     mentorships: 'Менторство',
+    projectReports: 'Звіти проектів',
     emailTemplates: 'Шаблони листів',
     bulkMessage: 'Масова розсилка',
     completionRequests: 'Запити на завершення',
