@@ -68,10 +68,10 @@ const adminNav = computed(() => {
 const contentEditorNav = computed(() => {
   if (!isAdmin.value && !isContentEditor.value) return []
   return [
-    { to: '/app/admin/about-page', label: 'Stránka O NTI', icon: '◫' },
-    { to: '/app/admin/news', label: 'Správa noviniek', icon: '◰' },
-    { to: '/app/admin/success-stories', label: 'Úspešné príbehy', icon: '◆' },
-    { to: '/app/admin/faq', label: 'Správa FAQ', icon: '?' },
+    { to: '/app/admin/about-page', label: t('nav.aboutPage'), icon: '◫' },
+    { to: '/app/admin/news', label: t('nav.news'), icon: '◰' },
+    { to: '/app/admin/success-stories', label: t('nav.successStories'), icon: '◆' },
+    { to: '/app/admin/faq', label: t('nav.faqManagement'), icon: '?' },
   ]
 })
 
@@ -128,7 +128,7 @@ const poNav = computed(() => {
   if (!isOrgMember.value && !hasPORequests.value) return []
   return [{
     to: '/app/product-owner/completion-requests',
-    label: 'Completion requests',
+    label: t('nav.completionRequests'),
     icon: '✦',
     badge: hasPORequests.value
   }]
@@ -312,7 +312,7 @@ async function checkFirmOrg() {
         </RouterLink>
 
         <p v-if="contentEditorNav.length" class="shell__group-label">
-          Content editor
+          {{ t('nav.contentEditor') }}
         </p>
         <RouterLink
           v-for="item in contentEditorNav"
@@ -326,7 +326,7 @@ async function checkFirmOrg() {
           {{ item.label }}
         </RouterLink>
         <template v-if="poNav.length">
-          <p class="shell__group-label">Product Owner</p>
+          <p class="shell__group-label">{{ t('nav.productOwner') }}</p>
           <RouterLink
             v-for="item in poNav"
             :key="item.to"

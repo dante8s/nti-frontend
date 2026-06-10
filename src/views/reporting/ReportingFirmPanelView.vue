@@ -1,7 +1,10 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { reportingApi } from '@/api/reporting'
+
+const { t } = useI18n()
 
 const firmDash = ref(null)
 const message = ref('')
@@ -12,9 +15,9 @@ async function load() {
   try {
     const res = await reportingApi.getFirmDashboard()
     firmDash.value = res.data
-    message.value = 'Data updated.'
+    message.value = t('reporting.dataUpdated')
   } catch {
-    message.value = 'Failed to load the company panel.'
+    message.value = t('reporting.failedFirm')
   } finally {
     busy.value = false
   }
@@ -26,38 +29,32 @@ onMounted(load)
 <template>
   <div class="panel">
     <nav class="back-row" aria-label="Reporting navigation">
-      <RouterLink class="back-link" :to="{ name: 'reporting-admin' }">← Summary and export</RouterLink>
-      <RouterLink class="back-link muted" :to="{ name: 'reporting-student' }">Student / team panel →</RouterLink>
+      <RouterLink class="back-link" :to="{ name: 'reporting-admin' }">{{ t('reporting.toSummary') }}</RouterLink>
+      <RouterLink class="back-link muted" :to="{ name: 'reporting-student' }">{{ t('reporting.toStudent') }}</RouterLink>
     </nav>
 
     <article class="card hero">
-      <h3>Company panel</h3>
-      <p class="hint lead">
-        Tasks (calls and deadlines), application load, assigned mentorships, and teams on applications. The
-        The 'budget' will appear after adding relevant data to the program model — currently showing available summaries from the API.
-      </p>
+      <h3>{{ t('reporting.firmPanelTitle') }}</h3>
+      <p class="hint lead">{{ t('reporting.firmPanelLead') }}</p>
       <div class="quick-links">
-        <RouterLink class="link-pill" to="/app/programs/my">My Program B proposals</RouterLink>
-        <RouterLink class="link-pill" to="/app/org/profile">Organization profile</RouterLink>
+        <RouterLink class="link-pill" to="/app/programs/my">{{ t('reporting.myProposalsLink') }}</RouterLink>
+        <RouterLink class="link-pill" to="/app/org/profile">{{ t('reporting.orgProfileLink') }}</RouterLink>
       </div>
       <div class="row">
-        <button type="button" :disabled="busy" @click="load">Refresh</button>
+        <button type="button" :disabled="busy" @click="load">{{ t('reporting.refresh') }}</button>
       </div>
     </article>
 
     <template v-if="firmDash">
       <article v-if="firmDash.summary" class="card">
-        <h4 class="card-title">Summary</h4>
+        <h4 class="card-title">{{ t('reporting.summary') }}</h4>
         <div class="summary-strip">
-          <span>Programs: <strong>{{ firmDash.summary.programCount }}</strong></span>
-          <span>Applications (org.): <strong>{{ firmDash.summary.applicationCount }}</strong></span>
-          <span>Mentorships (assignments): <strong>{{ firmDash.summary.mentorshipCount }}</strong></span>
-          <span>Open calls: <strong>{{ firmDash.summary.openCallCount }}</strong></span>
+          <span>{{ t('reporting.programs') }} <strong>{{ firmDash.summary.programCount }}</strong></span>
+          <span>{{ t('reporting.applicationsOrg') }} <strong>{{ firmDash.summary.applicationCount }}</strong></span>
+          <span>{{ t('reporting.mentorshipsAssign') }} <strong>{{ firmDash.summary.mentorshipCount }}</strong></span>
+          <span>{{ t('reporting.openCalls') }} <strong>{{ firmDash.summary.openCallCount }}</strong></span>
         </div>
-        <p class="hint note">
-          Budgets: separate tracking is planned in the program — once fields appear in the backend, they can be displayed here in the same
-          section structure.
-        </p>
+        <p class="hint note">{{ t('reporting.budgetsNote') }}</p>
       </article>
 
       <article
@@ -67,35 +64,35 @@ onMounted(load)
       >
         <h4 class="org-name">{{ org.organizationName }}</h4>
         <p class="hint org-meta">
-          Applications for org programs: {{ org.applicationCount }} · Mentorships: {{ org.mentorshipCount }}
+          {{ t('reporting.orgAppsAndMentorships', { appCount: org.applicationCount, mentorCount: org.mentorshipCount }) }}
         </p>
 
-        <h5 class="sub">Programs and load</h5>
+        <h5 class="sub">{{ t('reporting.programsLoad') }}</h5>
         <ul class="program-list">
           <li v-for="pr in org.programs" :key="pr.programId">
             <span class="pr-name">{{ pr.name }}</span>
             <span class="hint">({{ pr.type }}, {{ pr.status }})</span>
-            — applications on program: <strong>{{ pr.applicationsOnProgram }}</strong>
+            — {{ t('reporting.appsOnProgram') }} <strong>{{ pr.applicationsOnProgram }}</strong>
           </li>
         </ul>
 
-        <h5 class="sub">Calls (tasks) and applications</h5>
-        <div v-if="!org.calls?.length" class="hint">No calls for programs.</div>
+        <h5 class="sub">{{ t('reporting.callsAndApps') }}</h5>
+        <div v-if="!org.calls?.length" class="hint">{{ t('reporting.noCallsForPrograms') }}</div>
         <div v-for="c in org.calls" :key="c.callId" class="list-row">
           <div class="list-row__title">
             <strong>{{ c.title }}</strong>
           </div>
           <div class="meta">
-            <span>Deadline: {{ c.deadline }}</span>
-            <span>Call status: {{ c.status }}</span>
-            <span>Program: {{ c.programName }}</span>
-            <span>Applications: <strong>{{ c.applicationsOnCall }}</strong></span>
+            <span>{{ t('reporting.deadline') }} {{ c.deadline }}</span>
+            <span>{{ t('reporting.callStatus') }} {{ c.status }}</span>
+            <span>{{ t('reporting.program') }}: {{ c.programName }}</span>
+            <span>{{ t('reporting.appsOnCall') }} <strong>{{ c.applicationsOnCall }}</strong></span>
           </div>
         </div>
       </article>
 
       <article v-if="!firmDash.organizations?.length" class="card">
-        <p class="hint">No linked organizations. Check your organization membership or register a company.</p>
+        <p class="hint">{{ t('reporting.noLinkedOrgs') }}</p>
       </article>
     </template>
 
@@ -271,4 +268,3 @@ button:disabled {
   color: #64748b;
 }
 </style>
-

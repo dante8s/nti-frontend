@@ -1,36 +1,39 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { previewBulkMessage, sendBulkMessage } from '@/api/bulkMessage'
 import { programsApi } from '@/api/programs'
 
-const TARGET_OPTIONS = [
-  { value: 'ALL',                    label: 'All active users' },
-  { value: 'BY_ROLE',               label: 'By role' },
-  { value: 'BY_CALL',               label: 'By call' },
-  { value: 'BY_APPLICATION_STATUS', label: 'By application status' },
-]
+const { t } = useI18n()
 
-const ROLE_OPTIONS = [
-  { value: 'STUDENT',         label: 'Student' },
-  { value: 'FIRM',            label: 'Company (FIRM)' },
-  { value: 'FIRM_USER',       label: 'Company representative' },
-  { value: 'MENTOR',          label: 'Mentor' },
-  { value: 'EVALUATOR',       label: 'Commission (review)' },
-  { value: 'SUPER_EVALUATOR', label: 'Commission (decision)' },
-  { value: 'ADMIN',           label: 'Administrator' },
-]
+const TARGET_OPTIONS = computed(() => [
+  { value: 'ALL',                    label: t('bulkMsg.targetAll') },
+  { value: 'BY_ROLE',               label: t('bulkMsg.targetByRole') },
+  { value: 'BY_CALL',               label: t('bulkMsg.targetByCall') },
+  { value: 'BY_APPLICATION_STATUS', label: t('bulkMsg.targetByStatus') },
+])
 
-const APP_STATUS_OPTIONS = [
-  { value: 'SUBMITTED',         label: 'Submitted' },
-  { value: 'FORMALLY_VERIFIED', label: 'Formally verified' },
-  { value: 'IN_REVIEW',         label: 'In review' },
-  { value: 'NEEDS_REVISION',    label: 'Needs revision' },
-  { value: 'APPROVED',          label: 'Approved' },
-  { value: 'ONBOARDING',        label: 'Onboarding' },
-  { value: 'ACTIVE',            label: 'Active project' },
-  { value: 'SUSPENDED',         label: 'Suspended' },
-  { value: 'REJECTED',          label: 'Rejected' },
-]
+const ROLE_OPTIONS = computed(() => [
+  { value: 'STUDENT',         label: t('bulkMsg.roleStudent') },
+  { value: 'FIRM',            label: t('bulkMsg.roleFirm') },
+  { value: 'FIRM_USER',       label: t('bulkMsg.roleFirmUser') },
+  { value: 'MENTOR',          label: t('bulkMsg.roleMentor') },
+  { value: 'EVALUATOR',       label: t('bulkMsg.roleEvaluator') },
+  { value: 'SUPER_EVALUATOR', label: t('bulkMsg.roleSuperEvaluator') },
+  { value: 'ADMIN',           label: t('bulkMsg.roleAdmin') },
+])
+
+const APP_STATUS_OPTIONS = computed(() => [
+  { value: 'SUBMITTED',         label: t('bulkMsg.statusSubmitted') },
+  { value: 'FORMALLY_VERIFIED', label: t('bulkMsg.statusFormallyVerified') },
+  { value: 'IN_REVIEW',         label: t('bulkMsg.statusInReview') },
+  { value: 'NEEDS_REVISION',    label: t('bulkMsg.statusNeedsRevision') },
+  { value: 'APPROVED',          label: t('bulkMsg.statusApproved') },
+  { value: 'ONBOARDING',        label: t('bulkMsg.statusOnboarding') },
+  { value: 'ACTIVE',            label: t('bulkMsg.statusActive') },
+  { value: 'SUSPENDED',         label: t('bulkMsg.statusSuspended') },
+  { value: 'REJECTED',          label: t('bulkMsg.statusRejected') },
+])
 
 const form = ref({
   targetType: 'ALL',
@@ -88,7 +91,7 @@ async function preview() {
     const { data } = await previewBulkMessage(payload.value)
     previewCount.value = data.recipientCount
   } catch (e) {
-    error.value = e.response?.data?.error || 'Preview error'
+    error.value = e.response?.data?.error || t('bulkMsg.checking')
   } finally {
     previewing.value = false
   }
@@ -105,7 +108,7 @@ async function send() {
     sent.value = true
     setTimeout(() => (sent.value = false), 4000)
   } catch (e) {
-    error.value = e.response?.data?.error || 'Send error'
+    error.value = e.response?.data?.error || t('bulkMsg.sendingBtn')
   } finally {
     sending.value = false
   }
@@ -115,14 +118,13 @@ async function send() {
 <template>
   <div class="bm">
     <div class="bm__head">
-      <h1 class="bm__title">Bulk message</h1>
-      <p class="bm__sub">Send an in-app notification (and email) to a group of users at once</p>
+      <h1 class="bm__title">{{ t('bulkMsg.title') }}</h1>
+      <p class="bm__sub">{{ t('bulkMsg.sub') }}</p>
     </div>
 
     <div class="bm__card">
-      <!-- Target -->
       <div class="bm__field">
-        <label class="bm__label">Send to</label>
+        <label class="bm__label">{{ t('bulkMsg.sendTo') }}</label>
         <select v-model="form.targetType" class="bm__select">
           <option v-for="opt in TARGET_OPTIONS" :key="opt.value" :value="opt.value">
             {{ opt.label }}
@@ -130,73 +132,66 @@ async function send() {
         </select>
       </div>
 
-      <!-- BY_ROLE filter -->
       <div v-if="form.targetType === 'BY_ROLE'" class="bm__field">
-        <label class="bm__label">Role</label>
+        <label class="bm__label">{{ t('bulkMsg.role') }}</label>
         <select v-model="form.roleFilter" class="bm__select">
-          <option value="" disabled>Select a role...</option>
+          <option value="" disabled>{{ t('bulkMsg.selectRole') }}</option>
           <option v-for="r in ROLE_OPTIONS" :key="r.value" :value="r.value">{{ r.label }}</option>
         </select>
       </div>
 
-      <!-- BY_CALL filter -->
       <div v-if="form.targetType === 'BY_CALL'" class="bm__field">
-        <label class="bm__label">Call</label>
+        <label class="bm__label">{{ t('bulkMsg.call') }}</label>
         <select v-model="form.callId" class="bm__select">
-          <option :value="null" disabled>Select a call...</option>
+          <option :value="null" disabled>{{ t('bulkMsg.selectCall') }}</option>
           <option v-for="c in calls" :key="c.id" :value="c.id">
             {{ c.title }} (id {{ c.id }})
           </option>
         </select>
-        <p v-if="calls.length === 0" class="bm__hint">No open calls found</p>
+        <p v-if="calls.length === 0" class="bm__hint">{{ t('bulkMsg.noOpenCalls') }}</p>
       </div>
 
-      <!-- BY_APPLICATION_STATUS filter -->
       <div v-if="form.targetType === 'BY_APPLICATION_STATUS'" class="bm__field">
-        <label class="bm__label">Application status</label>
+        <label class="bm__label">{{ t('bulkMsg.appStatus') }}</label>
         <select v-model="form.applicationStatus" class="bm__select">
-          <option value="" disabled>Select a status...</option>
+          <option value="" disabled>{{ t('bulkMsg.selectStatus') }}</option>
           <option v-for="s in APP_STATUS_OPTIONS" :key="s.value" :value="s.value">{{ s.label }}</option>
         </select>
       </div>
 
-      <!-- Subject -->
       <div class="bm__field">
-        <label class="bm__label">Message subject</label>
-        <input v-model="form.subject" class="bm__input" type="text" placeholder="E.g., Important NTI announcement" />
+        <label class="bm__label">{{ t('bulkMsg.msgSubject') }}</label>
+        <input v-model="form.subject" class="bm__input" type="text" :placeholder="t('bulkMsg.subjectPlaceholder')" />
       </div>
 
-      <!-- Message -->
       <div class="bm__field">
-        <label class="bm__label">Message body</label>
+        <label class="bm__label">{{ t('bulkMsg.msgBody') }}</label>
         <textarea v-model="form.message" class="bm__textarea" rows="8"
-          placeholder="Enter your message text..." />
+          :placeholder="t('bulkMsg.bodyPlaceholder')" />
       </div>
 
-      <!-- Email toggle -->
       <div class="bm__field bm__field--row">
         <label class="bm__toggle">
           <input type="checkbox" v-model="form.sendEmail" />
-          <span>Also send via email</span>
+          <span>{{ t('bulkMsg.sendEmail') }}</span>
         </label>
       </div>
 
-      <!-- Preview result -->
       <div v-if="previewCount !== null" class="bm__preview-result">
         <span class="bm__preview-icon">◎</span>
-        <span>Recipients found: <strong>{{ previewCount }}</strong></span>
+        <span>{{ t('bulkMsg.recipientsFound') }} <strong>{{ previewCount }}</strong></span>
       </div>
 
       <p v-if="error" class="bm__error">{{ error }}</p>
 
       <div class="bm__actions">
         <button class="bm__btn bm__btn--preview" :disabled="!canSend || previewing" @click="preview">
-          {{ previewing ? 'Checking...' : 'Preview count' }}
+          {{ previewing ? t('bulkMsg.checking') : t('bulkMsg.previewCount') }}
         </button>
         <button class="bm__btn bm__btn--send" :disabled="!canSend || sending" @click="send">
-          {{ sending ? 'Sending...' : 'Send' }}
+          {{ sending ? t('bulkMsg.sendingBtn') : t('bulkMsg.sendBtn') }}
         </button>
-        <span v-if="sent" class="bm__ok">✓ Sent to {{ previewCount }} recipients</span>
+        <span v-if="sent" class="bm__ok">{{ t('bulkMsg.sentOk', { count: previewCount }) }}</span>
       </div>
     </div>
   </div>

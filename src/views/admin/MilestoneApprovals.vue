@@ -1,26 +1,26 @@
 <template>
   <div class="page">
     <p class="lead">
-      Milestones that require admin approval before planning starts.
+      {{ t('milestones.lead') }}
     </p>
 
     <div v-if="loading" class="state">
-      Loading…
+      {{ t('milestones.loading') }}
     </div>
     <div v-else-if="error" class="state state--error">
       {{ error }}
     </div>
     <div v-else-if="pendingMilestones.length === 0" class="state">
-      No milestones pending approval.
+      {{ t('milestones.noPending') }}
     </div>
     <div v-else class="table-wrap">
       <table class="table">
         <thead>
           <tr>
-            <th>Title</th>
-            <th>Application ID</th>
-            <th>Created By</th>
-            <th>Due Date</th>
+            <th>{{ t('milestones.colTitle') }}</th>
+            <th>{{ t('milestones.colAppId') }}</th>
+            <th>{{ t('milestones.colCreatedBy') }}</th>
+            <th>{{ t('milestones.colDueDate') }}</th>
             <th />
           </tr>
         </thead>
@@ -37,19 +37,19 @@
                 :disabled="processingId === m.id"
                 @click="approve(m)"
               >
-                {{ processingId === m.id ? 'Approving…' : 'Approve' }}
+                {{ processingId === m.id ? t('milestones.approving') : t('milestones.approve') }}
               </button>
               <button type="button" class="btn-edit" @click="openEditModal(m)">
-                Edit
+                {{ t('milestones.edit') }}
               </button>
               <button type="button" class="btn-delete" @click="removeMilestone(m)">
-                Delete
+                {{ t('milestones.delete') }}
               </button>
               <router-link
                 class="link-view"
                 :to="`/applications/${m.applicationId}`"
               >
-                View Application
+                {{ t('milestones.viewApp') }}
               </router-link>
             </td>
           </tr>
@@ -69,8 +69,11 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
+import { useI18n } from 'vue-i18n'
 import { MilestoneStatus, useMilestoneStore } from '@/stores/milestone'
 import MilestoneFormModal from '@/components/MilestoneFormModal.vue'
+
+const { t } = useI18n()
 
 const milestoneStore = useMilestoneStore()
 const { pendingMilestones } = storeToRefs(milestoneStore)
@@ -129,7 +132,7 @@ async function onMilestoneSaved(updated) {
 
 async function removeMilestone(milestone) {
   if (!milestone?.id) return
-  const ok = window.confirm('Delete this milestone permanently?')
+  const ok = window.confirm(t('milestones.confirmDelete'))
   if (!ok) return
   try {
     await milestoneStore.delete(milestone.id, milestone.applicationId)

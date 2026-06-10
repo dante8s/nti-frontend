@@ -1,15 +1,15 @@
 <script setup>
 import { RouterView } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 </script>
 
 <template>
   <section class="reporting-shell">
     <header class="shell-header">
-      <h2>Reporting</h2>
-      <p class="shell-lead">
-        Available from the Administration or Commission menu. View student / company panels — from buttons on the page
-        summary and export; shows data for the current user (for interface testing).
-      </p>
+      <h2>{{ t('reporting.title') }}</h2>
+      <p class="shell-lead">{{ t('reporting.lead') }}</p>
     </header>
 
     <RouterView />

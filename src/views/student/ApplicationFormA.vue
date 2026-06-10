@@ -1,24 +1,24 @@
 <template>
     <div class="page">
         <div class="back">
-            <router-link to="/programs/a">← Back to Program A</router-link>
+            <router-link to="/programs/a">{{ t('appForm.backToProgramA') }}</router-link>
         </div>
 
         <div class="form-box">
-            <h1>Application — Program A</h1>
-            <p class="subtitle">Grant incubation program</p>
+            <h1>{{ t('appForm.titleA') }}</h1>
+            <p class="subtitle">{{ t('appForm.subtitleA') }}</p>
 
             <div v-if="callInfo" class="call-info">
-                <span class="call-label">Call:</span>
+                <span class="call-label">{{ t('appForm.call') }}</span>
                 <strong>{{ callInfo.title }}</strong>
-                <span class="deadline">Deadline: {{ formatDate(callInfo.deadline) }}</span>
+                <span class="deadline">{{ t('appForm.deadline') }} {{ formatDate(callInfo.deadline) }}</span>
             </div>
 
             <div v-if="isDeadlinePassed" class="deadline-banner">
-                The application deadline for this call has passed
+                {{ t('appForm.deadlinePassed') }}
             </div>
 
-            <div v-if="initialLoading" class="loading">Loading...</div>
+            <div v-if="initialLoading" class="loading">{{ t('appForm.loading') }}</div>
 
             <template v-else-if="!isDeadlinePassed">
                 <!-- Step 1 — form (new or edit) -->
@@ -27,22 +27,22 @@
 
                     <form @submit.prevent="saveForm">
                         <div class="field">
-                            <label>Project name *</label>
-                            <input v-model="form.projectName" type="text" placeholder="Your project name" required />
+                            <label>{{ t('appForm.projectName') }}</label>
+                            <input v-model="form.projectName" type="text" :placeholder="t('appForm.projectNamePh')" required />
                         </div>
                         <div class="field">
-                            <label>Short description *</label>
-                            <textarea v-model="form.description" rows="4" placeholder="Describe your idea..." required />
+                            <label>{{ t('appForm.shortDesc') }}</label>
+                            <textarea v-model="form.description" rows="4" :placeholder="t('appForm.shortDescPh')" required />
                         </div>
                         <div class="field">
-                            <label>Topic category *</label>
+                            <label>{{ t('appForm.category') }}</label>
                             <select v-model="form.category" required>
-                                <option value="">Select a category</option>
-                                <option value="software">Software development</option>
-                                <option value="ai">AI and data</option>
-                                <option value="web">Web applications</option>
-                                <option value="game">Game development</option>
-                                <option value="iot">IoT and embedded</option>
+                                <option value="">{{ t('appForm.selectCategory') }}</option>
+                                <option value="software">{{ t('appForm.catSoftware') }}</option>
+                                <option value="ai">{{ t('appForm.catAi') }}</option>
+                                <option value="web">{{ t('appForm.catWeb') }}</option>
+                                <option value="game">{{ t('appForm.catGame') }}</option>
+                                <option value="iot">{{ t('appForm.catIot') }}</option>
                             </select>
                         </div>
                         <div v-if="stackSubjects.length" class="field stack-subjects">
@@ -53,16 +53,16 @@
                         </div>
 
                         <div class="field">
-                            <label>Technology stack *</label>
-                            <input v-model="form.techStack" type="text" placeholder="React, Spring Boot..." required />
+                            <label>{{ t('appForm.techStack') }}</label>
+                            <input v-model="form.techStack" type="text" :placeholder="t('appForm.techStackPh')" required />
                         </div>
                         <div class="field">
-                            <label>Team composition *</label>
+                            <label>{{ t('appForm.teamComp') }}</label>
                             <textarea v-model="form.teamDescription" rows="3" required />
                         </div>
 
                         <button type="submit" :disabled="loading" class="btn-primary">
-                            {{ loading ? 'Saving...' : 'Save and proceed to documents' }}
+                            {{ loading ? t('appForm.saving') : t('appForm.saveProceed') }}
                         </button>
                     </form>
                 </div>
@@ -70,7 +70,7 @@
                 <!-- Step 2 — documents -->
                 <div v-else>
                     <div class="step-header">
-                        <div class="step-done">✓ Information saved</div>
+                        <div class="step-done">{{ t('appForm.infoSaved') }}</div>
                         <!-- Show saved data -->
                         <div v-if="savedFormData" class="saved-summary">
                             <strong>{{ savedFormData.projectName }}</strong>
@@ -79,7 +79,7 @@
                         <!-- Button to return to form editing -->
                         <button v-if="application.status === 'DRAFT' || application.status === 'NEEDS_REVISION'"
                             type="button" class="btn-back-form" @click="application = null">
-                            Edit data ↩
+                            {{ t('appForm.editData') }}
                         </button>
                     </div>
 
@@ -88,14 +88,14 @@
 
                     <div class="submit-section">
                         <div v-if="!canSubmit" class="submit-hint">
-                            Upload all required documents to submit your application
+                            {{ t('appForm.docsRequired') }}
                         </div>
                         <div class="submit-actions">
                             <button class="btn-draft" @click="$router.push('/app/my-applications')">
-                                Save as draft
+                                {{ t('appForm.saveAsDraft') }}
                             </button>
                             <button class="btn-submit" :disabled="!canSubmit || submitting" @click="submitApplication">
-                                {{ submitting ? 'Submitting...' : 'Submit application' }}
+                                {{ submitting ? t('appForm.submitting') : t('appForm.submitApp') }}
                             </button>
                         </div>
                     </div>
@@ -103,9 +103,9 @@
                     <div v-if="submitError" class="error">{{ submitError }}</div>
 
                     <div v-if="submitted" class="success">
-                        <h3>Application submitted!</h3>
-                        <p>You can track the status in your dashboard.</p>
-                        <router-link to="/app/my-applications">Go to my applications</router-link>
+                        <h3>{{ t('appForm.submitted') }}</h3>
+                        <p>{{ t('appForm.trackStatus') }}</p>
+                        <router-link to="/app/my-applications">{{ t('appForm.goToApps') }}</router-link>
                     </div>
                 </div>
             </template>
@@ -115,7 +115,10 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
+
+const { t } = useI18n()
 import { programsApi } from '@/api/programs'
 import { applicationsApi } from '@/api/applications'
 import { getCallApplicationEligibility } from '@/api/profileApi'
@@ -183,13 +186,11 @@ onMounted(async () => {
         if (!isSuperAdmin) {
             const eligibility = await getCallApplicationEligibility()
             if (!eligibility?.teamLeader) {
-                error.value =
-                    'Only the team leader can submit an application for a call. Contact your team leader.'
+                error.value = t('appForm.notTeamLeader')
                 return
             }
             if (!eligibility?.teamFull) {
-                error.value =
-                    'The team is not yet complete. To submit an application, the team must be at full capacity (3 members).'
+                error.value = t('appForm.teamNotComplete')
                 return
             }
         }

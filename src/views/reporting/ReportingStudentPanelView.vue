@@ -1,7 +1,10 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { reportingApi } from '@/api/reporting'
+
+const { t } = useI18n()
 
 const studentDash = ref(null)
 const message = ref('')
@@ -12,9 +15,9 @@ async function load() {
   try {
     const res = await reportingApi.getStudentDashboard()
     studentDash.value = res.data
-    message.value = 'Data updated.'
+    message.value = t('reporting.dataUpdated')
   } catch {
-    message.value = 'Failed to load the student panel.'
+    message.value = t('reporting.failedStudent')
   } finally {
     busy.value = false
   }
@@ -24,12 +27,12 @@ onMounted(load)
 
 function statusLabel(s) {
   const map = {
-    DRAFT: 'Draft',
-    SUBMITTED: 'Submitted',
-    IN_REVIEW: 'In review',
-    NEEDS_REVISION: 'Needs revision',
-    APPROVED: 'Approved',
-    REJECTED: 'Rejected',
+    DRAFT: t('reporting.draft'),
+    SUBMITTED: t('reporting.submitted'),
+    IN_REVIEW: t('reporting.inReview'),
+    NEEDS_REVISION: t('reporting.needsRevision'),
+    APPROVED: t('reporting.approved'),
+    REJECTED: t('reporting.rejected'),
   }
   return map[s] || s
 }
@@ -38,46 +41,37 @@ function statusLabel(s) {
 <template>
   <div class="panel">
     <nav class="back-row" aria-label="Reporting navigation">
-      <RouterLink class="back-link" :to="{ name: 'reporting-admin' }">← Summary and export</RouterLink>
-      <RouterLink class="back-link muted" :to="{ name: 'reporting-firm' }">Company panel →</RouterLink>
+      <RouterLink class="back-link" :to="{ name: 'reporting-admin' }">{{ t('reporting.toSummary') }}</RouterLink>
+      <RouterLink class="back-link muted" :to="{ name: 'reporting-firm' }">{{ t('reporting.toFirm') }}</RouterLink>
     </nav>
 
     <article class="card hero">
-      <h3>Student / team panel</h3>
-      <p class="hint lead">
-        Overview of application statuses, call deadlines, required milestones, and your teams. Application details —
-        in the My applications section.
-      </p>
+      <h3>{{ t('reporting.studentPanelTitle') }}</h3>
+      <p class="hint lead">{{ t('reporting.studentPanelLead') }}</p>
       <div class="quick-links">
-        <RouterLink class="link-pill" to="/app/my-applications">My applications</RouterLink>
-        <RouterLink class="link-pill" to="/app/teams">My team</RouterLink>
-        <RouterLink class="link-pill" to="/app/my-profile">My profile</RouterLink>
+        <RouterLink class="link-pill" to="/app/my-applications">{{ t('reporting.myApplicationsLink') }}</RouterLink>
+        <RouterLink class="link-pill" to="/app/teams">{{ t('reporting.myTeamLink') }}</RouterLink>
+        <RouterLink class="link-pill" to="/app/my-profile">{{ t('reporting.myProfileLink') }}</RouterLink>
       </div>
       <div class="row">
-        <button type="button" :disabled="busy" @click="load">Refresh</button>
+        <button type="button" :disabled="busy" @click="load">{{ t('reporting.refresh') }}</button>
       </div>
     </article>
 
     <template v-if="studentDash">
       <article v-if="studentDash.summary" class="card">
-        <h4 class="card-title">Summary</h4>
+        <h4 class="card-title">{{ t('reporting.summary') }}</h4>
         <div class="summary-strip">
-          <span>Applications: <strong>{{ studentDash.summary.applicationCount }}</strong></span>
-          <span
-            >Milestones pending approval:
-            <strong>{{ studentDash.summary.pendingApprovalMilestones }}</strong></span
-          >
-          <span
-            >Overdue / in focus:
-            <strong>{{ studentDash.summary.overdueOrAttentionMilestones }}</strong></span
-          >
-          <span>Teams: <strong>{{ studentDash.summary.teamCount }}</strong></span>
+          <span>{{ t('reporting.studentSummaryApps') }} <strong>{{ studentDash.summary.applicationCount }}</strong></span>
+          <span>{{ t('reporting.studentSummaryPending') }} <strong>{{ studentDash.summary.pendingApprovalMilestones }}</strong></span>
+          <span>{{ t('reporting.studentSummaryOverdue') }} <strong>{{ studentDash.summary.overdueOrAttentionMilestones }}</strong></span>
+          <span>{{ t('reporting.studentSummaryTeams') }} <strong>{{ studentDash.summary.teamCount }}</strong></span>
         </div>
       </article>
 
       <article class="card">
-        <h4 class="card-title">Applications and deadlines</h4>
-        <div v-if="!studentDash.applications?.length" class="hint">No applications.</div>
+        <h4 class="card-title">{{ t('reporting.appsAndDeadlines') }}</h4>
+        <div v-if="!studentDash.applications?.length" class="hint">{{ t('reporting.noApplications') }}</div>
         <div v-for="row in studentDash.applications" :key="row.applicationId" class="list-row">
           <div class="list-row__title">
             <strong>#{{ row.applicationId }}</strong>
@@ -85,23 +79,22 @@ function statusLabel(s) {
           </div>
           <div class="meta">
             <span class="badge">{{ statusLabel(row.status) }}</span>
-            <span v-if="row.callDeadline">Call deadline: {{ row.callDeadline }}</span>
+            <span v-if="row.callDeadline">{{ t('reporting.callDeadline') }} {{ row.callDeadline }}</span>
             <span v-if="row.programName">{{ row.programName }} ({{ row.programType }})</span>
-            <span v-if="row.callStatus">Call status: {{ row.callStatus }}</span>
+            <span v-if="row.callStatus">{{ t('reporting.callStatus') }} {{ row.callStatus }}</span>
           </div>
           <div class="hint small">
-            Required milestones: pending approval — {{ row.pendingApprovalMilestones }}, need attention —
-            {{ row.overdueOrAttentionMilestones }}, total milestones — {{ row.totalMilestones }}
+            {{ t('reporting.requiredMilestones', { pendingApproval: row.pendingApprovalMilestones, overdueOrAttention: row.overdueOrAttentionMilestones, total: row.totalMilestones }) }}
           </div>
         </div>
       </article>
 
       <article class="card">
-        <h4 class="card-title">Teams</h4>
-        <div v-if="!studentDash.teams?.length" class="hint">No accepted teams.</div>
-        <div v-for="t in studentDash.teams" :key="t.teamId" class="list-row">
-          <strong>{{ t.name }}</strong>
-          <span class="hint"> — {{ t.role }}, members: {{ t.acceptedMembers }}</span>
+        <h4 class="card-title">{{ t('reporting.teamsSection') }}</h4>
+        <div v-if="!studentDash.teams?.length" class="hint">{{ t('reporting.noAcceptedTeams') }}</div>
+        <div v-for="team in studentDash.teams" :key="team.teamId" class="list-row">
+          <strong>{{ team.name }}</strong>
+          <span class="hint"> — {{ team.role }}, {{ t('reporting.colMembers').toLowerCase() }}: {{ team.acceptedMembers }}</span>
         </div>
       </article>
     </template>
@@ -258,4 +251,3 @@ button:disabled {
   color: #64748b;
 }
 </style>
-

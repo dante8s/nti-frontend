@@ -1,17 +1,17 @@
 <template>
   <div class="application-details">
     <button type="button" class="application-details__back-btn" @click="goBack">
-      ← Back
+      {{ t('appDetails.back') }}
     </button>
 
     <div v-if="loading" class="application-details__state">
-      Loading application...
+      {{ t('appDetails.loading') }}
     </div>
     <div v-else-if="error" class="application-details__state application-details__state--error">
       {{ error }}
     </div>
     <div v-else-if="!application" class="application-details__state">
-      Application was not found.
+      {{ t('appDetails.notFound') }}
     </div>
     <div v-else class="application-details__content">
       <header class="application-details__header">
@@ -47,10 +47,10 @@
           {{ membersError }}
         </p>
         <div v-if="membersLoading" class="application-details__meta">
-          Loading users...
+          {{ t('appDetails.loadingUsers') }}
         </div>
         <div v-else-if="eligibleOrganizationMembers.length === 0" class="application-details__meta">
-          No users available for assignment.
+          {{ t('appDetails.noUsersAvailable') }}
         </div>
         <div v-else class="application-details__product-owner-row">
           <select
@@ -59,7 +59,7 @@
             :disabled="assigningProductOwner"
             @change="onAssignProductOwner"
           >
-            <option value="">Assign Product Owner</option>
+            <option value="">{{ t('appDetails.assignPO') }}</option>
             <option
               v-for="member in eligibleOrganizationMembers"
               :key="member.id ?? member.userId"
@@ -69,12 +69,12 @@
             </option>
           </select>
           <span class="application-details__meta">
-            {{ assigningProductOwner ? 'Saving...' : (applicationOrganizationId ? 'Organization members' : 'All users') }}
+            {{ assigningProductOwner ? t('appDetails.saving') : (applicationOrganizationId ? t('appDetails.orgMembers') : t('appDetails.allUsers')) }}
           </span>
         </div>
 
         <div v-if="currentProductOwnerName" class="application-details__current-po">
-          <span class="application-details__current-po-label">Current Product Owner:</span>
+          <span class="application-details__current-po-label">{{ t('appDetails.currentPO') }}</span>
           <strong class="application-details__current-po-value">{{ currentProductOwnerName }}</strong>
         </div>
       </section>
@@ -95,23 +95,23 @@
       <section v-if="activeTab === 'overview'" class="application-details__panel">
         <dl class="application-details__overview-grid">
           <div class="application-details__overview-item">
-            <dt>Application ID</dt>
+            <dt>{{ t('appDetails.appId') }}</dt>
             <dd>#{{ application.id }}</dd>
           </div>
           <div class="application-details__overview-item">
-            <dt>Program type</dt>
+            <dt>{{ t('appDetails.programType') }}</dt>
             <dd>{{ application.programType || '—' }}</dd>
           </div>
           <div class="application-details__overview-item">
-            <dt>Created</dt>
+            <dt>{{ t('appDetails.created') }}</dt>
             <dd>{{ formatDateTime(application.createdAt) }}</dd>
           </div>
           <div class="application-details__overview-item">
-            <dt>Last update</dt>
+            <dt>{{ t('appDetails.lastUpdate') }}</dt>
             <dd>{{ formatDateTime(application.updatedAt) }}</dd>
           </div>
           <div class="application-details__overview-item application-details__overview-item--wide">
-            <dt>Admin comment</dt>
+            <dt>{{ t('appDetails.adminComment') }}</dt>
             <dd>{{ application.adminComment || '—' }}</dd>
           </div>
         </dl>
@@ -119,19 +119,19 @@
 
       <section v-else-if="activeTab === 'milestone'" class="application-details__panel">
         <div class="application-details__section-head">
-          <h2 class="application-details__section-title">Milestones</h2>
+          <h2 class="application-details__section-title">{{ t('appDetails.milestonesTitle') }}</h2>
           <button
             v-if="canCreateMilestone"
             type="button"
             class="application-details__primary-btn"
             @click="openCreateMilestoneModal"
           >
-            Add Milestone
+            {{ t('appDetails.addMilestone') }}
           </button>
         </div>
 
         <div v-if="milestoneList.length === 0" class="application-details__empty">
-          No milestones yet.
+          {{ t('appDetails.noMilestones') }}
         </div>
         <div v-else class="application-details__timeline">
           <article v-for="milestone in milestoneList" :key="milestone.id" class="application-details__card application-details__timeline-item">
@@ -148,7 +148,7 @@
                     class="application-details__select"
                   >
                     <option disabled value="">
-                      Update status...
+                      {{ t('appDetails.updateStatusPh') }}
                     </option>
                     <option
                       v-for="nextStatus in allowedStatusOptions(milestone)"
@@ -164,13 +164,13 @@
                     :disabled="!milestoneNextStatuses[milestone.id]"
                     @click="updateMilestoneStatus(milestone)"
                   >
-                    Update Status
+                    {{ t('appDetails.updateStatusBtn') }}
                   </button>
                 </template>
               </div>
             </div>
             <p class="application-details__meta">
-              Due: {{ formatDate(milestone.dueDate) }}
+              {{ t('appDetails.due') }} {{ formatDate(milestone.dueDate) }}
             </p>
             <p class="application-details__description">
               {{ milestone.description || '—' }}
@@ -188,7 +188,7 @@
                 class="application-details__secondary-btn"
                 @click="openEditMilestoneModal(milestone)"
               >
-                Edit
+                {{ t('appDetails.edit') }}
               </button>
               <button
                 v-if="canDeleteMilestone(milestone)"
@@ -196,7 +196,7 @@
                 class="application-details__danger-btn"
                 @click="deleteMilestone(milestone)"
               >
-                Delete Milestone
+                {{ t('appDetails.deleteMilestone') }}
               </button>
 
               <button
@@ -205,7 +205,7 @@
                 class="application-details__primary-btn"
                 @click="approveMilestone(milestone)"
               >
-                Approve
+                {{ t('appDetails.approve') }}
               </button>
             </div>
           </article>
@@ -214,7 +214,7 @@
 
       <section v-else-if="activeTab === 'mentorship'" class="application-details__panel">
         <div class="application-details__section-head">
-          <h2 class="application-details__section-title">Mentorship</h2>
+          <h2 class="application-details__section-title">{{ t('appDetails.mentorshipTitle') }}</h2>
           <div v-if="isAdmin" class="application-details__assign-mentor">
             <button
               type="button"
@@ -224,7 +224,7 @@
               :title="assignMentorDisabledReason || undefined"
               @click="openAssignMentorModal"
             >
-              Assign Mentor
+              {{ t('appDetails.assignMentor') }}
             </button>
             <p v-if="assignMentorDisabledReason" class="application-details__hint">
               {{ assignMentorDisabledReason }}
@@ -236,7 +236,7 @@
         </p>
 
         <div v-if="mentorshipList.length === 0" class="application-details__empty">
-          No mentorship records.
+          {{ t('appDetails.noMentorRecords') }}
         </div>
         <div v-else class="application-details__list">
           <article
@@ -246,20 +246,20 @@
           >
             <div class="application-details__card-head">
               <h3 class="application-details__card-title">
-                {{ mentorship.mentorName || 'Unknown mentor' }}
-                <span v-if="index === 0" class="application-details__current-tag">Current</span>
+                {{ mentorship.mentorName || t('appDetails.unknownMentor') }}
+                <span v-if="index === 0" class="application-details__current-tag">{{ t('appDetails.currentTag') }}</span>
               </h3>
               <StatusBadge :status="mentorship.status" />
             </div>
             <p class="application-details__meta">
-              Assigned: {{ formatDateTime(mentorship.startDate || mentorship.createdAt) }}
+              {{ t('appDetails.assigned') }} {{ formatDateTime(mentorship.startDate || mentorship.createdAt) }}
             </p>
             <ConsultationsPanel :mentorship-id="mentorship.id" />
             <div class="application-details__actions">
               <template v-if="isAdmin && mentorship.status === MentorshipStatus.ACTIVE">
                 <select v-model="mentorshipNextStatuses[mentorship.id]" class="application-details__select">
                   <option disabled value="">
-                    Close as...
+                    {{ t('appDetails.closeAs') }}
                   </option>
                   <option :value="MentorshipStatus.COMPLETED">
                     COMPLETED
@@ -274,7 +274,7 @@
                   :disabled="!mentorshipNextStatuses[mentorship.id]"
                   @click="updateMentorshipStatus(mentorship)"
                 >
-                  Change Status
+                  {{ t('appDetails.changeStatus') }}
                 </button>
               </template>
               <button
@@ -283,7 +283,7 @@
                 class="application-details__danger-btn"
                 @click="deleteMentorship(mentorship)"
               >
-                Delete Mentorship
+                {{ t('appDetails.deleteMentorship') }}
               </button>
             </div>
           </article>
@@ -292,22 +292,22 @@
 
       <section v-else-if="activeTab === 'team' && isAdmin" class="application-details__panel">
         <div class="application-details__section-head">
-          <h2 class="application-details__section-title">Applicant team</h2>
+          <h2 class="application-details__section-title">{{ t('appDetails.applicantTeam') }}</h2>
         </div>
-        <div v-if="teamLoading" class="application-details__meta">Loading...</div>
+        <div v-if="teamLoading" class="application-details__meta">{{ t('appDetails.teamLoading') }}</div>
         <div v-else-if="teamError" class="application-details__meta">{{ teamError }}</div>
-        <div v-else-if="!teamData" class="application-details__empty">Team not found</div>
+        <div v-else-if="!teamData" class="application-details__empty">{{ t('appDetails.teamNotFound') }}</div>
         <div v-else>
           <p class="application-details__meta" style="margin-bottom:0.8rem">
-            <strong>{{ teamData.name }}</strong> · ID: {{ teamData.id }} · Members: {{ teamData.members?.length ?? 0 }} / {{ teamData.maxCapacity }}
+            <strong>{{ teamData.name }}</strong> · ID: {{ teamData.id }} · {{ t('appDetails.members') }} {{ teamData.members?.length ?? 0 }} / {{ teamData.maxCapacity }}
           </p>
           <table class="application-details__team-table">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Status</th>
+                <th>{{ t('appDetails.colName') }}</th>
+                <th>{{ t('appDetails.colEmail') }}</th>
+                <th>{{ t('appDetails.colRole') }}</th>
+                <th>{{ t('appDetails.colStatus') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -334,19 +334,19 @@
 
       <section v-else class="application-details__panel">
         <div class="application-details__section-head">
-          <h2 class="application-details__section-title">Consultation Notes</h2>
+          <h2 class="application-details__section-title">{{ t('appDetails.consultNotes') }}</h2>
           <button
             v-if="isMentor"
             type="button"
             class="application-details__primary-btn"
             @click="openCreateNoteModal"
           >
-            Add Note
+            {{ t('appDetails.addNote') }}
           </button>
         </div>
 
         <div v-if="noteList.length === 0" class="application-details__empty">
-          No notes yet.
+          {{ t('appDetails.noNotes') }}
         </div>
         <div v-else class="application-details__list">
           <article v-for="note in noteList" :key="note.id" class="application-details__card">
@@ -365,14 +365,14 @@
                 class="application-details__secondary-btn"
                 @click="openEditNoteModal(note)"
               >
-                Edit
+                {{ t('appDetails.editNote') }}
               </button>
               <button
                 type="button"
                 class="application-details__danger-btn"
                 @click="deleteNote(note)"
               >
-                Delete
+                {{ t('appDetails.delete') }}
               </button>
             </div>
           </article>
@@ -389,12 +389,12 @@
 
     <div v-if="assignModalOpen" class="application-details__modal-overlay" @click.self="assignModalOpen = false">
       <div class="application-details__modal">
-        <h3 class="application-details__modal-title">Assign Mentor</h3>
+        <h3 class="application-details__modal-title">{{ t('appDetails.assignMentorModal') }}</h3>
         <label class="application-details__field">
-          <span>Mentor</span>
+          <span>{{ t('appDetails.selectMentor') }}</span>
           <select v-model="assignMentorUserId" class="application-details__select">
             <option disabled value="">
-              Select mentor...
+              {{ t('appDetails.selectMentor') }}
             </option>
             <option v-for="mentor in publicMentors" :key="mentor.id" :value="String(mentor.id)">
               {{ mentor.name }}
@@ -403,7 +403,7 @@
         </label>
         <div class="application-details__actions">
           <button type="button" class="application-details__secondary-btn" @click="assignModalOpen = false">
-            Cancel
+            {{ t('appDetails.cancel') }}
           </button>
           <button
             type="button"
@@ -411,7 +411,7 @@
             :disabled="!assignMentorUserId"
             @click="submitAssignMentor"
           >
-            Assign
+            {{ t('appDetails.assign') }}
           </button>
         </div>
       </div>
@@ -420,20 +420,20 @@
     <div v-if="noteModalOpen" class="application-details__modal-overlay" @click.self="closeNoteModal">
       <div class="application-details__modal">
         <h3 class="application-details__modal-title">
-          {{ editingNote ? 'Edit Note' : 'Add Note' }}
+          {{ editingNote ? t('appDetails.editNote') : t('appDetails.addNoteTitle') }}
         </h3>
         <label class="application-details__field">
-          <span>Content</span>
+          <span>{{ t('appDetails.content') }}</span>
           <textarea
             v-model.trim="noteFormContent"
             rows="5"
             class="application-details__textarea"
-            placeholder="Write consultation note..."
+            :placeholder="t('appDetails.notePh')"
           />
         </label>
         <div class="application-details__actions">
           <button type="button" class="application-details__secondary-btn" @click="closeNoteModal">
-            Cancel
+            {{ t('appDetails.cancel') }}
           </button>
           <button
             type="button"
@@ -441,7 +441,7 @@
             :disabled="!noteFormContent"
             @click="submitNote"
           >
-            Save
+            {{ t('appDetails.save') }}
           </button>
         </div>
       </div>
@@ -453,6 +453,9 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 import { applicationsApi } from '@/api/applications'
 import { adminApi } from '@/api/admin'
 import { teamsApi } from '@/api/teams'
@@ -516,12 +519,12 @@ const allUsers = ref([])
 
 const tabs = computed(() => {
   const base = [
-    { key: 'overview', label: 'Overview' },
-    { key: 'milestone', label: 'Milestone' },
-    { key: 'mentorship', label: 'Mentorship' },
-    { key: 'notes', label: 'Consultation Notes' },
+    { key: 'overview', label: t('appDetails.tabOverview') },
+    { key: 'milestone', label: t('appDetails.tabMilestone') },
+    { key: 'mentorship', label: t('appDetails.tabMentorship') },
+    { key: 'notes', label: t('appDetails.tabNotes') },
   ]
-  if (isAdmin.value) base.push({ key: 'team', label: 'Team' })
+  if (isAdmin.value) base.push({ key: 'team', label: t('appDetails.tabTeam') })
   return base
 })
 
@@ -863,7 +866,7 @@ async function onMilestoneSaved() {
 
 async function deleteMilestone(milestone) {
   if (!milestone?.id) return
-  const ok = window.confirm('Delete this milestone permanently?')
+  const ok = window.confirm(t('appDetails.confirmDeleteMilestone'))
   if (!ok) return
   try {
     await milestoneStore.delete(milestone.id, applicationIdNumber.value)
@@ -875,7 +878,7 @@ async function deleteMilestone(milestone) {
 
 async function deleteMentorship(mentorship) {
   if (!mentorship?.id) return
-  const ok = window.confirm('Delete this mentorship permanently?')
+  const ok = window.confirm(t('appDetails.confirmDeleteMentorship'))
   if (!ok) return
   mentorshipError.value = ''
   try {

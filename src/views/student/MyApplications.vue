@@ -1,21 +1,21 @@
 <template>
   <div class="page">
-    <h1>My applications</h1>
+    <h1>{{ t('myApps.title') }}</h1>
 
     <div v-if="loading" class="loading">
-      Loading...
+      {{ t('myApps.loading') }}
     </div>
 
     <div v-else-if="error" class="empty empty--error">
       <p>{{ error }}</p>
-      <p class="hint">Make sure the Spring backend is running on port 8080 and log in again.</p>
-      <button type="button" class="btn-go" @click="load">Try again</button>
+      <p class="hint">{{ t('myApps.errorHint') }}</p>
+      <button type="button" class="btn-go" @click="load">{{ t('myApps.tryAgain') }}</button>
     </div>
 
     <div v-else-if="applications.length === 0" class="empty">
-      <p>You have no applications yet</p>
+      <p>{{ t('myApps.noApps') }}</p>
       <router-link to="/programs/a" class="btn-go">
-        Browse programs
+        {{ t('myApps.browsePrograms') }}
       </router-link>
     </div>
 
@@ -35,7 +35,7 @@
         >
           <div class="card-top">
             <span class="program-tag">
-              {{ app.programType === 'PROGRAM_A' ? 'Program A' : 'Program B' }}
+              {{ app.programType === 'PROGRAM_A' ? t('myApps.programA') : t('myApps.programB') }}
             </span>
             <span class="status-tag" :class="statusClass(app.status)">
               {{ statusLabel(app.status) }}
@@ -47,7 +47,7 @@
 
           <!-- Card footer: buttons from Andrii branch -->
           <footer class="card__foot">
-            <span class="muted">Updated: {{ formatDate(app.updatedAt) }}</span>
+            <span class="muted">{{ t('myApps.updated') }} {{ formatDate(app.updatedAt) }}</span>
             <div class="card__foot-actions">
               <button
                 v-if="programDetailRoute(app)"
@@ -55,7 +55,7 @@
                 class="program-proposal-btn"
                 @click.stop="openProgramProposal(app)"
               >
-                Open Program Proposal
+                {{ t('myApps.openProposal') }}
               </button>
               <router-link
                 v-if="app.status === 'DRAFT'"
@@ -63,7 +63,7 @@
                 class="link-continue"
                 @click.stop
               >
-                Continue draft →
+                {{ t('myApps.continueDraft') }}
               </router-link>
             </div>
           </footer>
@@ -86,7 +86,7 @@
 
         <!-- Admin comment -->
         <div v-if="selected.adminComment" class="admin-comment">
-          <div class="comment-label">💬 Comment from administrator</div>
+          <div class="comment-label">{{ t('myApps.adminComment') }}</div>
           <div class="comment-text">{{ selected.adminComment }}</div>
         </div>
 
@@ -99,7 +99,7 @@
             :to="`/apply/${selected.programType === 'PROGRAM_A' ? 'a' : 'b'}/${selected.callId}`"
             class="btn-edit"
           >
-            ✏️ Edit application
+            {{ t('myApps.editApp') }}
           </router-link>
         </div>
 
@@ -128,10 +128,10 @@
           <button class="btn-submit" :disabled="submitting" @click="submitApp">
             {{
               submitting
-                ? 'Submitting...'
+                ? t('myApps.submitting')
                 : selected.status === 'NEEDS_REVISION'
-                  ? '↩ Submit revised application'
-                  : '📤 Submit application'
+                  ? t('myApps.submitRevised')
+                  : t('myApps.submitApp')
             }}
           </button>
         </div>
@@ -145,13 +145,13 @@
           <button
             class="btn-complete"
             :disabled="completing || !resultDocsReady"
-            :title="!resultDocsReady ? 'Upload both result documents' : ''"
+            :title="!resultDocsReady ? t('myApps.uploadBothDocs') : ''"
             @click="completeProject"
           >
-            {{ completing ? 'Sending...' : '✅ Complete project' }}
+            {{ completing ? t('myApps.sending') : t('myApps.completeProject') }}
           </button>
           <p v-if="!resultDocsReady" class="complete-hint">
-            To complete the project, upload both result documents above
+            {{ t('myApps.completeHint') }}
           </p>
         </div>
 
@@ -164,17 +164,17 @@
 
         <!-- Mentorship (from Andrii branch) -->
         <section class="mentorship">
-          <h3 class="mentorship__title">Mentorship</h3>
+          <h3 class="mentorship__title">{{ t('myApps.mentorshipTitle') }}</h3>
           <div v-if="mentorshipsFor(selected.id).length === 0" class="mentorship__empty">
-            No mentorship assigned yet.
+            {{ t('myApps.noMentorship') }}
           </div>
           <div v-else class="mentorship__table-wrap">
             <table class="mentorship__table">
               <thead>
                 <tr>
-                  <th>Mentor</th>
-                  <th>Status</th>
-                  <th>Assigned</th>
+                  <th>{{ t('myApps.colMentor') }}</th>
+                  <th>{{ t('myApps.colStatus') }}</th>
+                  <th>{{ t('myApps.colAssigned') }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -200,14 +200,14 @@
         <!-- Milestones -->
         <section class="milestones">
           <div class="milestones__head">
-            <h3 class="milestones__title">Milestones</h3>
+            <h3 class="milestones__title">{{ t('myApps.milestonesTitle') }}</h3>
             <button
               v-if="canCreateMilestone"
               type="button"
               class="milestone-btn milestone-btn--primary"
               @click="openCreateMilestoneModal"
             >
-              Add Milestone
+              {{ t('myApps.addMilestone') }}
             </button>
           </div>
 
@@ -216,7 +216,7 @@
           </p>
 
           <div v-if="milestoneList.length === 0" class="milestones__empty">
-            No milestones yet.
+            {{ t('myApps.noMilestones') }}
           </div>
           <div v-else class="milestones__list">
             <article
@@ -236,7 +236,7 @@
                       class="milestone-select"
                     >
                       <option disabled value="">
-                        Update status...
+                        {{ t('myApps.updateStatusPh') }}
                       </option>
                       <option
                         v-for="nextStatus in allowedStatusOptions(milestone)"
@@ -252,13 +252,13 @@
                       :disabled="!milestoneNextStatuses[milestone.id]"
                       @click="updateMilestoneStatus(milestone)"
                     >
-                      Update Status
+                      {{ t('myApps.updateStatusBtn') }}
                     </button>
                   </template>
                 </div>
               </div>
               <p class="milestone-item__meta">
-                Due: {{ formatDate(milestone.dueDate) }}
+                {{ t('myApps.due') }} {{ formatDate(milestone.dueDate) }}
               </p>
               <p class="milestone-item__desc">
                 {{ milestone.description || '—' }}
@@ -274,7 +274,7 @@
                   class="milestone-btn milestone-btn--secondary"
                   @click="openEditMilestoneModal(milestone)"
                 >
-                  Edit
+                  {{ t('myApps.editMilestone') }}
                 </button>
                 <button
                   v-if="canDeleteMilestone(milestone)"
@@ -282,7 +282,7 @@
                   class="milestone-btn milestone-btn--danger"
                   @click="deleteMilestone(milestone)"
                 >
-                  Delete Milestone
+                  {{ t('myApps.deleteMilestoneBtn') }}
                 </button>
                 <button
                   v-if="isAdmin && milestone.status === MilestoneStatus.PENDING_APPROVAL"
@@ -290,7 +290,7 @@
                   class="milestone-btn milestone-btn--primary"
                   @click="approveMilestone(milestone)"
                 >
-                  Approve
+                  {{ t('myApps.approve') }}
                 </button>
               </div>
             </article>
@@ -300,7 +300,7 @@
       </div>
 
       <div v-else class="detail empty-detail">
-        <p>Select an application from the list</p>
+        <p>{{ t('myApps.selectApp') }}</p>
       </div>
     </div>
 
@@ -317,6 +317,9 @@
 import { ref, computed, onMounted, onActivated, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 import { applicationsApi } from '@/api/applications'
 import { useMentorshipStore } from '@/stores/mentorship'
 import { MilestoneStatus, useMilestoneStore } from '@/stores/milestone'
@@ -546,17 +549,18 @@ async function completeProject() {
 }
 
 function statusLabel(status) {
-  return {
-    DRAFT: 'Draft',
-    SUBMITTED: 'Submitted',
-    IN_REVIEW: 'In review',
-    NEEDS_REVISION: 'Needs revision',
-    APPROVED: 'Approved',
-    REJECTED: 'Rejected',
-    COMPLETION_REQUESTED: 'Awaiting confirmation',
-    COMPLETION_PO_APPROVED: 'PO confirmed',
-    COMPLETED: 'Completed'
-  }[status] || status
+  const map = {
+    DRAFT: t('myApps.statusDraft'),
+    SUBMITTED: t('myApps.statusSubmitted'),
+    IN_REVIEW: t('myApps.statusInReview'),
+    NEEDS_REVISION: t('myApps.statusNeedsRevision'),
+    APPROVED: t('myApps.statusApproved'),
+    REJECTED: t('myApps.statusRejected'),
+    COMPLETION_REQUESTED: t('myApps.statusAwaitingConfirmation'),
+    COMPLETION_PO_APPROVED: t('myApps.statusPoConfirmed'),
+    COMPLETED: t('myApps.statusCompleted'),
+  }
+  return map[status] || status
 }
 
 function formatDate(date) {
@@ -640,7 +644,7 @@ async function onMilestoneSaved() {
 
 async function deleteMilestone(milestone) {
   if (!milestone?.id || selectedId.value == null) return
-  const ok = window.confirm('Delete this milestone permanently?')
+  const ok = window.confirm(t('myApps.confirmDelete'))
   if (!ok) return
   milestoneError.value = ''
   try {

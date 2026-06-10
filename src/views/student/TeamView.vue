@@ -1,12 +1,12 @@
 <template>
   <div class="page">
     <section class="page__head">
-      <p class="eyebrow">Student</p>
-      <h2 class="page__title">My team</h2>
-      <p class="page__sub">Create a team or join an existing one</p>
+      <p class="eyebrow">{{ t('teamView.eyebrow') }}</p>
+      <h2 class="page__title">{{ t('teamView.title') }}</h2>
+      <p class="page__sub">{{ t('teamView.sub') }}</p>
     </section>
 
-    <div v-if="loading" class="state-msg">Loading...</div>
+    <div v-if="loading" class="state-msg">{{ t('teamView.loading') }}</div>
     <div v-else-if="loadError" class="alert alert--error">{{ loadError }}</div>
 
     <div v-else class="content">
@@ -15,13 +15,13 @@
         <div class="card__head">
           <h3 class="card__title">
             <span class="badge badge--warn">{{ invites.length }}</span>
-            Team invitations
+            {{ t('teamView.teamInvitations') }}
           </h3>
         </div>
         <div class="invites-list">
           <div v-for="inv in invites" :key="inv.id" class="invite-row">
             <div class="invite-row__info">
-              <span class="invite-row__team">Team: <strong>{{ inv.teamId }}</strong></span>
+              <span class="invite-row__team">{{ t('teamView.teamLabel') }} <strong>{{ inv.teamId }}</strong></span>
               <span class="invite-row__date">{{ formatDate(inv.invitedAt) }}</span>
             </div>
             <div class="invite-row__actions">
@@ -31,7 +31,7 @@
                 :disabled="respondingId === inv.id"
                 @click="respond(inv, true)"
               >
-                Accept
+                {{ t('teamView.accept') }}
               </button>
               <button
                 type="button"
@@ -39,7 +39,7 @@
                 :disabled="respondingId === inv.id"
                 @click="respond(inv, false)"
               >
-                Decline
+                {{ t('teamView.decline') }}
               </button>
             </div>
           </div>
@@ -50,13 +50,13 @@
       <!-- No team: create form -->
       <div v-if="!team" class="card">
         <div class="card__head">
-          <h3 class="card__title">You don't have a team yet</h3>
+          <h3 class="card__title">{{ t('teamView.noTeam') }}</h3>
         </div>
-        <p class="hint-text">Create a new team or wait for an invitation from a leader.</p>
+        <p class="hint-text">{{ t('teamView.noTeamHint') }}</p>
 
         <div v-if="!showCreateForm" class="create-trigger">
           <button type="button" class="btn btn--primary" @click="showCreateForm = true">
-            + Create team
+            {{ t('teamView.createTeam') }}
           </button>
         </div>
 
@@ -65,11 +65,11 @@
           <div class="form">
             <div class="form__row">
               <div class="field">
-                <label class="field__label">Team name *</label>
-                <input v-model="createForm.name" class="field__input" placeholder="E.g.: Innovators" />
+                <label class="field__label">{{ t('teamView.teamName') }}</label>
+                <input v-model="createForm.name" class="field__input" :placeholder="t('teamView.teamNamePh')" />
               </div>
               <div class="field">
-                <label class="field__label">Max members</label>
+                <label class="field__label">{{ t('teamView.maxMembers') }}</label>
                 <input
                   v-model.number="createForm.maxCapacity"
                   class="field__input"
@@ -81,28 +81,28 @@
               </div>
             </div>
             <div class="field field--full">
-              <label class="field__label">Competencies</label>
+              <label class="field__label">{{ t('teamView.competencies') }}</label>
               <input
                 v-model="createForm.competencies"
                 class="field__input"
-                placeholder="E.g.: Backend, ML, Design"
+                :placeholder="t('teamView.competenciesPh')"
               />
             </div>
             <div class="field field--full">
-              <label class="field__label">Description</label>
+              <label class="field__label">{{ t('teamView.description') }}</label>
               <textarea
                 v-model="createForm.description"
                 class="field__input field__textarea"
                 rows="3"
-                placeholder="Brief team description"
+                :placeholder="t('teamView.descriptionPh')"
               />
             </div>
           </div>
           <div class="form__actions">
             <button type="button" class="btn btn--primary" :disabled="creating" @click="createTeam">
-              {{ creating ? 'Creating...' : 'Create' }}
+              {{ creating ? t('teamView.creating') : t('teamView.create') }}
             </button>
-            <button type="button" class="btn btn--ghost" @click="showCreateForm = false">Cancel</button>
+            <button type="button" class="btn btn--ghost" @click="showCreateForm = false">{{ t('teamView.cancel') }}</button>
           </div>
         </div>
       </div>
@@ -112,13 +112,13 @@
         <div class="card__head">
           <div>
             <h3 class="card__title">{{ team.name }}</h3>
-            <p class="card__sub-text">{{ team.description || 'No description' }}</p>
+            <p class="card__sub-text">{{ team.description || t('teamView.noDescription') }}</p>
           </div>
-          <span class="badge badge--info">{{ memberCount }}/{{ team.maxCapacity }} members</span>
+          <span class="badge badge--info">{{ t('teamView.memberCount', { count: memberCount, max: team.maxCapacity }) }}</span>
         </div>
 
         <div v-if="team.competencies" class="competencies">
-          <span class="field__label">Competencies:</span>
+          <span class="field__label">{{ t('teamView.competenciesLabel') }}</span>
           <span class="competency-tag" v-for="c in competencyList" :key="c">{{ c }}</span>
         </div>
 
@@ -127,10 +127,10 @@
           <table class="members-table">
             <thead>
               <tr>
-                <th>Member</th>
-                <th>Role</th>
-                <th>Status</th>
-                <th>Join date</th>
+                <th>{{ t('teamView.colMember') }}</th>
+                <th>{{ t('teamView.colRole') }}</th>
+                <th>{{ t('teamView.colStatus') }}</th>
+                <th>{{ t('teamView.colJoinDate') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -138,7 +138,7 @@
                 <td class="cell-name">{{ m.memberDisplayName || m.userId }}</td>
                 <td>
                   <span class="pill" :class="m.role === 'LEADER' ? 'pill--leader' : 'pill--member'">
-                    {{ m.role === 'LEADER' ? 'Leader' : 'Member' }}
+                    {{ m.role === 'LEADER' ? t('teamView.roleLeader') : t('teamView.roleMember') }}
                   </span>
                 </td>
                 <td>
@@ -154,14 +154,14 @@
 
         <!-- Invite member (leader only) -->
         <div v-if="isLeader" class="invite-section">
-          <h4 class="invite-section__title">Invite member</h4>
+          <h4 class="invite-section__title">{{ t('teamView.inviteTitle') }}</h4>
           <div v-if="inviteError" class="alert alert--error">{{ inviteError }}</div>
-          <div v-if="inviteSuccess" class="alert alert--ok">Invitation sent</div>
+          <div v-if="inviteSuccess" class="alert alert--ok">{{ t('teamView.inviteSuccess') }}</div>
           <div class="invite-input-row">
             <input
               v-model="inviteUserId"
               class="field__input"
-              placeholder="User ID"
+              :placeholder="t('teamView.userIdPh')"
               @keyup.enter="inviteMember"
             />
             <button
@@ -170,7 +170,7 @@
               :disabled="inviting || !inviteUserId.trim()"
               @click="inviteMember"
             >
-              {{ inviting ? '...' : 'Invite' }}
+              {{ inviting ? '...' : t('teamView.invite') }}
             </button>
           </div>
         </div>
@@ -181,8 +181,11 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { teamsApi } from '@/api/teams'
+
+const { t } = useI18n()
 
 const auth = useAuthStore()
 
@@ -296,7 +299,13 @@ async function inviteMember() {
 }
 
 function statusLabel(s) {
-  return { PENDING: 'Pending', ACCEPTED: 'Accepted', DECLINED: 'Declined', REMOVED: 'Removed' }[s] || s
+  const map = {
+    PENDING: t('teamView.statusPending'),
+    ACCEPTED: t('teamView.statusAccepted'),
+    DECLINED: t('teamView.statusDeclined'),
+    REMOVED: t('teamView.statusRemoved'),
+  }
+  return map[s] || s
 }
 
 function statusPillClass(s) {

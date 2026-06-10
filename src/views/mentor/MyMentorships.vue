@@ -1,25 +1,25 @@
 <template>
   <div class="page">
     <p class="lead">
-      Your active mentorships. Track status and jump to the related application.
+      {{ t('mentorView.lead') }}
     </p>
 
     <div v-if="loading" class="state">
-      Loading…
+      {{ t('mentorView.loading') }}
     </div>
     <div v-else-if="error" class="state state--error">
       {{ error }}
     </div>
     <div v-else-if="rows.length === 0" class="state">
-      No active mentorships found.
+      {{ t('mentorView.noMentorships') }}
     </div>
 
     <div v-else class="table-wrap">
       <table class="table">
         <thead>
           <tr>
-            <th>Application</th>
-            <th>Status</th>
+            <th>{{ t('mentorView.colApp') }}</th>
+            <th>{{ t('mentorView.colStatus') }}</th>
             <th />
           </tr>
         </thead>
@@ -39,9 +39,9 @@
                 class="btn-sm"
                 :to="`/applications/${row.applicationId}`"
               >
-                View Application
+                {{ t('mentorView.viewApp') }}
               </router-link>
-              <span v-else class="muted">No application</span>
+              <span v-else class="muted">{{ t('mentorView.noApp') }}</span>
             </td>
           </tr>
         </tbody>
@@ -49,7 +49,7 @@
     </div>
 
     <section v-if="rows.length" class="consultations-section">
-      <h2 class="consultations-section__title">Consultation Logs</h2>
+      <h2 class="consultations-section__title">{{ t('mentorView.consultationLogs') }}</h2>
       <div class="consultations-section__list">
         <article
           v-for="row in rows"
@@ -57,7 +57,7 @@
           class="consultations-section__item"
         >
           <h3 class="consultations-section__item-title">
-            Mentorship #{{ row.id }} • Application #{{ row.applicationId ?? '—' }}
+            {{ t('mentorView.mentorshipLabel', { id: row.id, appId: row.applicationId ?? '—' }) }}
           </h3>
           <ConsultationsPanel :mentorship-id="row.id" />
         </article>
@@ -69,8 +69,11 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
+import { useI18n } from 'vue-i18n'
 import { useMentorshipStore } from '@/stores/mentorship'
 import ConsultationsPanel from '@/components/ConsultationsPanel.vue'
+
+const { t } = useI18n()
 
 const mentorshipStore = useMentorshipStore()
 const { myMentorships } = storeToRefs(mentorshipStore)

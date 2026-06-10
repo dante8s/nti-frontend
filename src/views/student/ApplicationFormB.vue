@@ -1,24 +1,24 @@
 <template>
     <div class="page">
         <div class="back">
-            <router-link to="/programs/b">← Back to Program B</router-link>
+            <router-link to="/programs/b">{{ t('appForm.backToProgramB') }}</router-link>
         </div>
 
         <div class="form-box">
-            <h1>Application — Program B</h1>
-            <p class="subtitle">Živá prax — real projects from companies</p>
+            <h1>{{ t('appForm.titleB') }}</h1>
+            <p class="subtitle">{{ t('appForm.subtitleB') }}</p>
 
             <div v-if="callInfo" class="call-info green">
-                <span class="call-label">Task:</span>
+                <span class="call-label">{{ t('appForm.task') }}</span>
                 <strong>{{ callInfo.title }}</strong>
-                <span class="deadline">Deadline: {{ formatDate(callInfo.deadline) }}</span>
+                <span class="deadline">{{ t('appForm.deadline') }} {{ formatDate(callInfo.deadline) }}</span>
             </div>
 
             <div v-if="isDeadlinePassed" class="deadline-banner">
-                The application deadline for this call has passed
+                {{ t('appForm.deadlinePassed') }}
             </div>
 
-            <div v-if="initialLoading" class="loading">Loading...</div>
+            <div v-if="initialLoading" class="loading">{{ t('appForm.loading') }}</div>
 
             <template v-else-if="!isDeadlinePassed">
                 <!-- Step 1 — form -->
@@ -26,42 +26,42 @@
                     <div v-if="error" class="error">{{ error }}</div>
 
                     <form @submit.prevent="saveForm">
-                        <div class="section-title">Team</div>
+                        <div class="section-title">{{ t('appForm.sectionTeam') }}</div>
 
                         <div class="field">
-                            <label>Team name *</label>
-                            <input v-model="form.teamName" type="text" placeholder="Your team name" required />
+                            <label>{{ t('appForm.teamName') }}</label>
+                            <input v-model="form.teamName" type="text" :placeholder="t('appForm.teamNamePh')" required />
                         </div>
                         <div class="field">
-                            <label>Team composition *</label>
+                            <label>{{ t('appForm.teamComp') }}</label>
                             <textarea v-model="form.teamDescription" rows="3"
-                                placeholder="List the members and their roles..." required />
+                                :placeholder="t('appForm.teamCompPh')" required />
                         </div>
                         <div class="field">
-                            <label>Team technical skills *</label>
-                            <input v-model="form.skills" type="text" placeholder="Java, Vue.js, Docker, PostgreSQL..."
+                            <label>{{ t('appForm.techSkills') }}</label>
+                            <input v-model="form.skills" type="text" :placeholder="t('appForm.techSkillsPh')"
                                 required />
                         </div>
 
-                        <div class="section-title" style="margin-top:1.5rem">Solution proposal</div>
+                        <div class="section-title" style="margin-top:1.5rem">{{ t('appForm.sectionSolution') }}</div>
 
                         <div class="field">
-                            <label>How will you solve the task? *</label>
-                            <textarea v-model="form.solution" rows="4" placeholder="Describe your approach..." required />
+                            <label>{{ t('appForm.howSolve') }}</label>
+                            <textarea v-model="form.solution" rows="4" :placeholder="t('appForm.howSolvePh')" required />
                         </div>
                         <div class="field">
-                            <label>Expected results *</label>
+                            <label>{{ t('appForm.expectedResults') }}</label>
                             <textarea v-model="form.expectedResults" rows="3"
-                                placeholder="What will be the outcome of your work?" required />
+                                :placeholder="t('appForm.expectedResultsPh')" required />
                         </div>
                         <div class="field">
-                            <label>Team motivation *</label>
-                            <textarea v-model="form.motivation" rows="3" placeholder="Why is your team the right fit?"
+                            <label>{{ t('appForm.motivation') }}</label>
+                            <textarea v-model="form.motivation" rows="3" :placeholder="t('appForm.motivationPh')"
                                 required />
                         </div>
 
                         <button type="submit" :disabled="loading" class="btn-primary green">
-                            {{ loading ? 'Saving...' : 'Save and proceed to documents' }}
+                            {{ loading ? t('appForm.saving') : t('appForm.saveProceed') }}
                         </button>
                     </form>
                 </div>
@@ -69,14 +69,14 @@
                 <!-- Step 2 — documents -->
                 <div v-else>
                     <div class="step-header">
-                        <div class="step-done">✓ Information saved</div>
+                        <div class="step-done">{{ t('appForm.infoSaved') }}</div>
                         <div v-if="savedFormData" class="saved-summary">
                             <strong>{{ savedFormData.teamName }}</strong>
                             <span class="muted"> · {{ savedFormData.skills }}</span>
                         </div>
                         <button v-if="application.status === 'DRAFT' || application.status === 'NEEDS_REVISION'"
                             type="button" class="btn-back-form" @click="application = null">
-                            Edit data ↩
+                            {{ t('appForm.editData') }}
                         </button>
                     </div>
 
@@ -85,14 +85,14 @@
 
                     <div class="submit-section">
                         <div v-if="!canSubmit" class="submit-hint">
-                            Upload all 4 required documents
+                            {{ t('appForm.docsRequired4') }}
                         </div>
                         <div class="submit-actions">
                             <button class="btn-draft" @click="$router.push('/app/my-applications')">
-                                Save as draft
+                                {{ t('appForm.saveAsDraft') }}
                             </button>
                             <button class="btn-submit" :disabled="!canSubmit || submitting" @click="submitApplication">
-                                {{ submitting ? 'Submitting...' : 'Submit application' }}
+                                {{ submitting ? t('appForm.submitting') : t('appForm.submitApp') }}
                             </button>
                         </div>
                     </div>
@@ -100,9 +100,9 @@
                     <div v-if="submitError" class="error">{{ submitError }}</div>
 
                     <div v-if="submitted" class="success">
-                        <h3>Application submitted!</h3>
-                        <p>Track the status in your dashboard.</p>
-                        <router-link to="/app/my-applications">My applications</router-link>
+                        <h3>{{ t('appForm.submitted') }}</h3>
+                        <p>{{ t('appForm.trackStatusB') }}</p>
+                        <router-link to="/app/my-applications">{{ t('appForm.myAppsLink') }}</router-link>
                     </div>
                 </div>
             </template>
@@ -112,7 +112,10 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
+
+const { t } = useI18n()
 import { programsApi } from '@/api/programs'
 import { applicationsApi } from '@/api/applications'
 import { getCallApplicationEligibility } from '@/api/profileApi'
@@ -167,13 +170,11 @@ onMounted(async () => {
         if (!isSuperAdmin) {
             const eligibility = await getCallApplicationEligibility()
             if (!eligibility?.teamLeader) {
-                error.value =
-                    'Only the team leader can submit an application for a call. Contact your team leader.'
+                error.value = t('appForm.notTeamLeader')
                 return
             }
             if (!eligibility?.teamFull) {
-                error.value =
-                    'The team is not yet complete. To submit an application, the team must be at full capacity (3 members).'
+                error.value = t('appForm.teamNotComplete')
                 return
             }
         }

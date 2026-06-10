@@ -1,7 +1,10 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { reportingApi } from '@/api/reporting'
+
+const { t } = useI18n()
 
 const callId = ref('')
 const evalCallId = ref('')
@@ -26,25 +29,25 @@ const busy = ref(false)
 
 const formats = ['csv', 'xlsx', 'pdf', 'docx']
 
-const statLabels = {
-  openCalls: 'Open calls',
-  totalApplications: 'Total applications',
-  applicationsDraft: 'Drafts',
-  applicationsSubmitted: 'Submitted',
-  applicationsInReview: 'In review',
-  applicationsNeedsRevision: 'Needs revision',
-  applicationsApproved: 'Approved applications',
-  applicationsRejected: 'Rejected',
-  callsWithWinningTeam: 'Calls with winning team',
-  activePartnerOrganizations: 'Active partners',
-  totalOrganizations: 'Total organizations',
-  totalStudentProfiles: 'Student profiles',
-  profileWithCv: 'Profiles with CV',
-  completeProfiles: 'Complete profiles',
-  averageGrade: 'Average profile score',
-  totalTeams: 'Total teams',
-  eligibleTeams: 'Teams with ≥ 3 members',
-}
+const statLabels = computed(() => ({
+  openCalls: t('reporting.statOpenCalls'),
+  totalApplications: t('reporting.statTotalApps'),
+  applicationsDraft: t('reporting.statDrafts'),
+  applicationsSubmitted: t('reporting.statSubmitted'),
+  applicationsInReview: t('reporting.statInReview'),
+  applicationsNeedsRevision: t('reporting.statNeedsRevision'),
+  applicationsApproved: t('reporting.statApprovedApps'),
+  applicationsRejected: t('reporting.statRejected'),
+  callsWithWinningTeam: t('reporting.statCallsWinner'),
+  activePartnerOrganizations: t('reporting.statActivePartners'),
+  totalOrganizations: t('reporting.statTotalOrgs'),
+  totalStudentProfiles: t('reporting.statStudentProfiles'),
+  profileWithCv: t('reporting.statProfileCV'),
+  completeProfiles: t('reporting.statCompleteProfiles'),
+  averageGrade: t('reporting.statAvgGrade'),
+  totalTeams: t('reporting.statTotalTeams'),
+  eligibleTeams: t('reporting.statEligibleTeams'),
+}))
 
 function buildApplicationExportParams() {
   return {
@@ -95,9 +98,9 @@ async function loadAdminStats() {
   try {
     const res = await reportingApi.getStats()
     adminStats.value = res.data
-    message.value = 'Summary updated.'
+    message.value = t('reporting.summaryUpdated')
   } catch {
-    message.value = 'Failed to load summary.'
+    message.value = t('reporting.failedSummary')
   } finally {
     busy.value = false
   }
@@ -109,9 +112,9 @@ async function loadTeams() {
     const res = await reportingApi.getTeams(buildTeamQueryParams())
     teamItems.value = res.data?.items || []
     teamTotal.value = res.data?.total ?? 0
-    message.value = 'Team report updated.'
+    message.value = t('reporting.teamUpdated')
   } catch {
-    message.value = 'Failed to load teams.'
+    message.value = t('reporting.failedTeams')
     teamItems.value = []
     teamTotal.value = 0
   } finally {
@@ -126,9 +129,9 @@ async function exportApplications(format) {
     const res = await reportingApi.exportApplications(params, format)
     const suffix = `${role.value || 'all'}_${program.value || 'all'}_${status.value || 'all'}`
     downloadBlob(res.data, `nti_zvit_zayavky_${suffix}.${format}`)
-    message.value = `Applications export (${format.toUpperCase()}) generated.`
+    message.value = `${t('reporting.exportApps')} (${format.toUpperCase()}) OK.`
   } catch {
-    message.value = `Failed to export applications (${format.toUpperCase()}).`
+    message.value = `${t('reporting.exportApps')} (${format.toUpperCase()}) — error.`
   } finally {
     busy.value = false
   }
@@ -139,9 +142,9 @@ async function exportTeams(format) {
   try {
     const res = await reportingApi.exportTeams(buildTeamExportParams(), format)
     downloadBlob(res.data, `nti_zvit_komandy_${format}.${format}`)
-    message.value = `Teams export (${format.toUpperCase()}) generated.`
+    message.value = `${t('reporting.exportTeams')} (${format.toUpperCase()}) OK.`
   } catch {
-    message.value = `Failed to export teams (${format.toUpperCase()}).`
+    message.value = `${t('reporting.exportTeams')} (${format.toUpperCase()}) — error.`
   } finally {
     busy.value = false
   }
@@ -149,16 +152,16 @@ async function exportTeams(format) {
 
 async function exportEvaluationExcel() {
   if (!evalCallId.value) {
-    message.value = 'Please specify the call ID for the Excel evaluation.'
+    message.value = t('reporting.specifyCallId')
     return
   }
   busy.value = true
   try {
     const res = await reportingApi.exportEvaluationWorkbook(Number(evalCallId.value))
     downloadBlob(res.data, `evaluation_report_call_${evalCallId.value}.xlsx`)
-    message.value = 'Excel evaluation report downloaded.'
+    message.value = t('reporting.evalDownloaded')
   } catch {
-    message.value = 'Failed to generate Excel evaluation.'
+    message.value = t('reporting.failedEval')
   } finally {
     busy.value = false
   }
@@ -185,21 +188,21 @@ function teamNextPage() {
 
 function statusLabel(s) {
   const map = {
-    DRAFT: 'Draft',
-    SUBMITTED: 'Submitted',
-    IN_REVIEW: 'In review',
-    NEEDS_REVISION: 'Needs revision',
-    APPROVED: 'Approved',
-    REJECTED: 'Rejected',
+    DRAFT: t('reporting.draft'),
+    SUBMITTED: t('reporting.submitted'),
+    IN_REVIEW: t('reporting.inReview'),
+    NEEDS_REVISION: t('reporting.needsRevision'),
+    APPROVED: t('reporting.approved'),
+    REJECTED: t('reporting.rejected'),
   }
   return map[s] || s || '—'
 }
 
 const teamPageLabel = computed(() => {
-  if (!teamTotal.value) return '0 records'
+  if (!teamTotal.value) return t('reporting.noRecords')
   const from = teamPage.value * teamPageSize + 1
   const to = Math.min((teamPage.value + 1) * teamPageSize, teamTotal.value)
-  return `${from}–${to} of ${teamTotal.value}`
+  return t('reporting.records', { from, to, total: teamTotal.value })
 })
 
 onMounted(async () => {
@@ -211,12 +214,12 @@ onMounted(async () => {
 <template>
   <div class="panel">
     <article v-if="adminStats" class="card">
-      <h3>Summary</h3>
+      <h3>{{ t('reporting.summary') }}</h3>
       <p class="hint">
-        Overview of competitions, applications, and teams. Detailed lists —
-        <RouterLink class="inline-link" to="/app/admin/applications">Applications</RouterLink>,
-        <RouterLink class="inline-link" to="/app/admin/organizations">Organizations</RouterLink>,
-        <RouterLink class="inline-link" to="/app/admin/users">Users</RouterLink>.
+        {{ t('reporting.summaryHint') }}
+        <RouterLink class="inline-link" to="/app/admin/applications">{{ t('nav.applications') }}</RouterLink>,
+        <RouterLink class="inline-link" to="/app/admin/organizations">{{ t('nav.organizations') }}</RouterLink>,
+        <RouterLink class="inline-link" to="/app/admin/users">{{ t('nav.users') }}</RouterLink>.
       </p>
       <div class="stats">
         <div v-for="(value, key) in adminStats" :key="key" class="stat">
@@ -225,60 +228,58 @@ onMounted(async () => {
         </div>
       </div>
       <div class="row">
-        <button type="button" :disabled="busy" @click="loadAdminStats">Refresh summary</button>
+        <button type="button" :disabled="busy" @click="loadAdminStats">{{ t('reporting.refreshSummary') }}</button>
       </div>
     </article>
 
     <article class="card">
-      <h3>Teams and calls</h3>
-      <p class="hint">
-        Team-to-call link via the leader's application (any status). 'No call' — the leader has not submitted an application.
-      </p>
+      <h3>{{ t('reporting.teamsTitle') }}</h3>
+      <p class="hint">{{ t('reporting.teamsHint') }}</p>
       <div class="grid">
         <div>
-          <label class="label">Call ID</label>
-          <input v-model="teamCallId" type="number" min="1" placeholder="All" />
+          <label class="label">{{ t('reporting.callId') }}</label>
+          <input v-model="teamCallId" type="number" min="1" :placeholder="t('reporting.allOption')" />
         </div>
         <div>
-          <label class="label">Program</label>
+          <label class="label">{{ t('reporting.program') }}</label>
           <select v-model="teamProgram">
-            <option value="">All</option>
-            <option value="A">Program A</option>
-            <option value="B">Program B</option>
+            <option value="">{{ t('reporting.allOption') }}</option>
+            <option value="A">{{ t('reporting.programA') }}</option>
+            <option value="B">{{ t('reporting.programB') }}</option>
           </select>
         </div>
         <div>
-          <label class="label">Application status</label>
+          <label class="label">{{ t('reporting.appStatus') }}</label>
           <select v-model="teamStatus">
-            <option value="">All</option>
-            <option value="DRAFT">Draft</option>
-            <option value="SUBMITTED">Submitted</option>
-            <option value="IN_REVIEW">In review</option>
-            <option value="NEEDS_REVISION">Needs revision</option>
-            <option value="APPROVED">Approved</option>
-            <option value="REJECTED">Rejected</option>
+            <option value="">{{ t('reporting.allOption') }}</option>
+            <option value="DRAFT">{{ t('reporting.draft') }}</option>
+            <option value="SUBMITTED">{{ t('reporting.submitted') }}</option>
+            <option value="IN_REVIEW">{{ t('reporting.inReview') }}</option>
+            <option value="NEEDS_REVISION">{{ t('reporting.needsRevision') }}</option>
+            <option value="APPROVED">{{ t('reporting.approved') }}</option>
+            <option value="REJECTED">{{ t('reporting.rejected') }}</option>
           </select>
         </div>
         <div>
-          <label class="label">Call link</label>
+          <label class="label">{{ t('reporting.callLink') }}</label>
           <select v-model="teamLinked">
-            <option value="">All</option>
-            <option value="yes">Has application (on call)</option>
-            <option value="no">No call</option>
+            <option value="">{{ t('reporting.allOption') }}</option>
+            <option value="yes">{{ t('reporting.hasApp') }}</option>
+            <option value="no">{{ t('reporting.noCall') }}</option>
           </select>
         </div>
         <div>
-          <label class="label">Min. members</label>
-          <input v-model="teamMinMembers" type="number" min="1" max="10" placeholder="E.g. 3" />
+          <label class="label">{{ t('reporting.minMembers') }}</label>
+          <input v-model="teamMinMembers" type="number" min="1" max="10" placeholder="3" />
         </div>
         <label class="check-inline">
           <input v-model="teamWinnerOnly" type="checkbox" />
-          <span>Winners only (APPROVED)</span>
+          <span>{{ t('reporting.winnersOnly') }}</span>
         </label>
       </div>
 
       <div class="row">
-        <button type="button" :disabled="busy" @click="onTeamFilterSubmit">Apply filters</button>
+        <button type="button" :disabled="busy" @click="onTeamFilterSubmit">{{ t('reporting.applyFilters') }}</button>
         <button
           v-for="fmt in formats"
           :key="'team-' + fmt"
@@ -287,21 +288,21 @@ onMounted(async () => {
           :disabled="busy"
           @click="exportTeams(fmt)"
         >
-          Export teams {{ fmt.toUpperCase() }}
+          {{ t('reporting.exportTeams') }} {{ fmt.toUpperCase() }}
         </button>
       </div>
 
-      <div v-if="!teamItems.length" class="hint table-empty">No teams found for the selected filter.</div>
+      <div v-if="!teamItems.length" class="hint table-empty">{{ t('reporting.noTeamsFound') }}</div>
       <div v-else class="table-wrap">
         <table class="data-table">
           <thead>
             <tr>
-              <th>Team</th>
-              <th>Leader</th>
-              <th>Members</th>
-              <th>Call</th>
-              <th>Status</th>
-              <th>Milestones</th>
+              <th>{{ t('reporting.colTeam') }}</th>
+              <th>{{ t('reporting.colLeader') }}</th>
+              <th>{{ t('reporting.colMembers') }}</th>
+              <th>{{ t('reporting.colCall') }}</th>
+              <th>{{ t('reporting.colStatus') }}</th>
+              <th>{{ t('reporting.colMilestones') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -320,15 +321,15 @@ onMounted(async () => {
                   {{ row.callTitle }}
                   <span class="sub">#{{ row.callId }}</span>
                   <span v-if="row.additionalCallsCount" class="badge">
-                    +{{ row.additionalCallsCount }} call
+                    +{{ row.additionalCallsCount }}
                   </span>
                 </template>
-                <span v-else class="muted-cell">No call</span>
+                <span v-else class="muted-cell">{{ t('reporting.noCall') }}</span>
               </td>
               <td>
                 <template v-if="row.applicationStatus">
                   {{ statusLabel(row.applicationStatus) }}
-                  <span v-if="row.isWinner" class="badge badge--win">Winner</span>
+                  <span v-if="row.isWinner" class="badge badge--win">{{ t('reporting.winner') }}</span>
                 </template>
                 <span v-else>—</span>
               </td>
@@ -343,52 +344,52 @@ onMounted(async () => {
       </div>
 
       <div v-if="teamTotal > teamPageSize" class="pager">
-        <button type="button" :disabled="busy || teamPage === 0" @click="teamPrevPage">← Back</button>
+        <button type="button" :disabled="busy || teamPage === 0" @click="teamPrevPage">{{ t('reporting.back') }}</button>
         <span class="hint">{{ teamPageLabel }}</span>
         <button
           type="button"
           :disabled="busy || (teamPage + 1) * teamPageSize >= teamTotal"
           @click="teamNextPage"
         >
-          Next →
+          {{ t('reporting.next') }}
         </button>
       </div>
     </article>
 
     <article class="card">
-      <h3>Application export</h3>
+      <h3>{{ t('reporting.appExportTitle') }}</h3>
       <div class="grid">
         <div>
-          <label class="label">Call ID</label>
-          <input v-model="callId" type="number" min="1" placeholder="E.g. 1" />
+          <label class="label">{{ t('reporting.callId') }}</label>
+          <input v-model="callId" type="number" min="1" placeholder="1" />
         </div>
         <div>
-          <label class="label">Program</label>
+          <label class="label">{{ t('reporting.program') }}</label>
           <select v-model="program">
-            <option value="">All</option>
-            <option value="A">Program A</option>
-            <option value="B">Program B</option>
+            <option value="">{{ t('reporting.allOption') }}</option>
+            <option value="A">{{ t('reporting.programA') }}</option>
+            <option value="B">{{ t('reporting.programB') }}</option>
           </select>
         </div>
         <div>
-          <label class="label">Application status</label>
+          <label class="label">{{ t('reporting.appStatus') }}</label>
           <select v-model="status">
-            <option value="">All</option>
-            <option value="DRAFT">Draft</option>
-            <option value="SUBMITTED">Submitted</option>
-            <option value="IN_REVIEW">In review</option>
-            <option value="NEEDS_REVISION">Needs revision</option>
-            <option value="APPROVED">Approved</option>
-            <option value="REJECTED">Rejected</option>
+            <option value="">{{ t('reporting.allOption') }}</option>
+            <option value="DRAFT">{{ t('reporting.draft') }}</option>
+            <option value="SUBMITTED">{{ t('reporting.submitted') }}</option>
+            <option value="IN_REVIEW">{{ t('reporting.inReview') }}</option>
+            <option value="NEEDS_REVISION">{{ t('reporting.needsRevision') }}</option>
+            <option value="APPROVED">{{ t('reporting.approved') }}</option>
+            <option value="REJECTED">{{ t('reporting.rejected') }}</option>
           </select>
         </div>
         <div>
-          <label class="label">Applicant role</label>
+          <label class="label">{{ t('reporting.applicantRole') }}</label>
           <select v-model="role">
-            <option value="">All</option>
-            <option value="student">Students</option>
-            <option value="company">Companies</option>
-            <option value="evaluator">Commission</option>
+            <option value="">{{ t('reporting.allOption') }}</option>
+            <option value="student">{{ t('reporting.students') }}</option>
+            <option value="company">{{ t('reporting.companies') }}</option>
+            <option value="evaluator">{{ t('reporting.commission') }}</option>
           </select>
         </div>
       </div>
@@ -400,24 +401,24 @@ onMounted(async () => {
           :disabled="busy"
           @click="exportApplications(fmt)"
         >
-          Export applications {{ fmt.toUpperCase() }}
+          {{ t('reporting.exportApps') }} {{ fmt.toUpperCase() }}
         </button>
       </div>
     </article>
 
     <article class="card">
-      <h3>Evaluation report (Excel by call)</h3>
-      <p class="hint">Criteria and average scores by call.</p>
+      <h3>{{ t('reporting.evalTitle') }}</h3>
+      <p class="hint">{{ t('reporting.evalHint') }}</p>
       <div class="row tight">
         <input
           v-model="evalCallId"
           type="number"
           min="1"
           class="narrow"
-          placeholder="Call ID"
+          :placeholder="t('reporting.callId')"
         />
         <button type="button" :disabled="busy" @click="exportEvaluationExcel">
-          Download evaluation_report.xlsx
+          {{ t('reporting.downloadEval') }}
         </button>
       </div>
     </article>

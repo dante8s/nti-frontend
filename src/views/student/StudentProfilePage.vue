@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import {
   createProfile,
   deleteCv,
@@ -10,6 +11,8 @@ import {
   uploadCv,
   uploadProfilePhoto,
 } from '@/api/profileApi'
+
+const { t } = useI18n()
 
 const loading = ref(false)
 const saving = ref(false)
@@ -70,14 +73,14 @@ function extractApiError(error, fallback) {
   const apiMessage =
     payload?.error || payload?.message || (typeof payload === 'string' ? payload : '')
 
-  if (status === 401) return 'Session expired. Please log in again.'
+  if (status === 401) return t('profile.sessionExpired')
   if (status === 403) {
     return (
       apiMessage
-      || 'Access denied. If you are a student or admin — log out and log back in to sync the session.'
+      || t('profile.accessDenied')
     )
   }
-  if (status === 404) return apiMessage || 'Profile not found.'
+  if (status === 404) return apiMessage || t('profile.profileNotFound')
   if (status) return apiMessage || `${fallback} (HTTP ${status})`
   return apiMessage || fallback
 }
@@ -125,7 +128,7 @@ async function loadProfile() {
     loadedProfile.value = profile
     syncForm(profile)
     profileExists.value = true
-    setMessage('Profile loaded.', 'success')
+    setMessage(t('profile.loaded'), 'success')
     await refreshAvatarPreview()
   } catch (error) {
     if (error?.response?.status === 404) {
@@ -133,10 +136,10 @@ async function loadProfile() {
       loadedProfile.value = null
       releaseAvatarBlob()
       clearForm()
-      setMessage('Profile not yet created. Fill in the fields and click "Save".')
+      setMessage(t('profile.notCreated'))
       return
     }
-    setMessage(extractApiError(error, 'Failed to load profile.'), 'error')
+    setMessage(extractApiError(error, t('profile.failedLoad')), 'error')
   } finally {
     loading.value = false
   }
@@ -153,10 +156,10 @@ async function saveProfile() {
     loadedProfile.value = profile
     syncForm(profile)
     profileExists.value = true
-    setMessage('Profile saved successfully.', 'success')
+    setMessage(t('profile.savedOk'), 'success')
     await refreshAvatarPreview()
   } catch (error) {
-    setMessage(extractApiError(error, 'Failed to save profile.'), 'error')
+    setMessage(extractApiError(error, t('profile.failedSave')), 'error')
   } finally {
     saving.value = false
   }
@@ -169,7 +172,7 @@ function onFilePicked(event) {
     return
   }
   if (!file.name.toLowerCase().endsWith('.pdf')) {
-    setMessage('Only PDF files are allowed.', 'error')
+    setMessage(t('profile.onlyPdf'), 'error')
     event.target.value = ''
     selectedFile.value = null
     return
@@ -179,7 +182,7 @@ function onFilePicked(event) {
 
 async function submitCv() {
   if (!selectedFile.value) {
-    setMessage('Please select a PDF file first.', 'error')
+    setMessage(t('profile.selectPdfFirst'), 'error')
     return
   }
   uploading.value = true
@@ -189,9 +192,9 @@ async function submitCv() {
     selectedFile.value = null
     const profile = await getProfile(ME)
     loadedProfile.value = profile
-    setMessage('CV uploaded successfully.', 'success')
+    setMessage(t('profile.cvUploaded'), 'success')
   } catch (error) {
-    setMessage(extractApiError(error, 'Failed to upload CV.'), 'error')
+    setMessage(extractApiError(error, t('profile.failedCvUpload')), 'error')
   } finally {
     uploading.value = false
   }
@@ -206,9 +209,9 @@ async function removeCv() {
     if (cvFileInput.value) cvFileInput.value.value = ''
     const profile = await getProfile(ME)
     loadedProfile.value = profile
-    setMessage('CV deleted.', 'success')
+    setMessage(t('profile.cvDeleted'), 'success')
   } catch (error) {
-    setMessage(extractApiError(error, 'Failed to delete CV.'), 'error')
+    setMessage(extractApiError(error, t('profile.failedCvDelete')), 'error')
   } finally {
     deleting.value = false
   }
@@ -241,13 +244,13 @@ function onPhotoPicked(event) {
     return
   }
   if (!isLikelyImageFile(file)) {
-    setMessage('Please select an image file (common photo formats).', 'error')
+    setMessage(t('profile.selectImageFile'), 'error')
     event.target.value = ''
     selectedPhotoFile.value = null
     return
   }
   if (file.size > MAX_PHOTO_BYTES) {
-    setMessage('Photo must be no larger than 10 MB.', 'error')
+    setMessage(t('profile.photoTooLarge'), 'error')
     event.target.value = ''
     selectedPhotoFile.value = null
     return
@@ -257,11 +260,11 @@ function onPhotoPicked(event) {
 
 async function submitPhoto() {
   if (!profileExists.value) {
-    setMessage('Please save the profile first (section below).', 'error')
+    setMessage(t('profile.saveFirstPhoto'), 'error')
     return
   }
   if (!selectedPhotoFile.value) {
-    setMessage('Please select a photo file.', 'error')
+    setMessage(t('profile.selectPhotoFirst'), 'error')
     return
   }
   photoUploading.value = true
@@ -272,10 +275,10 @@ async function submitPhoto() {
     selectedPhotoFile.value = null
     if (photoInputRef.value)
       photoInputRef.value.value = ''
-    setMessage('Profile photo updated.', 'success')
+    setMessage(t('profile.photoUpdated'), 'success')
     await refreshAvatarPreview()
   } catch (error) {
-    setMessage(extractApiError(error, 'Failed to upload photo.'), 'error')
+    setMessage(extractApiError(error, t('profile.failedPhotoUpload')), 'error')
   } finally {
     photoUploading.value = false
   }
@@ -290,9 +293,9 @@ async function removePhoto() {
     const updated = await deleteProfilePhoto(ME)
     loadedProfile.value = { ...(loadedProfile.value || {}), ...updated }
     releaseAvatarBlob()
-    setMessage('Profile photo deleted.', 'success')
+    setMessage(t('profile.photoDeleted'), 'success')
   } catch (error) {
-    setMessage(extractApiError(error, 'Failed to delete photo.'), 'error')
+    setMessage(extractApiError(error, t('profile.failedPhotoDelete')), 'error')
   } finally {
     photoDeleting.value = false
   }
@@ -309,12 +312,12 @@ onMounted(loadProfile)
   <div class="page">
 
     <article class="card card--photo">
-      <h3 class="title-sm">Profile photo</h3>
+      <h3 class="title-sm">{{ t('profile.photoTitle') }}</h3>
       <div class="photo-row">
         <div class="photo-preview" aria-hidden="true">
           <img v-if="avatarBlobUrl" class="photo-preview__img" :src="avatarBlobUrl" alt="">
           <span v-else class="photo-preview__placeholder">
-            {{ profileExists ? 'No photo' : '—' }}
+            {{ profileExists ? t('profile.noPhoto') : '—' }}
           </span>
         </div>
         <div class="photo-actions">
@@ -334,9 +337,9 @@ onMounted(loadProfile)
               @click="photoInputRef.click()"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              Choose photo
+              {{ t('profile.choosePhoto') }}
             </button>
-            <span class="cv-filename">{{ selectedPhotoFile ? selectedPhotoFile.name : 'No file selected' }}</span>
+            <span class="cv-filename">{{ selectedPhotoFile ? selectedPhotoFile.name : t('profile.noFileSelected') }}</span>
           </div>
           <button
             type="button"
@@ -344,7 +347,7 @@ onMounted(loadProfile)
             :disabled="!profileExists || photoUploading || !selectedPhotoFile"
             @click="submitPhoto"
           >
-            {{ photoUploading ? 'Uploading…' : 'Upload photo' }}
+            {{ photoUploading ? t('profile.uploading') : t('profile.uploadPhoto') }}
           </button>
           <button
             type="button"
@@ -352,33 +355,33 @@ onMounted(loadProfile)
             :disabled="!profileExists || photoDeleting || !hasAvatarPhoto"
             @click="removePhoto"
           >
-            {{ photoDeleting ? 'Deleting…' : 'Delete photo' }}
+            {{ photoDeleting ? t('profile.deleting') : t('profile.deletePhoto') }}
           </button>
         </div>
       </div>
       <p v-if="!profileExists" class="photo-hint">
-        Save the profile in the section below to add a photo.
+        {{ t('profile.saveFirst') }}
       </p>
       <p v-else class="photo-hint photo-hint--muted">
-        JPEG, PNG, GIF, WebP, HEIC, SVG and other common formats, up to 10 MB.
+        {{ t('profile.photoFormats') }}
       </p>
     </article>
 
     <article class="card">
-      <h3 class="title-sm">Profile data</h3>
+      <h3 class="title-sm">{{ t('profile.dataTitle') }}</h3>
       <div class="profile-form">
         <div class="grid two form-fields">
           <div class="form-field">
-            <label class="label" for="study-program">Study program</label>
+            <label class="label" for="study-program">{{ t('profile.studyProgram') }}</label>
             <input
               id="study-program"
               v-model="form.studyProgram"
               type="text"
-              placeholder="Computer Science"
+              :placeholder="t('profile.studyProgramPh')"
             />
           </div>
           <div class="form-field">
-            <label class="label" for="year-of-study">Year of study</label>
+            <label class="label" for="year-of-study">{{ t('profile.yearOfStudy') }}</label>
             <input
               id="year-of-study"
               v-model="form.yearOfStudy"
@@ -392,7 +395,7 @@ onMounted(loadProfile)
 
         <div class="grid two form-fields">
           <div class="form-field">
-            <label class="label" for="average-grade">Average grade</label>
+            <label class="label" for="average-grade">{{ t('profile.averageGrade') }}</label>
             <input
               id="average-grade"
               v-model="form.profileAverageGrade"
@@ -406,53 +409,53 @@ onMounted(loadProfile)
           <div class="form-field form-field--checkbox">
             <label class="check-row">
               <input v-model="form.hasRepeatedSubjects" type="checkbox" />
-              <span>Has retakes</span>
+              <span>{{ t('profile.hasRetakes') }}</span>
             </label>
           </div>
         </div>
 
         <div class="form-field">
-          <label class="label" for="skills">Skills</label>
+          <label class="label" for="skills">{{ t('profile.skills') }}</label>
           <textarea
             id="skills"
             v-model="form.skills"
             rows="3"
-            placeholder="Java, Spring, SQL..."
+            :placeholder="t('profile.skillsPh')"
           />
         </div>
 
         <div class="form-field">
-          <label class="label" for="bio">About me</label>
+          <label class="label" for="bio">{{ t('profile.aboutMe') }}</label>
           <textarea
             id="bio"
             v-model="form.bio"
             rows="4"
-            placeholder="Your experience and motivation..."
+            :placeholder="t('profile.aboutMePh')"
           />
         </div>
       </div>
 
       <button class="btn profile-form__submit" :disabled="saving" @click="saveProfile">
-        {{ saving ? 'Saving...' : 'Save profile' }}
+        {{ saving ? t('profile.saving') : t('profile.saveProfile') }}
       </button>
     </article>
 
     <article class="card">
-      <h3 class="title-sm">CV (PDF)</h3>
+      <h3 class="title-sm">{{ t('profile.cvTitle') }}</h3>
       <div class="row cv-row">
         <input ref="cvFileInput" type="file" accept=".pdf,application/pdf" class="cv-input-hidden" @change="onFilePicked" />
         <button class="btn ghost cv-browse-btn" @click="cvFileInput.click()">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          Choose file
+          {{ t('profile.chooseFile') }}
         </button>
-        <span class="cv-filename">{{ selectedFile ? selectedFile.name : 'No file selected' }}</span>
+        <span class="cv-filename">{{ selectedFile ? selectedFile.name : t('profile.noFileSelected') }}</span>
       </div>
       <div class="row cv-actions-row">
         <button class="btn" :disabled="uploading" @click="submitCv">
-          {{ uploading ? 'Uploading...' : 'Upload CV' }}
+          {{ uploading ? t('profile.uploadingCV') : t('profile.uploadCV') }}
         </button>
         <button class="btn danger" :disabled="deleting" @click="removeCv">
-          {{ deleting ? 'Deleting...' : 'Delete CV' }}
+          {{ deleting ? t('profile.deletingCV') : t('profile.deleteCV') }}
         </button>
       </div>
     </article>
