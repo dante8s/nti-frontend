@@ -46,6 +46,7 @@ const adminNav = computed(() => {
       { to: '/app/admin/applications', label: t('nav.applications'), icon: '◆' },
       { to: '/app/admin/milestone-approvals', label: t('nav.milestoneApprovals'), icon: '✓' },
       { to: '/app/admin/programs', label: t('nav.programs'), icon: '◇' },
+      { to: '/app/admin/qualification-stacks', label: t('nav.qualificationStacks'), icon: '◧' },
       { to: '/app/admin/program-review-queue', label: t('nav.programBReview'), icon: '◬' },
       { to: '/app/admin/organizations', label: t('nav.organizations'), icon: '◈' },
       { to: '/app/admin/mentorships', label: t('nav.mentorships'), icon: '✦' },
@@ -183,7 +184,8 @@ async function checkFirmOrg() {
       if (!myEmail) return false
       return String(member?.userEmail || '').toLowerCase() === myEmail
     })
-firmIsOwner.value = membership?.role === 'OWNER'  } catch {
+    firmIsOwner.value = membership?.role === 'OWNER'
+  } catch {
     // keep nav usable even if endpoint fails
   } finally {
     firmChecked.value = true

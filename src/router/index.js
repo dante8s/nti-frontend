@@ -200,6 +200,12 @@ const router = createRouter({
           component: () => import('@/views/admin/AdminPrograms.vue'),
         },
         {
+          path: 'admin/qualification-stacks',
+          name: 'admin-qualification-stacks',
+          meta: { title: 'Kvalifikačné stacky', requiresAdmin: true },
+          component: () => import('@/views/admin/AdminQualificationStacks.vue'),
+        },
+        {
           path: 'admin/program-review-queue',
           name: 'admin-program-review-queue',
           meta: { title: 'Program B review queue', requiresAdmin: true },
